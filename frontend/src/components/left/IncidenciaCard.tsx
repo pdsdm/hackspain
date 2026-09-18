@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, Bus, Truck } from 'lucide-react'
+import { MapPin, Bus, Truck } from 'lucide-react'
 import type { CrisisState } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { Panel } from '../ui/Panel'
@@ -26,7 +26,7 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
     body = (
       <>
         <div className="flex items-start gap-2">
-          <MapPin size={18} className={`mt-0.5 ${st.tone === 'red' ? 'text-red' : st.tone === 'green' ? 'text-green' : st.tone === 'amber' ? 'text-amber' : 'text-cyan'}`} />
+          <MapPin size={18} className={`mt-0.5 ${st.tone === 'red' ? 'text-red' : st.tone === 'green' ? 'text-green' : st.tone === 'amber' ? 'text-amber' : 'text-ink'}`} />
           <div className="flex-1 min-w-0">
             <div className="font-semibold">{sp.name}</div>
             <div className="text-[12px] text-muted">MADRING {sp.zone === 'sur' ? 'Sur' : 'Norte'}{sp.capacity ? ` · ${sp.capacity} plazas` : ''}</div>
@@ -41,12 +41,12 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
     body = (
       <>
         <div className="flex items-start gap-2">
-          <Bus size={18} className={`mt-0.5 ${sh.status === 'retrasado' ? 'text-amber' : 'text-cyan'}`} />
+          <Bus size={18} className={`mt-0.5 ${sh.status === 'retrasado' ? 'text-amber' : 'text-ink'}`} />
           <div className="flex-1">
             <div className="font-semibold">{sh.name} · {sh.passengers} pasajeros</div>
             <div className="text-[12px] text-muted">{sh.origin} → {sh.destinationId === 'accesoNorte' ? 'Acceso Norte' : 'Acceso Sur (P2)'}</div>
           </div>
-          <Pill tone={sh.status === 'retrasado' ? 'amber' : sh.accepted ? 'green' : 'cyan'}>{sh.status === 'llegado' ? 'Llegado' : sh.status === 'retrasado' ? `+${sh.delayMin} min` : sh.accepted ? 'Ruta aceptada' : 'Instrucción pendiente'}</Pill>
+          <Pill tone={sh.status === 'retrasado' ? 'amber' : sh.accepted ? 'green' : 'ink'}>{sh.status === 'llegado' ? 'Llegado' : sh.status === 'retrasado' ? `+${sh.delayMin} min` : sh.accepted ? 'Ruta aceptada' : 'Instrucción pendiente'}</Pill>
         </div>
         <p className="mt-2 text-[12px] text-muted">Llegada prevista <span className="text-text num">{fmtClock(sh.arriveAt)}</span></p>
       </>
@@ -60,7 +60,7 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
             <div className="font-semibold">{d.name}</div>
             <div className="text-[12px] text-muted">Destino: {s.spaces.find((x) => x.id === d.dockId)?.name ?? d.dockId}</div>
           </div>
-          <Pill tone={d.status === 'confirmada' || d.status === 'entregada' ? 'green' : d.status === 'programada' ? 'cyan' : 'red'}>{d.status}</Pill>
+          <Pill tone={d.status === 'confirmada' || d.status === 'entregada' ? 'green' : d.status === 'programada' ? 'ink' : 'red'}>{d.status}</Pill>
         </div>
         <p className="mt-2 text-[12px] text-text/80">{d.note}</p>
         <p className="mt-1 text-[12px] text-muted">Llegada prevista <span className="text-text num">{fmtClock(d.arriveAt)}</span></p>
@@ -78,14 +78,9 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
   }
 
   return (
-    <Panel title="Incidencia seleccionada">
-      <div className="rounded-md border border-amber/50 bg-amber/5 p-3">
-        <div className="flex items-center gap-2 text-amber font-semibold mb-2">
-          <AlertTriangle size={16} /> Pabellón Principal fuera de servicio
-          <span className="ml-auto text-[11px] text-muted font-normal">Ventana: <span className="text-amber num">{Math.max(0, Math.floor(left / 60))} min</span></span>
-        </div>
-        <div className="border-t border-amber/20 pt-2">{body}</div>
-      </div>
+    <Panel title={<span className="flex items-center gap-2.5"><span className="w-2.5 h-2.5 bg-red" style={{ clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' }} /> Incidencia</span>} right={<span className="text-[11px] text-muted num">T−{Math.max(0, Math.floor(left / 60))} min</span>}>
+      <p className="display font-bold text-[16px] leading-tight m-0">Pabellón Principal cerrado</p>
+      <div className="mt-3 pt-3 border-t border-line">{body}</div>
     </Panel>
   )
 }

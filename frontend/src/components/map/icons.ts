@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { Bus, Truck } from 'lucide-react'
 
 export function pinIcon(label: string, cls: string, sub?: string) {
-  const html = `<div class="marker-pin ${cls}"><span class="dot"></span><span>${label}</span>${sub ? `<span style="color:#8b9bb8;font-weight:500">${sub}</span>` : ''}</div>`
+  const html = `<div class="marker-pin ${cls}"><span class="dot"></span><span>${label}</span>${sub ? `<span style="color:#6b7079;font-weight:500">${sub}</span>` : ''}</div>`
   return L.divIcon({ html, className: '', iconAnchor: [6, 12] })
 }
 

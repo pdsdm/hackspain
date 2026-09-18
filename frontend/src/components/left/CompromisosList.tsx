@@ -4,8 +4,8 @@ import { Panel } from '../ui/Panel'
 import { COMMITMENT } from '../ui/status'
 
 const ICON: Record<CommitmentStatus, { I: typeof CheckCircle2; cls: string }> = {
-  propuesto: { I: CircleDashed, cls: 'text-cyan' },
-  en_consulta: { I: PhoneCall, cls: 'text-cyan' },
+  propuesto: { I: CircleDashed, cls: 'text-ink' },
+  en_consulta: { I: PhoneCall, cls: 'text-ink' },
   aceptado_condiciones: { I: Clock, cls: 'text-amber' },
   confirmado: { I: CheckCircle2, cls: 'text-green' },
   en_ejecucion: { I: PlayCircle, cls: 'text-green' },

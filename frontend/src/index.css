@@ -2,17 +2,23 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --color-bg: #0b1220;
-  --color-panel: #111a2e;
-  --color-panel-2: #16213a;
-  --color-line: #1e2a44;
-  --color-muted: #8b9bb8;
-  --color-text: #e6edf7;
-  --color-cyan: #22d3ee;
-  --color-amber: #f59e0b;
-  --color-red: #ef4444;
-  --color-green: #22c55e;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-bg: #f4f4f2;
+  --color-panel: #ffffff;
+  --color-panel-2: #ededea;
+  --color-line: #dcdcd8;
+  --color-line-2: #b8b8b2;
+  --color-muted: #6b7079;
+  --color-text: #1a1d24;
+  --color-ink: #1a1d24;
+  --color-amber: #c47a00;
+  --color-red: #e5484d;
+  --color-green: #1f9d55;
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 }
 
 html, body, #root {
@@ -23,59 +29,64 @@ html, body, #root {
   font-size: 13px;
 }
 
-* { scrollbar-width: thin; scrollbar-color: #24304d transparent; }
+* { scrollbar-width: thin; scrollbar-color: #cfcfca transparent; }
 
-.leaflet-container { background: #070c16; font-family: inherit; }
-.dark-tiles { filter: invert(1) hue-rotate(195deg) brightness(.62) contrast(1.15) saturate(.35); }
-.marker-pin.ring { outline: 2px solid #22d3ee; outline-offset: 1px; }
-.leaflet-control-attribution { background: rgba(11,18,32,.7) !important; color: #6b7a96 !important; font-size: 10px; }
-.leaflet-control-attribution a { color: #8b9bb8 !important; }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111a2e; color: #e6edf7; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.leaflet-container { background: #fafaf8; font-family: inherit; }
+.dark-tiles { filter: grayscale(1) contrast(.9) brightness(1.04); }
+.marker-pin.ring { outline: 2px solid #1a1d24; outline-offset: 1px; }
+.leaflet-control-attribution { background: rgba(255,255,255,.75) !important; color: #6b7079 !important; font-size: 10px; }
+.leaflet-control-attribution a { color: #4a4e56 !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #ffffff; color: #1a1d24; border-radius: 0; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
 .leaflet-popup-content { margin: 10px 12px; font-size: 12px; }
-.leaflet-tooltip { background: #111a2e; border: 1px solid #1e2a44; color: #e6edf7; box-shadow: none; font-size: 11px; }
-.leaflet-tooltip-top:before { border-top-color: #1e2a44; }
+.leaflet-tooltip { background: #ffffff; border: 1px solid #dcdcd8; border-radius: 0; color: #1a1d24; box-shadow: none; font-size: 11px; }
+.leaflet-tooltip-top:before { border-top-color: #dcdcd8; }
 
 .route-anim { stroke-dasharray: 10 8; animation: dash 1.2s linear infinite; }
 @keyframes dash { to { stroke-dashoffset: -18; } }
 
 .marker-pin {
   display: flex; align-items: center; gap: 6px;
-  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
-  background: #111a2ecc; border: 1px solid #1e2a44; color: #e6edf7;
+  padding: 3px 8px; border-radius: 0; white-space: nowrap;
+  background: #ffffffe6; border: 1px solid #dcdcd8; color: #1a1d24;
   font-size: 11px; font-weight: 600; backdrop-filter: blur(4px);
-  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,.10);
 }
-.marker-pin .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
-.marker-pin.closed { border-color: #ef4444; }
-.marker-pin.closed .dot { background: #ef4444; box-shadow: 0 0 0 4px #ef444433; }
-.marker-pin.ok .dot { background: #22c55e; }
-.marker-pin.pending .dot { background: #f59e0b; }
-.marker-pin.proposed .dot { background: #22d3ee; }
-.marker-pin.idle .dot { background: #8b9bb8; }
+.marker-pin .dot { width: 8px; height: 8px; border-radius: 0; flex: none; }
+.marker-pin.closed { border-color: #e5484d; }
+.marker-pin.closed .dot { background: #e5484d; box-shadow: 0 0 0 4px #e5484d33; }
+.marker-pin.ok .dot { background: #1f9d55; }
+.marker-pin.pending .dot { background: #c47a00; }
+.marker-pin.proposed .dot { background: #1a1d24; }
+.marker-pin.idle .dot { background: #b8b8b2; }
 .marker-pin.ghost { opacity: .55; border-style: dashed; }
 
 .vehicle {
   width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center;
-  background: #0b1220; border: 2px solid #22d3ee; color: #22d3ee; box-shadow: 0 0 0 4px #22d3ee22;
+  background: #ffffff; border: 2px solid #1a1d24; color: #1a1d24; box-shadow: 0 0 0 4px #1a1d2422;
 }
-.vehicle.delayed { border-color: #f59e0b; color: #f59e0b; box-shadow: 0 0 0 4px #f59e0b22; }
-.vehicle.truck { border-color: #f59e0b; color: #f59e0b; box-shadow: 0 0 0 4px #f59e0b22; }
+.vehicle.delayed { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
+.vehicle.truck { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
 .vehicle svg { width: 12px; height: 12px; }
 
 .zone-label {
   background: transparent; border: none; box-shadow: none;
-  color: #cbd5e1; font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; opacity: .9;
+  color: #6b7079; font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .9;
 }
 .zone-label:before { display: none; }
 
 .wave { display: flex; align-items: center; gap: 2px; height: 22px; }
-.wave i { width: 3px; border-radius: 2px; background: #22d3ee; animation: wave 1s ease-in-out infinite; }
+.wave i { width: 3px; border-radius: 0; background: #1a1d24; animation: wave 1s ease-in-out infinite; }
 @keyframes wave { 0%,100% { height: 4px; } 50% { height: 20px; } }
 
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 #f59e0b55; } 100% { box-shadow: 0 0 0 10px #f59e0b00; } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 #c47a0055; } 100% { box-shadow: 0 0 0 10px #c47a0000; } }
 .pulse-amber { animation: pulse-ring 1.6s ease-out infinite; }
 
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .fade-in { animation: fade-in .35s ease-out both; }
 
 .num { font-variant-numeric: tabular-nums; }
+
+.display { font-family: var(--font-display); }
+.label { font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--color-muted); }
+.chamfer { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.chamfer-sm { clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
