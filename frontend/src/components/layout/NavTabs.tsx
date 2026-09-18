@@ -1,14 +1,22 @@
-const TABS = ['Vista general', 'Movilidad', 'Proveedores', 'Infraestructura', 'Personal', 'Contingencias', 'Comunicaciones']
+import type { CrisisState } from '../../domain/types'
+import { fmtClock } from '../../domain/time'
 
-export function NavTabs() {
+const TABS = ['Vista general', 'Movilidad', 'Proveedores', 'Comunicaciones', 'Cronología']
+
+export function NavTabs({ s }: { s: CrisisState }) {
+  const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
   return (
-    <nav className="flex items-center px-4 h-9 border-b border-line bg-bg">
-      <ul className="flex items-center gap-1 h-full">
+    <nav className="flex items-stretch px-6 h-11 border-b border-line bg-bg flex-none">
+      <ul className="flex items-stretch gap-1">
         {TABS.map((t, i) => (
-          <li key={t} className={`h-full flex items-center px-3 text-[12px] border-b-2 ${i === 0 ? 'border-cyan text-cyan' : 'border-transparent text-muted'}`}>{t}</li>
+          <li key={t} className={`flex items-center px-3.5 display text-[12px] tracking-[0.04em] uppercase border-b-2 ${i === 0 ? 'font-bold border-ink text-ink' : 'font-semibold border-transparent text-muted'}`}>{t}</li>
         ))}
       </ul>
-      <span className="ml-auto text-[11px] italic text-muted">Personas en movimiento. Madrid contigo.</span>
+      <div className="ml-auto flex items-center gap-[18px] text-[12px] text-muted num">
+        <span>{total.toLocaleString('es-ES')} invitados</span>
+        <span>Plan v{s.planVersion}</span>
+        <span className="text-ink font-semibold">{fmtClock(s.clock.simSeconds, true)}</span>
+      </div>
     </nav>
   )
 }
