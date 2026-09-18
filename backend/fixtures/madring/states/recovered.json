@@ -1,0 +1,581 @@
+{
+  "simulated": true,
+  "clock": {
+    "simSeconds": 44700,
+    "speed": 1,
+    "paused": true,
+    "openingAt": 46800,
+    "lunchAt": 48600,
+    "raceAt": 54000
+  },
+  "planVersion": 2,
+  "coordinatorStatus": "estable",
+  "spaces": [
+    {
+      "id": "principal",
+      "name": "Pabellón Principal",
+      "kind": "pabellon",
+      "zone": "sur",
+      "capacity": 600,
+      "status": "cerrado",
+      "note": "Avería de agua · sin hora de reapertura",
+      "pos": [
+        40.4652,
+        -3.6212
+      ]
+    },
+    {
+      "id": "pabellonB",
+      "name": "Pabellón B",
+      "kind": "pabellon",
+      "zone": "sur",
+      "capacity": 450,
+      "status": "confirmado",
+      "note": "Acuerdo confirmado en el fixture",
+      "pos": [
+        40.468,
+        -3.6172
+      ],
+      "readyAt": 46200
+    },
+    {
+      "id": "loungeSur",
+      "name": "Lounge Fan Zone Sur",
+      "kind": "lounge",
+      "zone": "sur",
+      "capacity": 150,
+      "status": "confirmado",
+      "note": "Reserva desde 13:15 con espera confirmada",
+      "pos": [
+        40.4628,
+        -3.6178
+      ],
+      "readyAt": 47700
+    },
+    {
+      "id": "norteC",
+      "name": "Pabellón Norte C",
+      "kind": "pabellon",
+      "zone": "norte",
+      "capacity": 600,
+      "status": "inactivo",
+      "note": "Primera apertura posible 13:45",
+      "readyAt": 49500,
+      "pos": [
+        40.4778,
+        -3.6118
+      ]
+    },
+    {
+      "id": "accesoSur",
+      "name": "Acceso Sur",
+      "kind": "acceso",
+      "zone": "sur",
+      "status": "operativo",
+      "note": "Feria de Madrid · 90 invitados esperando",
+      "pos": [
+        40.4618,
+        -3.614
+      ]
+    },
+    {
+      "id": "accesoNorte",
+      "name": "Acceso Norte",
+      "kind": "acceso",
+      "zone": "norte",
+      "status": "operativo",
+      "note": "Valdebebas",
+      "pos": [
+        40.481,
+        -3.6138
+      ]
+    },
+    {
+      "id": "muelleSur",
+      "name": "Muelle Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "status": "cerrado",
+      "note": "Asociado al pabellón cerrado",
+      "pos": [
+        40.4636,
+        -3.6238
+      ]
+    },
+    {
+      "id": "muelleEste",
+      "name": "Muelle Este Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "status": "confirmado",
+      "note": "Acuerdo confirmado en el fixture",
+      "pos": [
+        40.4672,
+        -3.6118
+      ]
+    },
+    {
+      "id": "esperaSur",
+      "name": "Zona de espera Sur",
+      "kind": "espera",
+      "zone": "sur",
+      "capacity": 150,
+      "status": "confirmado",
+      "pos": [
+        40.4632,
+        -3.6122
+      ],
+      "note": "Acuerdo confirmado en el fixture"
+    }
+  ],
+  "commitments": [
+    {
+      "id": "c-principal",
+      "title": "Recepción en Pabellón Principal",
+      "area": "espacios",
+      "status": "invalidado",
+      "counterpart": "Recinto",
+      "conditions": [],
+      "planVersion": 1,
+      "note": "Pabellón cerrado por avería",
+      "updatedAt": 44100
+    },
+    {
+      "id": "c-entrega1",
+      "title": "CAT-01 · 360 servicios → Muelle Este Sur",
+      "area": "catering",
+      "status": "confirmado",
+      "counterpart": "Catering",
+      "conditions": [],
+      "planVersion": 2,
+      "note": "Condiciones verificadas en la simulación",
+      "updatedAt": 44700
+    },
+    {
+      "id": "c-entrega2",
+      "title": "CAT-02 · 240 servicios → Muelle Este Sur",
+      "area": "catering",
+      "status": "confirmado",
+      "counterpart": "Catering",
+      "conditions": [],
+      "planVersion": 2,
+      "note": "Condiciones verificadas en la simulación",
+      "updatedAt": 44700
+    },
+    {
+      "id": "c-shuttles",
+      "title": "Llegada de 4 shuttles · Acceso Sur",
+      "area": "transporte",
+      "status": "confirmado",
+      "counterpart": "Transportes Ibéricos",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    },
+    {
+      "id": "c-pabB",
+      "title": "Reserva de Pabellón B · 450 plazas",
+      "area": "espacios",
+      "counterpart": "Recinto",
+      "status": "confirmado",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    },
+    {
+      "id": "c-lounge",
+      "title": "Reserva de Lounge Sur · 150 plazas",
+      "area": "espacios",
+      "counterpart": "Recinto",
+      "status": "confirmado",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    },
+    {
+      "id": "c-muelle",
+      "title": "Habilitar Muelle Este Sur",
+      "area": "espacios",
+      "counterpart": "Recinto + Recepción",
+      "status": "confirmado",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    },
+    {
+      "id": "c-espera",
+      "title": "Espera Sur para 150 hasta las 13:15",
+      "area": "asistentes",
+      "counterpart": "Recinto + Recepción",
+      "status": "confirmado",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    },
+    {
+      "id": "c-accesibilidad",
+      "title": "Acceso adaptado en Pabellón B para 12 invitados",
+      "area": "espacios",
+      "counterpart": "Recinto",
+      "status": "confirmado",
+      "conditions": [],
+      "planVersion": 2,
+      "updatedAt": 44700,
+      "note": "Condiciones verificadas en la simulación"
+    }
+  ],
+  "agents": [
+    {
+      "id": "espacios",
+      "name": "Espacios",
+      "objective": "Comprobar ejecución de los acuerdos",
+      "status": "estable"
+    },
+    {
+      "id": "catering",
+      "name": "Catering",
+      "objective": "Comprobar ejecución de los acuerdos",
+      "status": "estable"
+    },
+    {
+      "id": "transporte",
+      "name": "Transporte",
+      "objective": "Comprobar ejecución de los acuerdos",
+      "status": "estable"
+    },
+    {
+      "id": "asistentes",
+      "name": "Asistentes",
+      "objective": "Contactar a 120 invitados sin evidencia de recepción",
+      "status": "estable"
+    }
+  ],
+  "shuttles": [
+    {
+      "id": "BUS-01",
+      "name": "BUS-01",
+      "passengers": 45,
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.4618,
+          -3.614
+        ]
+      ],
+      "departAt": 43200,
+      "arriveAt": 45600,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-02",
+      "name": "BUS-02",
+      "passengers": 45,
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.4618,
+          -3.614
+        ]
+      ],
+      "departAt": 43680,
+      "arriveAt": 46200,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-03",
+      "name": "BUS-03",
+      "passengers": 45,
+      "origin": "Plaza de Castilla",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.469,
+          -3.629
+        ],
+        [
+          40.4618,
+          -3.614
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 46080,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-04",
+      "name": "BUS-04",
+      "passengers": 45,
+      "origin": "Aeropuerto T4",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.484,
+          -3.602
+        ],
+        [
+          40.476,
+          -3.605
+        ],
+        [
+          40.469,
+          -3.608
+        ],
+        [
+          40.4618,
+          -3.614
+        ]
+      ],
+      "departAt": 43920,
+      "arriveAt": 45900,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "CAT-01",
+      "name": "CAT-01 · 360 servicios",
+      "services": 360,
+      "dockId": "muelleEste",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.4672,
+          -3.6118
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 45600,
+      "status": "confirmada",
+      "note": "Muelle Este y recepción confirmados; entrega aún en ruta/programada"
+    },
+    {
+      "id": "CAT-02",
+      "name": "CAT-02 · 240 servicios",
+      "services": 240,
+      "dockId": "muelleEste",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.4672,
+          -3.6118
+        ]
+      ],
+      "departAt": 45000,
+      "arriveAt": 47100,
+      "status": "confirmada",
+      "note": "Muelle Este y recepción confirmados; entrega aún en ruta/programada"
+    }
+  ],
+  "guestGroups": [
+    {
+      "id": "g-acceso",
+      "name": "En control de acceso Sur",
+      "count": 90,
+      "where": "Acceso Sur",
+      "confirmedCount": 90,
+      "informedCount": 90,
+      "acceptedCount": 84,
+      "assignedSpaceId": "pabellonB"
+    },
+    {
+      "id": "g-shuttles",
+      "name": "En shuttles (4 × 45)",
+      "count": 180,
+      "where": "En ruta",
+      "confirmedCount": 180,
+      "informedCount": 150,
+      "acceptedCount": 121,
+      "assignedSpaceId": "pabellonB"
+    },
+    {
+      "id": "g-propios",
+      "name": "Por sus medios",
+      "count": 330,
+      "where": "Cercanías / L8 / taxi",
+      "confirmedCount": 330,
+      "informedCount": 240,
+      "acceptedCount": 187,
+      "needs": "12 accesibilidad · 38 dieta"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "d-plan-sur",
+      "title": "Autorizar Pabellón B + Lounge Sur",
+      "summary": "450 plazas a las 13:00 y 150 a las 13:15 con espera autorizada.",
+      "cost": 3200,
+      "conditions": [
+        "Espera para 150",
+        "Muelle y recepción",
+        "Reserva de espacios"
+      ],
+      "effectApprove": "Autoriza gasto y apertura escalonada; las condiciones requieren confirmación.",
+      "effectReject": "Evaluar alternativa Norte con permisos, traslado exterior, coste y retraso.",
+      "status": "aprobada",
+      "createdAt": 44280
+    }
+  ],
+  "calls": [],
+  "events": [
+    {
+      "id": "e0",
+      "time": 44100,
+      "kind": "incidencia",
+      "text": "Recinto confirma cierre del Pabellón Principal (avería de agua)",
+      "area": "espacios"
+    },
+    {
+      "id": "e1",
+      "time": 44100,
+      "kind": "accion",
+      "text": "Coordinador abre la crisis: 3 compromisos invalidados; llegada de shuttles en consulta"
+    },
+    {
+      "id": "proposal-condition",
+      "time": 44220,
+      "kind": "acuerdo",
+      "text": "Recinto: Lounge solo desde 13:15; aceptación condicionada",
+      "area": "espacios"
+    },
+    {
+      "id": "proposal-decision",
+      "time": 44280,
+      "kind": "decision",
+      "text": "Se solicitan 3.200 €; ninguna reserva confirmada todavía"
+    },
+    {
+      "id": "recovered-plan",
+      "time": 44700,
+      "kind": "acuerdo",
+      "text": "600 plazas confirmadas en Sur; 480 avisos recibidos; 120 pendientes"
+    }
+  ],
+  "budget": {
+    "contingency": 5000,
+    "autonomousLimit": 1500,
+    "authorized": 3200,
+    "forecast": 3200,
+    "committed": 3200
+  },
+  "constraints": [
+    "Norte y Sur sin conexión interior",
+    "Gasto autónomo ≤ 1.500 €"
+  ],
+  "twistsApplied": [],
+  "selectedId": "principal",
+  "scriptId": "main",
+  "scriptCursor": 0,
+  "nextScriptAt": null,
+  "waitingForDecision": null,
+  "agentsPaused": false,
+  "resolved": false
+}

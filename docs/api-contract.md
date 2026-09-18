@@ -59,6 +59,8 @@ Estado completo de la crisis. El frontend hace polling cada 2 s.
 
 Los tiempos son segundos desde medianoche (12:15 = 44100). Los campos `scriptId`, `scriptCursor`, `nextScriptAt` solo importan a la simulación del frontend; el backend puede devolverlos con valores fijos.
 
+Los importes de `budget` y `decisions[].cost` se expresan en euros. Hay seis ejemplos completos y reproducibles de `CrisisState` en [`backend/fixtures/madring/states/`](../backend/fixtures/madring/states/), con [guía y reglas de los datos](../backend/fixtures/README.md). Son snapshots sintéticos pausados para desarrollo; no implementan `/state` ni cambian su formato. El roster individual y las asignaciones auxiliares están en `seed.json` y `manifest.json`, fuera de la respuesta de este endpoint.
+
 ### `POST /interventions`
 
 Acción del responsable humano.

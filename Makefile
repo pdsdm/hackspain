@@ -2,10 +2,13 @@
 # Detecta qué hay en backend/ y frontend/. Cuando elijáis stack el viernes, ajustad los comandos
 # y copiadlos también a la sección "Comandos" de backend/AGENTS.md y frontend/AGENTS.md.
 
-.PHONY: check backend-check frontend-check
+.PHONY: check backend-check frontend-check fixtures-check
 
-check: backend-check frontend-check
+check: backend-check frontend-check fixtures-check
 	@echo "✅ make check OK"
+
+fixtures-check:
+	@cd backend && npm run fixtures:check
 
 backend-check:
 	@if [ -f backend/requirements.txt ] || [ -f backend/pyproject.toml ]; then \
