@@ -2,32 +2,39 @@
   PARA EL EQUIPO: reglas que solo aplican al frontend.
   El agente lee el AGENTS.md más cercano al archivo que edita, así que esto se suma al AGENTS.md raíz
   y tiene prioridad sobre él cuando se trabaja dentro de frontend/.
-  Rellenar el viernes en cuanto se elija el stack: sobre todo la sección "Comandos".
 -->
 
 # Frontend: instrucciones para agentes
 
 ## Stack
 
-- Framework: [por decidir, p. ej. Next.js + Tailwind]
-- Componentes UI: [por decidir]
+- Framework: Vite 8 + React 19 + TypeScript, Tailwind CSS 4 (`@tailwindcss/vite`)
+- Mapa: `leaflet` + `react-leaflet` (tiles OpenStreetMap con filtro oscuro)
+- Iconos: `lucide-react`
+- Lint: `oxlint` (config en `.oxlintrc.json`)
 
 ## Comandos
 
-<!-- Deben coincidir con lo que ejecuta `make check` en el Makefile raíz. -->
-
 - Instalar: `npm install`
-- Arrancar en local: `[p. ej. npm run dev]`
-- Lint: `[p. ej. npm run lint]`
-- Build: `[p. ej. npm run build]`
+- Arrancar en local: `npm run dev` (http://localhost:5173)
+- Lint: `npm run lint`
+- Build: `npm run build`
 
 ## Estructura
 
-<!-- Rellenar cuando exista código. Una línea por carpeta. -->
+- `src/domain/`: tipos (`types.ts`), estado inicial del escenario, reducer, guion 12:15→12:25 (`script.ts`), giros e intervenciones (`twists.ts`), KPIs (`selectors.ts`).
+- `src/data/`: `useCrisisState.ts` elige simulación local o backend según `VITE_DATA_SOURCE`; `apiClient.ts` habla con `VITE_API_URL`.
+- `src/components/layout/`: barra superior y pestañas.
+- `src/components/left/`: operaciones por área, incidencia seleccionada, compromisos.
+- `src/components/map/`: mapa Leaflet, iconos, capas.
+- `src/components/center/`: franja de KPIs.
+- `src/components/right/`: coordinador y agentes, llamada, decisión, cronología, modal de intervención, control de simulación.
+- `src/components/ui/`: primitivas (`Panel`, `Pill`, `StatBar`) y tablas de estados/colores (`status.ts`).
 
 ## Reglas
 
-- La URL del backend sale de `NEXT_PUBLIC_API_URL` (ver `.env.example`), nunca hardcodeada.
-- Los tipos y formatos de datos siguen `docs/api-contract.md`. Si el backend aún no existe, crea un mock con ese mismo formato.
+- La URL del backend sale de `VITE_API_URL` (ver `.env.example`), nunca hardcodeada.
+- Los tipos y formatos de datos siguen `docs/api-contract.md`; `src/domain/types.ts` es su reflejo en código. Si cambias uno, cambia el otro.
+- Toda la lógica de escenario vive en `src/domain/`; los componentes solo leen `CrisisState` y despachan acciones.
 - Prioriza el flujo de la demo: la pantalla que se enseña en el pitch primero, todo lo demás después.
 - Muestra estados de carga y de error: en la demo en directo las APIs pueden tardar.

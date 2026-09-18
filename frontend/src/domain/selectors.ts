@@ -1,0 +1,40 @@
+import type { CrisisState, Space } from './types'
+
+export function kpis(s: CrisisState) {
+  const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
+  const confirmed = s.guestGroups.reduce((a, g) => a + g.confirmedCount, 0)
+  const informed = s.guestGroups.reduce((a, g) => a + g.informedCount, 0)
+  const accepted = s.guestGroups.reduce((a, g) => a + g.acceptedCount, 0)
+  const cateringTotal = s.deliveries.reduce((a, d) => a + d.services, 0)
+  const cateringConfirmed = s.deliveries.filter((d) => d.status === 'confirmada' || d.status === 'entregada').reduce((a, d) => a + d.services, 0)
+  const shuttlesOk = s.shuttles.filter((x) => x.accepted).length
+  const critical = s.commitments
+    .filter((c) => c.status === 'aceptado_condiciones' || c.status === 'en_consulta' || c.status === 'propuesto')
+    .flatMap((c) => c.conditions.map((cond) => ({ commitment: c.title, cond })))
+  const pendingDecisions = s.decisions.filter((d) => d.status === 'pendiente').length
+  return { total, confirmed, informed, accepted, cateringTotal, cateringConfirmed, shuttlesOk, shuttlesTotal: s.shuttles.length, critical, pendingDecisions }
+}
+
+export function areaSummary(s: CrisisState) {
+  const spacesConfirmed = s.spaces.filter((x) => x.kind !== 'acceso' && x.kind !== 'muelle' && x.status === 'confirmado').length
+  const spacesPending = s.spaces.filter((x) => x.kind !== 'acceso' && x.kind !== 'muelle' && (x.status === 'pendiente' || x.status === 'propuesto')).length
+  const deliveriesOk = s.deliveries.filter((d) => d.status === 'confirmada' || d.status === 'entregada').length
+  const deliveriesBad = s.deliveries.filter((d) => d.status === 'retrasada' || d.status === 'bloqueada').length
+  const shuttlesBad = s.shuttles.filter((x) => x.status === 'retrasado' || x.status === 'reasignado').length
+  const shuttlesOk = s.shuttles.filter((x) => x.accepted).length
+  const informed = s.guestGroups.reduce((a, g) => a + g.informedCount, 0)
+  const pendingNeeds = s.commitments.filter((c) => c.area === 'asistentes' && c.status !== 'completado' && c.status !== 'invalidado').length
+  return { spacesConfirmed, spacesPending, deliveriesOk, deliveriesBad, shuttlesOk, shuttlesBad, informed, pendingNeeds }
+}
+
+export function spaceById(s: CrisisState, id: string | null): Space | undefined {
+  return s.spaces.find((x) => x.id === id)
+}
+
+export function pendingDecision(s: CrisisState) {
+  return s.decisions.find((d) => d.status === 'pendiente') ?? null
+}
+
+export function activeCall(s: CrisisState) {
+  return s.calls.find((c) => c.status === 'en_curso') ?? [...s.calls].reverse()[0] ?? null
+}
