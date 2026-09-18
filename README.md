@@ -74,7 +74,9 @@ La demo cuenta tanto como el sistema. Hay que ensayar el pitch.
 
 ## Escenario
 
-**Elegido:** gestión de eventos para un operador de ocio en directo (tipo Fever), con un caso de crisis en directo: la ciudad entra en alerta y hay que salvar los eventos de esa noche. El contexto completo irá en `docs/` (tarea T1). Por qué esta idea y qué descartamos: [`docs/decisions.md`](docs/decisions.md) (D3).
+**Elegido:** operaciones de hospitalidad el domingo de Gran Premio en **MADRING** (IFEMA Madrid). Una avería deja fuera el pabellón principal de 600 invitados a 45 minutos de la apertura; hay que reubicar, rehacer catering y shuttles, y comunicar el plan nuevo. Restricción dura: MADRING Norte y Sur no están conectados por el interior.
+
+Contexto completo: [`escenario/escenario.md`](escenario/escenario.md). Por qué esta idea y qué descartamos: [`docs/decisions.md`](docs/decisions.md) (D4).
 
 HappyRobot pone la plataforma de producción (voz, chat, email) y estará en el evento el fin de semana.
 
@@ -115,6 +117,8 @@ make check             # verifica lint + tests + build
 │   ├── decisions.md      # decisiones tomadas y su porqué
 │   ├── api-contract.md   # contrato backend ↔ frontend (fuente de verdad)
 │   └── guia_hackathon.md # horarios, sitios, tracks
+├── escenario/
+│   └── escenario.md      # escenario MADRING: crisis, agentes, demo
 ├── .agents/skills/       # procedimientos repetibles para agentes (p. ej. cerrar-tarea)
 ├── .claude/skills        # enlace simbólico a .agents/skills
 ├── scripts/              # setup, seed data, utilidades

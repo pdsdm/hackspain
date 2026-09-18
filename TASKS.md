@@ -10,6 +10,6 @@
 
 | ID | Tarea | Responsable | Rama | Spec | Estado |
 |---|---|---|---|---|---|
-| T1 | Volcar el doc de contexto de la idea en `docs/` y rellenar la sección "Escenario" del README | equipo | - | - | todo |
+| T1 | Volcar el doc de contexto de la idea en `docs/` y rellenar la sección "Escenario" del README | equipo | - | [`escenario/escenario.md`](escenario/escenario.md) | doing |
 | T2 | Decidir stack y rellenar `backend/AGENTS.md`, `frontend/AGENTS.md` y el Makefile | | | - | todo |
 | T3 | Primera versión de `docs/api-contract.md` | | | - | todo |

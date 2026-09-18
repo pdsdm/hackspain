@@ -14,7 +14,7 @@
 ## Proyecto
 
 Hackathon ETSIT-UPM 2026: 36 horas, 5 personas. Track: **HappyRobot, "¿Puede la IA gestionar una crisis?"** (enunciado y criterios en `README.md`).
-Idea: gestión de eventos con un caso de crisis en directo. Llamadas, SMS y email van por la plataforma HappyRobot.
+Idea: crisis de hospitalidad el domingo de Gran Premio en MADRING (detalle en `escenario/escenario.md`). Llamadas, SMS y email van por la plataforma HappyRobot.
 Objetivo: demo funcional en `main` antes del domingo a las 11:00.
 Prioridad: que funcione > que se entienda en la demo > que el código sea elegante.
 

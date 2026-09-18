@@ -19,5 +19,11 @@
 
 ### D3: track HappyRobot con gestión de eventos y un caso de crisis
 
-- **Por qué:** es un cliente de empresa creíble (operadores tipo Fever) en el que pasa algo cada noche. Las llamadas a artistas, salas y asistentes son interacciones reales, negociar por voz es el terreno de HappyRobot y ningún otro equipo va a hacer ocio en directo. La emergencia de la ciudad (tormenta, apagón) es el detonante, no el producto.
-- **Descartado:** gestión de emergencias de la ciudad (idea obvia, comprador público y llamadas simuladas), Enchufados, Groundhold, y la gestión de la producción completa del evento (sin crisis no cumple el reto).
+- **Por qué:** cliente de empresa creíble, crisis en directo, llamadas reales. Sustituida por D4.
+- **Descartado:** gestión de emergencias de la ciudad, Enchufados, Groundhold, y la producción completa del evento sin crisis.
+
+### D4: escenario MADRING (sustituye a D3)
+
+- **Qué:** el producto es un centro de operaciones agéntico para un bloque de hospitalidad el domingo de Gran Premio en MADRING. El incidente es el cierre del Pabellón Principal (600 invitados, 45 min a la apertura). Nexo Events es ficticia; el recinto y la separación Norte/Sur son del circuito real.
+- **Por qué:** se entiende en segundos, la cuenta atrás es de carrera, y Norte/Sur sin conexión interior obliga a coordinar espacios, shuttles, catering y mensajes. Encaja con HappyRobot (llamadas y SMS a recinto, proveedores e invitados) y con el criterio de creatividad del jurado.
+- **Descartado:** gala corporativa genérica (D3), crisis de ciudad, dirigir la carrera o a seguridad/FIA, y operar el GP entero (fuera de alcance de la demo).
