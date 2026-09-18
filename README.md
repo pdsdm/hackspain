@@ -74,9 +74,82 @@ La demo cuenta tanto como el sistema. Hay que ensayar el pitch.
 
 ## Escenario
 
-Pendiente de elegir. Ideas del enunciado (lista abierta): incendio forestal, apagón general, conflicto armado, inundación u otro desastre natural, fallo de infraestructura crítica, accidente con muchos heridos, emergencia humanitaria, brote.
+**Elegido:** gestión de eventos para un operador de ocio en directo (tipo Fever), con un caso de crisis en directo: la ciudad entra en alerta y hay que salvar los eventos de esa noche. El contexto completo irá en `docs/` (tarea T1). Por qué esta idea y qué descartamos: [`docs/decisions.md`](docs/decisions.md) (D3).
 
 HappyRobot pone la plataforma de producción (voz, chat, email) y estará en el evento el fin de semana.
+
+---
+
+## Equipo: zhivel
+
+| Nombre | Rol / foco | GitHub |
+|---|---|---|
+| Zhi Chen Xiang | | |
+| Pepe Moyano Font | | [pdsdm](https://github.com/pdsdm) |
+| Carlos Mata Carrillo | | |
+| Buenaventura Porcel Esquivel | | [ventura14](https://github.com/ventura14) |
+| Álvaro Iglesias Reina | | |
+
+## Quickstart
+
+```bash
+git clone https://github.com/pdsdm/hackspain.git
+cd hackspain
+cp .env.example .env   # rellenar API keys
+./scripts/setup.sh     # instala dependencias según lo que haya en backend/ y frontend/
+make check             # verifica lint + tests + build
+```
+
+## Estructura del repo
+
+```
+.
+├── AGENTS.md             # reglas estables para agentes de IA (todo el repo, <150 líneas)
+├── CLAUDE.md             # solo importa AGENTS.md (Claude Code no lee AGENTS.md directamente)
+├── TASKS.md              # tablero: tarea | responsable | rama | spec | estado
+├── Makefile              # `make check` = verificación única antes de dar algo por hecho
+├── backend/AGENTS.md     # reglas y comandos solo del backend
+├── frontend/AGENTS.md    # reglas y comandos solo del frontend
+├── docs/
+│   ├── specs/            # una spec corta por feature (copiar _plantilla.md)
+│   ├── decisions.md      # decisiones tomadas y su porqué
+│   ├── api-contract.md   # contrato backend ↔ frontend (fuente de verdad)
+│   └── guia_hackathon.md # horarios, sitios, tracks
+├── .agents/skills/       # procedimientos repetibles para agentes (p. ej. cerrar-tarea)
+├── .claude/skills        # enlace simbólico a .agents/skills
+├── scripts/              # setup, seed data, utilidades
+└── .github/              # templates de issues y PRs
+```
+
+## Cómo trabajamos con agentes
+
+Cada uno puede usar el agente que quiera (Claude Code, Codex, Cursor…): todos leen las mismas reglas.
+La idea clave es **separar lo que no cambia de lo que cambia cada hora**:
+
+| Si quieres decirle al agente… | Va en… |
+|---|---|
+| Una regla que vale para todo el proyecto ("nunca hardcodees la URL del backend") | `AGENTS.md` (o el de `backend/` / `frontend/` si solo aplica ahí) |
+| Qué tiene que construir ahora y cuándo está terminado | `docs/specs/T<id>-<nombre>.md` |
+| Quién hace qué y en qué estado está | `TASKS.md` |
+| Algo que hemos decidido y por qué ("usamos FastAPI porque…") | `docs/decisions.md` |
+| Cómo se hablan backend y frontend | `docs/api-contract.md` |
+| Un procedimiento que se repite (cerrar tarea, preparar demo…) | `.agents/skills/<nombre>/SKILL.md` |
+
+- **`AGENTS.md` no es un diario.** Solo se añade una regla cuando el agente comete el mismo error dos veces, y va a "Lecciones aprendidas".
+- **Arranca cada tarea con su spec:** "implementa `docs/specs/T4-subida-pdf.md`".
+- **Termina con `make check`** o con la skill `cerrar-tarea`.
+
+Ramas, worktrees y PRs: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Checklist de entrega (domingo 11:00)
+
+- [ ] Código final en `main`
+- [ ] README con problema, solución y cómo correr la demo
+- [ ] Demo grabada en vídeo como backup
+- [ ] Pitch ensayado (la demo cuenta tanto como el sistema)
+- [ ] `.env.example` actualizado (nunca subir `.env` ni API keys)
+
+⚠️ **Lo que no esté subido a las 11:00 del domingo no se evalúa.**
 
 ---
 

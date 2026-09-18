@@ -6,6 +6,9 @@
 *.key
 credentials.json
 secrets.json
+secrets/
+*.sqlite3
+*.tsbuildinfo
 
 # Dependencies
 node_modules/
