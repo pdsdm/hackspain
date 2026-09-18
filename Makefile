@@ -15,7 +15,7 @@ backend-check:
 		{ python3 -m pytest -q || [ $$? -eq 5 ]; }; \
 	elif [ -f backend/package.json ]; then \
 		echo "→ backend (Node)"; \
-		cd backend && npm run lint --if-present && npm test --if-present && npm run build --if-present; \
+		cd backend && npm run lint && npm test && npm run build; \
 	else \
 		echo "→ backend vacío, nada que comprobar"; \
 	fi
@@ -23,7 +23,7 @@ backend-check:
 frontend-check:
 	@if [ -f frontend/package.json ]; then \
 		echo "→ frontend"; \
-		cd frontend && npm run lint --if-present && npm run build --if-present; \
+		cd frontend && npm run lint && npm run build; \
 	else \
 		echo "→ frontend vacío, nada que comprobar"; \
 	fi
