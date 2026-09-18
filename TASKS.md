@@ -11,7 +11,7 @@
 | ID | Tarea | Responsable | Rama | Spec | Estado |
 |---|---|---|---|---|---|
 | T1 | Revisar contexto MADRING ya incorporado y coherencia con D4 | equipo | - | [`escenario/escenario.md`](escenario/escenario.md) | review |
-| T2 | Cerrar stack, scaffold, comandos y checks | Zhi | `feat/zhi-stack` | [T2](docs/specs/T2-stack.md) | todo |
+| T2 | Cerrar stack, scaffold, comandos y checks | Zhi | `feat/zhi-backend-foundation` (PR #4, mergeada) | [T2](docs/specs/T2-backend-foundation.md) | done |
 | T3 | Cerrar contrato backend, frontend y workflows | Pep | `feat/pep-contrato` | [T3](docs/specs/T3-contrato.md) | todo |
 | T4 | Planificar responsabilidades, hitos y exclusión local del manual | Carlos / Codex | `feat/carlos-planificacion` | [T4](docs/specs/T4-planificacion.md) | done |
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` | [T5](docs/specs/T5-seed.md) | todo |
