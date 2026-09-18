@@ -10,8 +10,10 @@
     "dev": "node --env-file-if-exists=../.env --watch --import tsx src/server.ts",
     "start": "node --env-file-if-exists=../.env dist/server.js",
     "build": "tsc -p tsconfig.json",
-    "lint": "oxlint src test",
-    "test": "node --import tsx --test \"test/**/*.test.ts\""
+    "lint": "cd .. && backend/node_modules/.bin/oxlint backend/src backend/test backend/fixtures scripts/generate-fixtures.mts",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "fixtures:generate": "node --import tsx ../scripts/generate-fixtures.mts",
+    "fixtures:check": "tsc -p tsconfig.fixtures.json && node --import tsx ../scripts/generate-fixtures.mts --check"
   },
   "dependencies": {
     "express": "^5.1.0"

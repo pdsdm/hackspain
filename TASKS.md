@@ -14,7 +14,7 @@
 | T2 | Cerrar stack, scaffold, comandos y checks | Zhi | `feat/zhi-backend-foundation` (PR #4, mergeada) | [T2](docs/specs/T2-backend-foundation.md) | done |
 | T3 | Cerrar contrato backend, frontend y workflows | Pep | `feat/pep-contrato` | [T3](docs/specs/T3-contrato.md) | todo |
 | T4 | Planificar responsabilidades, hitos y exclusión local del manual | Carlos / Codex | `feat/carlos-planificacion` | [T4](docs/specs/T4-planificacion.md) | done |
-| T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` | [T5](docs/specs/T5-seed.md) | todo |
+| T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` | [T5](docs/specs/T5-seed.md) | review |
 | T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `feat/alvaro-prueba-voz` | [T6](docs/specs/T6-prueba-voz.md) | todo |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/zhi-estado` | [T7](docs/specs/T7-estado.md) | todo |
 | T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` | [T8](docs/specs/T8-dashboard.md) | todo |

@@ -82,7 +82,7 @@ export function createInitialState(): CrisisState {
     calls: [],
     events: [
       { id: 'e0', time: T0, kind: 'incidencia', text: 'Recinto confirma cierre del Pabellón Principal (avería de agua)', area: 'espacios' },
-      { id: 'e1', time: T0 + 10, kind: 'accion', text: 'Coordinador abre la crisis: 4 compromisos invalidados, 3 áreas afectadas' },
+      { id: 'e1', time: T0, kind: 'accion', text: 'Coordinador abre la crisis: 3 compromisos invalidados; llegada de shuttles en consulta' },
     ],
     budget: { contingency: 5000, autonomousLimit: 1500, authorized: 1500, forecast: 0, committed: 0 },
     constraints: ['Norte y Sur sin conexión interior', 'Gasto autónomo ≤ 1.500 €'],
