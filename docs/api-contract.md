@@ -8,7 +8,7 @@
 
 # Contrato de API
 
-Base URL local: `http://localhost:8000` (variable `NEXT_PUBLIC_API_URL` en el frontend)
+Base URL local: `http://localhost:8000` (variable `VITE_API_URL` en el frontend, ver D6)
 
 Errores: todas las respuestas de error usan el formato `{ "error": "mensaje legible" }` con el código HTTP adecuado.
 

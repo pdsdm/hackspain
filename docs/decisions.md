@@ -43,3 +43,4 @@
 
 - **Qué:** Node.js 22 + TypeScript + Express 5 en `backend/`; persistencia local con `node:sqlite` para evitar un driver nativo adicional.
 - **Por qué:** comparte lenguaje con el frontend y el SDK de HappyRobot, arranca rápido y mantiene el estado en una sola instancia. Descartados FastAPI y dos backends paralelos.
+- **Nota:** `node:sqlite` es experimental en Node 22 y avisa con `ExperimentalWarning` al arrancar; se acepta. Requiere Node ≥ 22.13 (también en el entorno de demo). No sustituir por `better-sqlite3` u otro driver nativo.
