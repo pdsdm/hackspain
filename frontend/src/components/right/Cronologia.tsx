@@ -13,7 +13,7 @@ export function Cronologia({ s }: { s: CrisisState }) {
   }, [n])
   const items = s.events.slice(-40)
   return (
-    <Panel title="Cronología de la operación" right={<span className="text-[11px] text-muted num">{n} eventos</span>} className="flex-1" bodyClass="overflow-hidden p-0">
+    <Panel title="Cronología de la operación" right={<span className="text-[11px] text-muted num">{n} eventos</span>} className="flex-1 min-h-[240px]" bodyClass="overflow-hidden p-0 flex-1">
       <ul ref={ref} className="h-full overflow-y-auto px-3 py-2">
         {items.map((e, i) => {
           const latest = i === items.length - 1

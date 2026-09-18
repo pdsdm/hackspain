@@ -31,7 +31,7 @@ function pendingDecision(s: CrisisState) {
 export function goToNorte(s: CrisisState, why: string) {
   const pend = pendingDecision(s)
   if (pend) { pend.status = 'rechazada'; s.waitingForDecision = null }
-  const inv = ['c-pabB', 'c-lounge', 'c-muelle', 'c-entrega1', 'c-entrega2', 'c-shuttles']
+  const inv = ['c-pabB', 'c-lounge', 'c-muelle', 'c-entrega1', 'c-entrega2', 'c-shuttles', 'c-norte150', 'c-50']
   let n = 0
   for (const id of inv) if (invalidate(s, id, why)) n++
   setSpace(s, 'pabellonB', 'descartado', 'Descartado: no se divide la hospitalidad')
@@ -40,6 +40,8 @@ export function goToNorte(s: CrisisState, why: string) {
   setSpace(s, 'norteC', 'propuesto', 'Única opción para 600 juntos · apertura 13:45')
   for (const g of s.guestGroups) { g.confirmedCount = 0; g.assignedSpaceId = 'norteC'; g.acceptedCount = 0 }
   for (const sh of s.shuttles) { sh.accepted = false }
+  for (const d of s.deliveries) if (d.status !== 'entregada') { d.status = 'programada'; d.note = 'Destino Sur invalidado · pendiente Norte' }
+  for (const a of s.agents) a.lastResult = undefined
   if (s.budget.committed > 0) pushEvent(s, 'fallo', `Se liberan reservas en Sur. Coste ya comprometido: ${s.budget.committed.toLocaleString('es-ES')} € (posible penalización)`)
   s.budget.forecast = 2800
   upsertCommitment(s, { id: 'c-norteC', title: 'Reubicar 600 invitados en Pabellón Norte C', area: 'espacios', status: 'propuesto', counterpart: 'Recinto', conditions: ['Disponibilidad 13:45', 'Traslado exterior Sur→Norte', 'Aceptar retraso de apertura'] })
@@ -101,7 +103,7 @@ export function applyTwist(s: CrisisState, t: TwistId) {
       pushEvent(s, 'fallo', `Faltan 150 plazas en Sur${had ? ' · compromiso invalidado' : ''}. Se explora Norte C con traslado`)
       setSpace(s, 'norteC', 'propuesto', 'Alternativa para 150 con traslado · 13:45')
       upsertCommitment(s, { id: 'c-norte150', title: 'Traslado de 150 invitados a Norte C (13:45)', area: 'espacios', status: 'propuesto', counterpart: 'Recinto + Transporte', conditions: ['Lanzadera Sur→Norte', 'Aceptar retraso 13:45'] })
-      setAgent(s, 'espacios', { status: 'incidencia', objective: 'Cubrir 150 plazas: Norte C con traslado o espera en Sur' })
+      setAgent(s, 'espacios', { status: 'incidencia', objective: 'Cubrir 150 plazas: Norte C con traslado o espera en Sur', lastResult: 'Lounge Sur retirado por el recinto' })
       setAgent(s, 'asistentes', { status: 'activo', objective: 'Avisar a 150 invitados: instrucción pendiente, esperar en Sur' })
       startCall(s, 'espacios', 'Responsable de recinto · MADRING', [
         ['agente', 'Nos comunican que el Lounge Sur ya no está disponible. ¿Podéis confirmar Norte C para 150 personas a las 13:45 y una lanzadera desde Sur?'],
@@ -123,7 +125,7 @@ export function applyTwist(s: CrisisState, t: TwistId) {
       }
       pushEvent(s, 'incidencia', 'Recinto valida Pabellón B con 400 plazas (no 450)', 'espacios')
       pushEvent(s, 'fallo', 'B + Lounge Sur cubren 550/600. Faltan 50 plazas: el coordinador no declara cobertura completa')
-      setAgent(s, 'espacios', { status: 'incidencia', objective: 'Cubrir 50 plazas: ampliar espera Sur o Norte C' })
+      setAgent(s, 'espacios', { status: 'incidencia', objective: 'Cubrir 50 plazas: ampliar espera Sur o Norte C', lastResult: 'Pabellón B validado con 400' })
       upsertCommitment(s, { id: 'c-50', title: 'Ubicar 50 invitados sin plaza', area: 'espacios', status: 'propuesto', counterpart: 'Recinto', conditions: ['Espacio adicional en Sur o traslado a Norte'] })
       replan(s)
       break

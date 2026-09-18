@@ -23,7 +23,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#22d3ee', weight: 1.5, fillColor: '#22d3ee', fillOpacity: 0.06, dashArray: '4 4' }} />
         <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#a78bfa', weight: 1.5, fillColor: '#a78bfa', fillOpacity: 0.06, dashArray: '4 4' }} />
         <Marker position={[40.4602, -3.6190]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} />
-        <Marker position={[40.4838, -3.6145]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
+        <Marker position={[40.4826, -3.6145]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
         <Polyline positions={[[40.4715, -3.6190], [40.4720, -3.6150]]} pathOptions={{ color: '#ef4444', weight: 3, dashArray: '6 6' }}>
           <Tooltip permanent direction="right" offset={[6, 0]}>Sin conexión interior Norte ↔ Sur</Tooltip>
         </Polyline>
