@@ -1,0 +1,236 @@
+// Comprueba que la salida del coordinador cumple los criterios de T10 antes de ejecutarla.
+// No sustituye a la validación de aforo y presupuesto del backend (T7): esto solo descarta
+// una respuesta del modelo mal formada o incoherente con el estado que recibió.
+
+import type {
+  Area,
+  CommitmentStatus,
+  CoordinatorInput,
+  CoordinatorOutput,
+  CoordinatorStatus,
+} from "./types.js";
+
+export interface ValidationIssue {
+  code: string;
+  detail: string;
+}
+
+const AREAS: readonly Area[] = ["espacios", "catering", "transporte", "asistentes"];
+const CHANNELS = ["llamada", "sms", "email"] as const;
+const STATUSES: readonly CommitmentStatus[] = [
+  "propuesto",
+  "en_consulta",
+  "aceptado_condiciones",
+  "confirmado",
+  "en_ejecucion",
+  "completado",
+  "invalidado",
+];
+const COORDINATOR_STATUSES: readonly CoordinatorStatus[] = [
+  "estable",
+  "replanificando",
+  "esperando_decision",
+  "pausado",
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function checkShape(value: unknown): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const add = (detail: string) => issues.push({ code: "forma", detail });
+
+  if (!isRecord(value)) {
+    add("la salida no es un objeto JSON");
+    return issues;
+  }
+
+  if (typeof value.reading !== "string" || value.reading.trim() === "") add("reading vacío");
+  if (typeof value.planVersion !== "number") add("planVersion no es un número");
+  if (!COORDINATOR_STATUSES.includes(value.coordinatorStatus as CoordinatorStatus)) {
+    add(`coordinatorStatus desconocido: ${String(value.coordinatorStatus)}`);
+  }
+  if (!isStringArray(value.unverified)) add("unverified no es una lista de textos");
+
+  if (!Array.isArray(value.actions)) {
+    add("actions no es una lista");
+  } else {
+    for (const [index, raw] of value.actions.entries()) {
+      if (!isRecord(raw)) {
+        add(`actions[${index}] no es un objeto`);
+        continue;
+      }
+      if (typeof raw.id !== "string" || raw.id === "") add(`actions[${index}].id vacío`);
+      if (!AREAS.includes(raw.area as Area)) add(`actions[${index}].area desconocida`);
+      if (!CHANNELS.includes(raw.channel as (typeof CHANNELS)[number])) {
+        add(`actions[${index}].channel desconocido`);
+      }
+      if (typeof raw.counterpart !== "string" || raw.counterpart === "") {
+        add(`actions[${index}].counterpart vacío`);
+      }
+      if (typeof raw.objective !== "string" || raw.objective === "") {
+        add(`actions[${index}].objective vacío`);
+      }
+      if (typeof raw.dueAt !== "number") add(`actions[${index}].dueAt no es un número`);
+      if (!isStringArray(raw.dependsOn)) add(`actions[${index}].dependsOn no es una lista`);
+      if (typeof raw.reason !== "string") add(`actions[${index}].reason no es un texto`);
+    }
+  }
+
+  if (!Array.isArray(value.commitments)) {
+    add("commitments no es una lista");
+  } else {
+    for (const [index, raw] of value.commitments.entries()) {
+      if (!isRecord(raw)) {
+        add(`commitments[${index}] no es un objeto`);
+        continue;
+      }
+      if (!STATUSES.includes(raw.status as CommitmentStatus)) {
+        add(`commitments[${index}].status desconocido`);
+      }
+      if (!isStringArray(raw.conditions)) add(`commitments[${index}].conditions no es una lista`);
+    }
+  }
+
+  if (!Array.isArray(value.assignments)) {
+    add("assignments no es una lista");
+  } else {
+    for (const [index, raw] of value.assignments.entries()) {
+      if (!isRecord(raw)) {
+        add(`assignments[${index}] no es un objeto`);
+        continue;
+      }
+      if (typeof raw.groupId !== "string") add(`assignments[${index}].groupId no es un texto`);
+      if (typeof raw.spaceId !== "string") add(`assignments[${index}].spaceId no es un texto`);
+      if (typeof raw.count !== "number" || raw.count <= 0) {
+        add(`assignments[${index}].count debe ser un número positivo`);
+      }
+    }
+  }
+
+  if (value.decision !== null) {
+    if (!isRecord(value.decision)) {
+      add("decision debe ser un objeto o null");
+    } else {
+      for (const field of ["title", "summary", "effectApprove", "effectReject", "rationale"]) {
+        if (typeof value.decision[field] !== "string" || value.decision[field] === "") {
+          add(`decision.${field} vacío`);
+        }
+      }
+      if (typeof value.decision.cost !== "number") add("decision.cost no es un número");
+      if (!isStringArray(value.decision.conditions)) add("decision.conditions no es una lista");
+    }
+  }
+
+  return issues;
+}
+
+function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const add = (code: string, detail: string) => issues.push({ code, detail });
+
+  if (output.planVersion < input.planVersion) {
+    add("version_plan_retrocede", `${output.planVersion} < ${input.planVersion}`);
+  }
+
+  const actionIds = new Set(output.actions.map((action) => action.id));
+  for (const action of output.actions) {
+    if (action.reason.trim() === "") add("razon_vacia", `acción ${action.id} sin reason`);
+    if (action.dueAt <= input.clock.simSeconds) {
+      add("plazo_pasado", `acción ${action.id} vence en ${action.dueAt}`);
+    }
+    for (const dependency of action.dependsOn) {
+      if (!actionIds.has(dependency)) {
+        add("dependencia_inexistente", `acción ${action.id} depende de ${dependency}`);
+      }
+    }
+  }
+
+  for (const commitment of output.commitments) {
+    if (commitment.status === "confirmado" && commitment.conditions.length > 0) {
+      add("confirmado_con_condiciones", `compromiso ${commitment.id}`);
+    }
+  }
+
+  const spaces = new Map(input.spaces.map((space) => [space.id, space]));
+  const groups = new Map(input.guestGroups.map((group) => [group.id, group]));
+  const perSpace = new Map<string, number>();
+  const perGroup = new Map<string, number>();
+
+  for (const assignment of output.assignments) {
+    const space = spaces.get(assignment.spaceId);
+    const group = groups.get(assignment.groupId);
+    if (space === undefined) {
+      add("espacio_inexistente", assignment.spaceId);
+      continue;
+    }
+    if (group === undefined) {
+      add("grupo_inexistente", assignment.groupId);
+      continue;
+    }
+    perSpace.set(assignment.spaceId, (perSpace.get(assignment.spaceId) ?? 0) + assignment.count);
+    perGroup.set(assignment.groupId, (perGroup.get(assignment.groupId) ?? 0) + assignment.count);
+  }
+
+  for (const [spaceId, assigned] of perSpace) {
+    const capacity = spaces.get(spaceId)?.capacity;
+    if (capacity !== undefined && assigned > capacity) {
+      add("aforo_superado", `${spaceId}: ${assigned} > ${capacity}`);
+    }
+  }
+
+  for (const [groupId, assigned] of perGroup) {
+    const count = groups.get(groupId)?.count ?? 0;
+    if (assigned > count) {
+      add("grupo_sobreasignado", `${groupId}: ${assigned} > ${count}`);
+    }
+  }
+
+  if (output.decision === null) {
+    if (input.budget.forecast > input.budget.authorized) {
+      add("falta_escalado", `previsto ${input.budget.forecast} > autorizado ${input.budget.authorized}`);
+    }
+    if (output.coordinatorStatus === "esperando_decision") {
+      add("estado_sin_escalado", "esperando_decision sin decision");
+    }
+  } else {
+    if (output.decision.cost <= input.budget.authorized) {
+      add("escalado_innecesario", `${output.decision.cost} cabe en ${input.budget.authorized}`);
+    }
+    if (output.coordinatorStatus !== "esperando_decision") {
+      add("estado_sin_esperar", `hay decision pero el estado es ${output.coordinatorStatus}`);
+    }
+  }
+
+  return issues;
+}
+
+export function validateOutput(
+  value: unknown,
+  input: CoordinatorInput,
+): { output: CoordinatorOutput | null; issues: ValidationIssue[] } {
+  const shapeIssues = checkShape(value);
+  if (shapeIssues.length > 0) {
+    return { output: null, issues: shapeIssues };
+  }
+
+  const output = value as CoordinatorOutput;
+  const issues = checkInvariants(output, input);
+  return { output: issues.length === 0 ? output : null, issues };
+}
+
+export function parseOutput(
+  text: string,
+  input: CoordinatorInput,
+): { output: CoordinatorOutput | null; issues: ValidationIssue[] } {
+  try {
+    return validateOutput(JSON.parse(text), input);
+  } catch {
+    return { output: null, issues: [{ code: "json_invalido", detail: "la respuesta no es JSON" }] };
+  }
+}
