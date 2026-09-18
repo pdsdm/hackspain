@@ -2,8 +2,8 @@ import type { AgentStatus, CommitmentStatus, CoordinatorStatus, EventKind, Space
 import type { Tone } from './Pill'
 
 export const COMMITMENT: Record<CommitmentStatus, { label: string; tone: Tone }> = {
-  propuesto: { label: 'Propuesto', tone: 'cyan' },
-  en_consulta: { label: 'En consulta', tone: 'cyan' },
+  propuesto: { label: 'Propuesto', tone: 'ink' },
+  en_consulta: { label: 'En consulta', tone: 'ink' },
   aceptado_condiciones: { label: 'Aceptado con condiciones', tone: 'amber' },
   confirmado: { label: 'Confirmado', tone: 'green' },
   en_ejecucion: { label: 'En ejecución', tone: 'green' },
@@ -12,8 +12,8 @@ export const COMMITMENT: Record<CommitmentStatus, { label: string; tone: Tone }>
 }
 
 export const AGENT: Record<AgentStatus, { label: string; tone: Tone }> = {
-  activo: { label: 'Activo', tone: 'cyan' },
-  llamada: { label: 'En llamada', tone: 'cyan' },
+  activo: { label: 'Activo', tone: 'ink' },
+  llamada: { label: 'En llamada', tone: 'ink' },
   esperando: { label: 'Esperando', tone: 'amber' },
   pausado: { label: 'Pausado', tone: 'muted' },
   incidencia: { label: 'Incidencia', tone: 'red' },
@@ -22,7 +22,7 @@ export const AGENT: Record<AgentStatus, { label: string; tone: Tone }> = {
 
 export const COORD: Record<CoordinatorStatus, { label: string; tone: Tone }> = {
   estable: { label: 'Estable', tone: 'green' },
-  replanificando: { label: 'Replanificando', tone: 'cyan' },
+  replanificando: { label: 'Replanificando', tone: 'ink' },
   esperando_decision: { label: 'Esperando decisión', tone: 'amber' },
   pausado: { label: 'Pausado', tone: 'muted' },
 }
@@ -30,7 +30,7 @@ export const COORD: Record<CoordinatorStatus, { label: string; tone: Tone }> = {
 export const SPACE: Record<SpaceStatus, { label: string; tone: Tone; cls: string }> = {
   cerrado: { label: 'Cerrado', tone: 'red', cls: 'closed' },
   operativo: { label: 'Operativo', tone: 'green', cls: 'ok' },
-  propuesto: { label: 'Propuesto', tone: 'cyan', cls: 'proposed' },
+  propuesto: { label: 'Propuesto', tone: 'ink', cls: 'proposed' },
   pendiente: { label: 'Pendiente', tone: 'amber', cls: 'pending' },
   confirmado: { label: 'Confirmado', tone: 'green', cls: 'ok' },
   descartado: { label: 'Descartado', tone: 'muted', cls: 'idle ghost' },
@@ -40,11 +40,11 @@ export const SPACE: Record<SpaceStatus, { label: string; tone: Tone; cls: string
 export const EVENT_DOT: Record<EventKind, string> = {
   incidencia: 'bg-red',
   fallo: 'bg-red',
-  accion: 'bg-cyan',
+  accion: 'bg-ink',
   info: 'bg-muted',
   acuerdo: 'bg-green',
   espera: 'bg-amber',
   decision: 'bg-amber',
   intervencion: 'bg-white',
-  mensaje: 'bg-cyan',
+  mensaje: 'bg-ink',
 }
