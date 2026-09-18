@@ -10,7 +10,27 @@
 
 | ID | Tarea | Responsable | Rama | Spec | Estado |
 |---|---|---|---|---|---|
-| T1 | Volcar el doc de contexto de la idea en `docs/` y rellenar la sección "Escenario" del README | equipo | - | [`escenario/escenario.md`](escenario/escenario.md) | doing |
-| T2 | Decidir stack y rellenar `backend/AGENTS.md`, `frontend/AGENTS.md` y el Makefile | | | - | todo |
-| T3 | Primera versión de `docs/api-contract.md` | | | - | todo |
-| T4 | Panel de supervisión (frontend) con simulación en el navegador | Pepe | `feat/pepe-frontend-panel` | [`docs/specs/T4-frontend-panel.md`](docs/specs/T4-frontend-panel.md) | review |
+| T1 | Revisar contexto MADRING ya incorporado y coherencia con D4 | equipo | - | [`escenario/escenario.md`](escenario/escenario.md) | review |
+| T2 | Cerrar stack, scaffold, comandos y checks | Zhi | `feat/zhi-backend-foundation` (PR #4, mergeada) | [T2](docs/specs/T2-backend-foundation.md) | done |
+| T3 | Cerrar contrato backend, frontend y workflows | Pep | `feat/pep-contrato` | [T3](docs/specs/T3-contrato.md) | todo |
+| T4 | Planificar responsabilidades, hitos y exclusión local del manual | Carlos / Codex | `feat/carlos-planificacion` | [T4](docs/specs/T4-planificacion.md) | done |
+| T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` | [T5](docs/specs/T5-seed.md) | todo |
+| T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `feat/alvaro-prueba-voz` | [T6](docs/specs/T6-prueba-voz.md) | todo |
+| T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/zhi-estado` | [T7](docs/specs/T7-estado.md) | todo |
+| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` | [T8](docs/specs/T8-dashboard.md) | todo |
+| T9 | Adaptador HappyRobot y callbacks | Álvaro | `feat/alvaro-integracion` | [T9](docs/specs/T9-integracion.md) | todo |
+| T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` | [T10](docs/specs/T10-coordinador.md) | todo |
+| T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` | [T11](docs/specs/T11-espacios.md) | todo |
+| T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | todo |
+| T13 | Agente de Transporte | Álvaro | `feat/alvaro-transporte` | [T13](docs/specs/T13-transporte.md) | todo |
+| T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | todo |
+| T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | todo |
+| T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | todo |
+| T17 | Integración y pruebas críticas | Zhi | `feat/zhi-integracion-final` | [T17](docs/specs/T17-integracion-final.md) | todo |
+| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-entorno-demo` | [T18](docs/specs/T18-entorno-demo.md) | todo |
+| T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
+| T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
+| T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |
+| T22 | P2: transcripción en directo | Álvaro | `feat/alvaro-transcripcion` | [T22](docs/specs/T22-transcripcion.md) | todo |
+
+Plan, prioridades, estimaciones y dependencias: [`docs/plan-ejecucion.md`](docs/plan-ejecucion.md). T4 `done` significa documentación preparada y comprobada localmente, no mergeada ni implementada. T1 pasa a `review` porque el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.
