@@ -11,6 +11,6 @@
 | ID | Tarea | Responsable | Rama | Spec | Estado |
 |---|---|---|---|---|---|
 | T1 | Volcar el doc de contexto de la idea en `docs/` y rellenar la sección "Escenario" del README | equipo | - | [`escenario/escenario.md`](escenario/escenario.md) | doing |
-| T2 | Decidir stack y rellenar `backend/AGENTS.md`, `frontend/AGENTS.md` y el Makefile | | | - | todo |
+| T2 | Decidir stack y rellenar `backend/AGENTS.md`, `frontend/AGENTS.md` y el Makefile | Zhi | `feat/zhi-backend-foundation` | [`docs/specs/T2-backend-foundation.md`](docs/specs/T2-backend-foundation.md) | review |
 | T3 | Primera versión de `docs/api-contract.md` | | | - | todo |
 | T4 | Panel de supervisión (frontend) con simulación en el navegador | Pepe | `feat/pepe-frontend-panel` | [`docs/specs/T4-frontend-panel.md`](docs/specs/T4-frontend-panel.md) | review |
