@@ -12,7 +12,7 @@ function Tile({ icon: I, label, value, sub, bar, tone }: { icon: typeof Users; l
       <span className={`w-10 h-10 grid place-items-center rounded-md bg-panel-2 border border-line flex-none ${color}`}><I size={19} /></span>
       <div className="min-w-0 flex-1">
         <div className="text-[20px] font-bold leading-none num">{value}</div>
-        <div className="text-[11px] text-muted mt-1 truncate">{label}{sub ? <span className={`${color}`}> · {sub}</span> : null}</div>
+        <div className="text-[11px] text-muted mt-1 leading-tight">{label}{sub ? <span className={`${color}`}> · {sub}</span> : null}</div>
         {bar && <div className="mt-1.5"><StatBar value={bar[0]} max={bar[1]} tone={tone} /></div>}
       </div>
     </div>
@@ -31,11 +31,11 @@ export function EstadoGlobal({ s }: { s: CrisisState }) {
       </div>
       <div className="grid grid-cols-3 xl:grid-cols-6 gap-x-5 gap-y-4">
         <Tile icon={Users} label="ubicación confirmada" value={`${k.confirmed}/${k.total}`} sub={pendingSeats ? `${pendingSeats} sin plaza` : 'completo'} bar={[k.confirmed, k.total]} tone={pendingSeats ? (k.confirmed ? 'amber' : 'red') : 'green'} />
-        <Tile icon={MessageSquareCheck} label="informados (entrega verificada)" value={`${k.informed}/${k.total}`} sub={`${k.accepted} aceptan`} bar={[k.informed, k.total]} tone={k.informed >= k.total ? 'green' : 'cyan'} />
-        <Tile icon={UtensilsCrossed} label="servicios catering confirmados" value={`${k.cateringConfirmed}/${k.cateringTotal}`} bar={[k.cateringConfirmed, k.cateringTotal]} tone={k.cateringConfirmed >= k.cateringTotal ? 'green' : k.cateringConfirmed ? 'amber' : 'red'} />
-        <Tile icon={Bus} label="grupos con llegada coordinada" value={`${k.shuttlesOk}/${k.shuttlesTotal}`} bar={[k.shuttlesOk, k.shuttlesTotal]} tone={k.shuttlesOk >= k.shuttlesTotal ? 'green' : 'amber'} />
-        <Tile icon={Euro} label={`previsto · comprometido ${fmtEur(s.budget.committed)}`} value={fmtEur(s.budget.forecast)} sub={`autorizado ${fmtEur(s.budget.authorized)}`} bar={[s.budget.committed, s.budget.contingency]} tone={overBudget ? 'red' : 'cyan'} />
-        <Tile icon={ShieldAlert} label="condiciones críticas pendientes" value={String(k.critical.length + k.pendingDecisions)} sub={k.pendingDecisions ? `${k.pendingDecisions} decisión` : undefined} tone={k.critical.length + k.pendingDecisions === 0 ? 'green' : 'amber'} />
+        <Tile icon={MessageSquareCheck} label="informados (entrega verif.)" value={`${k.informed}/${k.total}`} sub={`${k.accepted} aceptan`} bar={[k.informed, k.total]} tone={k.informed >= k.total ? 'green' : 'cyan'} />
+        <Tile icon={UtensilsCrossed} label="catering confirmado" value={`${k.cateringConfirmed}/${k.cateringTotal}`} bar={[k.cateringConfirmed, k.cateringTotal]} tone={k.cateringConfirmed >= k.cateringTotal ? 'green' : k.cateringConfirmed ? 'amber' : 'red'} />
+        <Tile icon={Bus} label="grupos llegada coordinada" value={`${k.shuttlesOk}/${k.shuttlesTotal}`} bar={[k.shuttlesOk, k.shuttlesTotal]} tone={k.shuttlesOk >= k.shuttlesTotal ? 'green' : 'amber'} />
+        <Tile icon={Euro} label={`previsto · compr. ${fmtEur(s.budget.committed)}`} value={fmtEur(s.budget.forecast)} sub={`autorizado ${fmtEur(s.budget.authorized)}`} bar={[s.budget.committed, s.budget.contingency]} tone={overBudget ? 'red' : 'cyan'} />
+        <Tile icon={ShieldAlert} label="condiciones críticas" value={String(k.critical.length + k.pendingDecisions)} sub={k.pendingDecisions ? `${k.pendingDecisions} decisión` : undefined} tone={k.critical.length + k.pendingDecisions === 0 ? 'green' : 'amber'} />
       </div>
     </section>
   )

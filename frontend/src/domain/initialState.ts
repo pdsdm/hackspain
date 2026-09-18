@@ -4,15 +4,15 @@ import { hm } from './time'
 export const T0 = hm(12, 15)
 
 export const POS = {
-  principal: [40.4655, -3.6205] as LatLng,
-  pabellonB: [40.4670, -3.6162] as LatLng,
-  loungeSur: [40.4638, -3.6182] as LatLng,
+  principal: [40.4652, -3.6212] as LatLng,
+  pabellonB: [40.4680, -3.6172] as LatLng,
+  loungeSur: [40.4628, -3.6178] as LatLng,
   norteC: [40.4778, -3.6118] as LatLng,
-  accesoSur: [40.4630, -3.6150] as LatLng,
+  accesoSur: [40.4618, -3.6140] as LatLng,
   accesoNorte: [40.4810, -3.6138] as LatLng,
-  muelleSur: [40.4646, -3.6224] as LatLng,
-  muelleEste: [40.4664, -3.6132] as LatLng,
-  esperaSur: [40.4641, -3.6158] as LatLng,
+  muelleSur: [40.4636, -3.6238] as LatLng,
+  muelleEste: [40.4672, -3.6118] as LatLng,
+  esperaSur: [40.4632, -3.6122] as LatLng,
   chamartin: [40.4728, -3.6826] as LatLng,
   castilla: [40.4666, -3.6892] as LatLng,
   t4: [40.4919, -3.5928] as LatLng,

@@ -8,8 +8,8 @@ import { pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong, progress } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'
 
-const TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
 export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect: (id: string) => void; selected: string | null }) {
   const [layers, setLayers] = useState<Layers>({ transporte: true, proveedores: true, accesos: true })
@@ -17,8 +17,8 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
 
   return (
     <div className="relative h-full w-full rounded-lg overflow-hidden border border-line">
-      <MapContainer center={[40.4712, -3.6265]} zoom={14} zoomControl={false} attributionControl className="h-full w-full">
-        <TileLayer url={TILES} attribution={ATTR} subdomains="abcd" maxZoom={19} />
+      <MapContainer center={[40.4712, -3.6215]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
+        <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#22d3ee', weight: 1.5, fillColor: '#22d3ee', fillOpacity: 0.06, dashArray: '4 4' }} />
         <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#a78bfa', weight: 1.5, fillColor: '#a78bfa', fillOpacity: 0.06, dashArray: '4 4' }} />

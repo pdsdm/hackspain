@@ -26,6 +26,8 @@ html, body, #root {
 * { scrollbar-width: thin; scrollbar-color: #24304d transparent; }
 
 .leaflet-container { background: #070c16; font-family: inherit; }
+.dark-tiles { filter: invert(1) hue-rotate(195deg) brightness(.62) contrast(1.15) saturate(.35); }
+.marker-pin.ring { outline: 2px solid #22d3ee; outline-offset: 1px; }
 .leaflet-control-attribution { background: rgba(11,18,32,.7) !important; color: #6b7a96 !important; font-size: 10px; }
 .leaflet-control-attribution a { color: #8b9bb8 !important; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111a2e; color: #e6edf7; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
