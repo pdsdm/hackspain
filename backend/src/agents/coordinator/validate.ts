@@ -173,6 +173,10 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
       add("grupo_inexistente", assignment.groupId);
       continue;
     }
+    if (space.status === "cerrado" || space.status === "descartado") {
+      add("espacio_no_utilizable", `${assignment.spaceId} está ${space.status}`);
+      continue;
+    }
     perSpace.set(assignment.spaceId, (perSpace.get(assignment.spaceId) ?? 0) + assignment.count);
     perGroup.set(assignment.groupId, (perGroup.get(assignment.groupId) ?? 0) + assignment.count);
   }

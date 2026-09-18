@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildUserPrompt } from "../src/agents/coordinator/prompt.js";
-import { hm, initialCrisisInput } from "../src/agents/coordinator/scenario.js";
+import { hm, crisisInput } from "../src/agents/coordinator/scenario.js";
 import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
 import { parseOutput, validateOutput } from "../src/agents/coordinator/validate.js";
 
@@ -66,7 +66,7 @@ function validPlan(): CoordinatorOutput {
 }
 
 test("el plan de referencia del escenario inicial pasa la validación", () => {
-  const { output, issues } = validateOutput(validPlan(), initialCrisisInput());
+  const { output, issues } = validateOutput(validPlan(), crisisInput());
 
   assert.deepEqual(issues, []);
   assert.equal(output?.assignments.length, 4);
@@ -76,7 +76,7 @@ test("rechaza superar el aforo de un espacio", () => {
   const plan = validPlan();
   plan.assignments = [{ groupId: "g-propios", spaceId: "loungeSur", count: 330 }];
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "aforo_superado");
 });
@@ -85,13 +85,13 @@ test("rechaza asignar más personas de las que tiene un grupo", () => {
   const plan = validPlan();
   plan.assignments = [{ groupId: "g-acceso", spaceId: "pabellonB", count: 200 }];
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "grupo_sobreasignado");
 });
 
 test("exige escalado cuando el coste previsto supera lo autorizado", () => {
-  const input = initialCrisisInput();
+  const input = crisisInput();
   input.budget.forecast = 3200;
   const plan = validPlan();
   plan.decision = null;
@@ -106,7 +106,7 @@ test("rechaza escalar un gasto que cabe en el límite autónomo", () => {
   const plan = validPlan();
   plan.decision = { ...validPlan().decision!, cost: 900 };
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "escalado_innecesario");
 });
@@ -115,7 +115,7 @@ test("exige un porqué en cada acción", () => {
   const plan = validPlan();
   plan.actions[0]!.reason = "   ";
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "razon_vacia");
 });
@@ -124,7 +124,7 @@ test("rechaza depender de una acción que no existe", () => {
   const plan = validPlan();
   plan.actions[1]!.dependsOn = ["a9"];
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "dependencia_inexistente");
 });
@@ -133,7 +133,7 @@ test("rechaza un plazo anterior a la hora actual", () => {
   const plan = validPlan();
   plan.actions[0]!.dueAt = hm(12, 10);
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "plazo_pasado");
 });
@@ -142,20 +142,46 @@ test("rechaza dar por confirmado un compromiso con condiciones abiertas", () => 
   const plan = validPlan();
   plan.commitments[0]!.status = "confirmado";
 
-  const { issues } = validateOutput(plan, initialCrisisInput());
+  const { issues } = validateOutput(plan, crisisInput());
 
   assert.equal(issues[0]?.code, "confirmado_con_condiciones");
 });
 
 test("rechaza una respuesta que no es JSON", () => {
-  const { output, issues } = parseOutput("Claro, aquí tienes el plan:", initialCrisisInput());
+  const { output, issues } = parseOutput("Claro, aquí tienes el plan:", crisisInput());
 
   assert.equal(output, null);
   assert.equal(issues[0]?.code, "json_invalido");
 });
 
+test("rechaza asignar personas a un espacio cerrado o descartado", () => {
+  const plan = validPlan();
+  plan.assignments = [{ groupId: "g-acceso", spaceId: "principal", count: 90 }];
+
+  const { issues } = validateOutput(plan, crisisInput());
+
+  assert.equal(issues[0]?.code, "espacio_no_utilizable");
+});
+
+test("carga los estados de demo de T5", () => {
+  const crisis = crisisInput();
+  const total = crisis.guestGroups.reduce((sum, group) => sum + group.count, 0);
+
+  assert.equal(total, 600);
+  assert.equal(crisis.spaces.find((space) => space.id === "pabellonB")?.capacity, 450);
+  assert.equal(crisis.budget.authorized, 1500);
+});
+
+test("los giros del jurado llegan como estados cargables", () => {
+  const sinLounge = crisisInput("lounge_unavailable");
+  const bReducido = crisisInput("pabellon_b_400");
+
+  assert.equal(sinLounge.spaces.find((space) => space.id === "loungeSur")?.status, "descartado");
+  assert.equal(bReducido.spaces.find((space) => space.id === "pabellonB")?.capacity, 400);
+});
+
 test("el prompt lleva las horas en segundos y las restricciones del escenario", () => {
-  const prompt = buildUserPrompt(initialCrisisInput());
+  const prompt = buildUserPrompt(crisisInput());
 
   assert.match(prompt, /12:15 \(44100\)/);
   assert.match(prompt, /Norte y Sur sin conexión interior/);

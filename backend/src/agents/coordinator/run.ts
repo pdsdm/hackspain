@@ -3,7 +3,7 @@
 
 import { complete, loadLlmConfig } from "./llm.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt.js";
-import { initialCrisisInput } from "./scenario.js";
+import { crisisInput } from "./scenario.js";
 import { parseOutput } from "./validate.js";
 
 function readRuns(argv: string[]): number {
@@ -15,7 +15,7 @@ function readRuns(argv: string[]): number {
 async function main(): Promise<void> {
   const runs = readRuns(process.argv.slice(2));
   const config = loadLlmConfig();
-  const input = initialCrisisInput();
+  const input = crisisInput();
   const userPrompt = buildUserPrompt(input);
 
   console.log(`Coordinador · ${config.provider} · ${config.model} · ${runs} ejecuciones\n`);
