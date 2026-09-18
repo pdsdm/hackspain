@@ -12,6 +12,7 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
   return (
     <header className="flex items-center gap-4 px-4 h-14 border-b border-line bg-panel/60">
       <div className="flex items-center gap-3">
+        <img src="/logo.svg" alt="" className="w-8 h-8 rounded" />
         <span className="text-2xl font-extrabold tracking-tight">MADRING</span>
         <span className="w-px h-6 bg-line" />
         <span className="text-[15px] text-text/90">Centro de operaciones · Hospitalidad domingo GP</span>
