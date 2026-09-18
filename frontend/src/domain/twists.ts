@@ -1,5 +1,5 @@
 import type { CrisisState, TwistId } from './types'
-import { groups, invalidate, openDecision, pushEvent, setAgent, setCommitment, setSpace, startCall, upsertCommitment } from './helpers'
+import { groups, invalidate, pushEvent, setAgent, setCommitment, setSpace, startCall, upsertCommitment } from './helpers'
 
 export interface TwistMeta {
   id: TwistId

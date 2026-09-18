@@ -2,16 +2,19 @@ import { useState } from 'react'
 import { X, Check, Ban, Split, Pause, Play, Lock, PhoneForwarded } from 'lucide-react'
 import type { CrisisState, Intervention } from '../../domain/types'
 
-export function IntervenirModal({ s, onClose, onIntervene }: { s: CrisisState; onClose: () => void; onIntervene: (i: Intervention) => void }) {
-  const [text, setText] = useState('')
-  const fire = (i: Intervention) => { onIntervene(i); onClose() }
-  const pend = s.decisions.find((d) => d.status === 'pendiente')
-  const Btn = ({ icon: I, label, sub, tone, onClick }: { icon: typeof X; label: string; sub: string; tone: string; onClick: () => void }) => (
+function Btn({ icon: I, label, sub, tone, onClick }: { icon: typeof X; label: string; sub: string; tone: string; onClick: () => void }) {
+  return (
     <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-md border border-line hover:bg-white/5 text-left ${tone}`}>
       <I size={18} className="flex-none" />
       <span><span className="block font-semibold text-text">{label}</span><span className="block text-[11px] text-muted">{sub}</span></span>
     </button>
   )
+}
+
+export function IntervenirModal({ s, onClose, onIntervene }: { s: CrisisState; onClose: () => void; onIntervene: (i: Intervention) => void }) {
+  const [text, setText] = useState('')
+  const fire = (i: Intervention) => { onIntervene(i); onClose() }
+  const pend = s.decisions.find((d) => d.status === 'pendiente')
   return (
     <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm grid place-items-center p-4" onClick={onClose}>
       <div className="w-full max-w-md bg-panel border border-line rounded-lg p-4 fade-in" onClick={(e) => e.stopPropagation()}>

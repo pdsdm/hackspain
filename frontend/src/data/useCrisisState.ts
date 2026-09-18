@@ -24,7 +24,7 @@ const TICK_MS = 250
 export function useCrisisState(): CrisisController {
   const [state, dispatch] = useReducer(reducer, undefined, createInitialState)
   const [error, setError] = useState<string | null>(null)
-  const last = useRef<number>(performance.now())
+  const last = useRef<number>(0)
 
   useEffect(() => {
     if (SOURCE !== 'sim') return
