@@ -140,6 +140,52 @@ test("demo director repeats API rehearsals from calm and validates observable ch
   assert.ok(logs.some((line) => line.includes("2/2 ensayos superados")));
 });
 
+test("demo director uses the environment-specific HappyRobot hook", async () => {
+  const originalArgv = process.argv;
+  const originalEnv = { ...process.env };
+  const posts: PostedEvent[] = [];
+  const urls: string[] = [];
+  const hookUrl = "https://workflows.platform.eu.happyrobot.ai/hooks/development/demo-inputs";
+  const fetchFn: typeof fetch = async (input, init) => {
+    const url = String(input);
+    urls.push(url);
+    if (url.endsWith("/simulation/reset")) {
+      posts.length = 0;
+      return response({ ok: true, runId: "run-hook", planVersion: 1 });
+    }
+    if (url.endsWith("/state")) return response(state(posts));
+    if (url.endsWith("/actions")) return response({ tasks: [] });
+    if (url === hookUrl) {
+      const payload = JSON.parse(String(init?.body)) as PostedEvent & { backend_base_url: string; sessionId: string };
+      assert.equal(payload.backend_base_url, "https://backend.example");
+      assert.equal(payload.sessionId, payload.evidence.sessionId);
+      posts.push(payload);
+      return response({ run_id: `hr-${posts.length}`, status: "workflow started" });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  try {
+    process.argv = ["node", "demo-video.mts", "--inputs=happyrobot", "--report=-"];
+    process.env = {
+      ...originalEnv,
+      DEMO_API_URL: "http://backend.test",
+      DEMO_VIDEO_TIMEOUT_MS: "10000",
+      HAPPYROBOT_DEMO_INPUT_HOOK_URL: hookUrl,
+      PUBLIC_BASE_URL: "https://backend.example",
+    };
+    await runVideoDirector(fetchFn);
+  } finally {
+    process.argv = originalArgv;
+    process.env = originalEnv;
+  }
+
+  assert.equal(posts.length, 2);
+  assert.deepEqual(posts.map((item) => item.channel), ["call", "sms"]);
+  assert.equal(urls.filter((url) => url === hookUrl).length, 2);
+  assert.equal(urls.some((url) => url.includes("/workflows/")), false);
+});
+
 test("demo director fails with an actionable specialist coherence diagnostic", async () => {
   await assert.rejects(
     withDirector(["--inputs=api", "--report=-"], "transporte"),

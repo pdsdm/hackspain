@@ -231,25 +231,18 @@ async function sendDirect(fetchFn: FetchFn, apiUrl: string, token: string, paylo
 
 async function sendHappyRobot(
   fetchFn: FetchFn,
-  config: { apiBase: string; apiKey: string; workflowId: string; environment: string; backendBaseUrl: string },
+  config: { hookUrl: string; backendBaseUrl: string },
   payload: DemoEvent,
 ) {
-  const result = await json<{ run_id?: string; status?: string }>(
-    fetchFn,
-    `${config.apiBase}/workflows/${encodeURIComponent(config.workflowId)}/runs`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-      body: JSON.stringify({
-        environment: config.environment,
-        payload: {
-          ...payload,
-          sessionId: payload.evidence.sessionId,
-          backend_base_url: config.backendBaseUrl,
-        },
-      }),
-    },
-  );
+  const result = await json<{ run_id?: string; status?: string }>(fetchFn, config.hookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...payload,
+      sessionId: payload.evidence.sessionId,
+      backend_base_url: config.backendBaseUrl,
+    }),
+  });
   if (!result.run_id) throw new Error(`HappyRobot no devolvió run_id (${result.status ?? "sin estado"})`);
   return { workflowRunId: result.run_id };
 }
@@ -269,10 +262,7 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
   if (!Number.isInteger(timeoutMs) || timeoutMs < 10_000) throw new Error("DEMO_VIDEO_TIMEOUT_MS debe ser un entero >= 10000");
   const token = mode === "api" ? required(process.env.HAPPYROBOT_WEBHOOK_TOKEN, "HAPPYROBOT_WEBHOOK_TOKEN") : "";
   const happyRobotConfig = mode === "happyrobot" ? {
-    apiBase: (process.env.HAPPYROBOT_DEMO_INPUT_API_BASE?.trim() || "https://platform.eu.happyrobot.ai/api/v2").replace(/\/+$/, ""),
-    apiKey: required(process.env.HAPPYROBOT_API_KEY, "HAPPYROBOT_API_KEY"),
-    workflowId: required(process.env.HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID, "HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID"),
-    environment: process.env.HAPPYROBOT_DEMO_INPUT_ENVIRONMENT?.trim() || "development",
+    hookUrl: required(process.env.HAPPYROBOT_DEMO_INPUT_HOOK_URL, "HAPPYROBOT_DEMO_INPUT_HOOK_URL"),
     backendBaseUrl: required(publicBaseUrl(), "PUBLIC_BASE_URL o .demo/public-url"),
   } : undefined;
   const readState = () => json<PublicState>(fetchFn, `${apiUrl}/state`);

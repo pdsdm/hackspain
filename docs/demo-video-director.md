@@ -15,7 +15,7 @@ Variables:
 ```dotenv
 HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID=
 HAPPYROBOT_DEMO_INPUT_ENVIRONMENT=development
-HAPPYROBOT_DEMO_INPUT_API_BASE=https://platform.eu.happyrobot.ai/api/v2
+HAPPYROBOT_DEMO_INPUT_HOOK_URL=https://workflows.platform.eu.happyrobot.ai/hooks/development/<slug>
 DEMO_API_URL=http://127.0.0.1:8000
 DEMO_VIDEO_TIMEOUT_MS=360000
 ```
@@ -40,13 +40,13 @@ Cada ensayo crea un run backend nuevo desde `calm`; no reutiliza el estado anter
 
 ## Ensayo HappyRobot
 
-Primero, un owner publica el workflow y guarda su identificador en `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID`. Con el backend público levantado por `./scripts/demo.sh up`, ejecutar:
+Primero, un owner publica el workflow y configura `HAPPYROBOT_DEMO_INPUT_HOOK_URL` con el hook del entorno: `/hooks/development/<slug>` para desarrollo o `/hooks/<slug>` para producción. Con el backend público levantado por `./scripts/demo.sh up`, ejecutar:
 
 ```bash
 npm --prefix backend run demo:video -- --inputs=happyrobot --rehearsals=3
 ```
 
-El alias `external` equivale a `happyrobot`. Este modo exige `HAPPYROBOT_API_KEY`, `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` y `PUBLIC_BASE_URL` o `.demo/public-url`; no imprime sus valores.
+El alias `external` equivale a `happyrobot`. Este modo exige `HAPPYROBOT_DEMO_INPUT_HOOK_URL` y `PUBLIC_BASE_URL` o `.demo/public-url`; no imprime sus valores. El hook directo es obligatorio en la cuenta EU porque `/api/v2/workflows/{id}/runs` devuelve `Workflow not found` para estos workflows v3.
 
 ## Evidencia y criterio de salida
 

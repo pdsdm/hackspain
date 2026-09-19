@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 22:50 CEST |
-| **Base** | `d704a3c` — PR #79, escenario y storyboard de vídeo |
+| **Foto tomada** | 20 de septiembre de 2026, 00:28 CEST |
+| **Base** | `85e7674` + rama T52 `feat/zhi-demo-recording-readiness` |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, durante T52 |
 
@@ -13,9 +13,9 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` sobre `d704a3c` + cambios T52 | **OK** |
-| Tests backend | 333: **326 pasan, 0 fallan, 7 live omitidos** |
-| Tests focalizados T46/T52 | 7: **7 pasan, 0 fallan** |
+| `make check` sobre `85e7674` + cambios T52 | **OK** |
+| Tests backend | 344: **337 pasan, 0 fallan, 7 live omitidos** |
+| Tests focalizados T46/T52 | 8: **8 pasan, 0 fallan** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 22.23.2; el repo exige ≥22.13 |
@@ -41,9 +41,9 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
 - **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
 - **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
-- **T52, rama actual:** el director admite `--rehearsals=N`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
+- **T52, rama actual:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
 
-Un ensayo API local real desde `calm` alcanzó M0, M2 y M3: Principal cerró, los dos inputs conservaron canal/actor/evidencia, Muelle Este cerró y CAT-01/CAT-02 quedaron bloqueadas. La puerta final falló honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`; no hubo run HappyRobot ni grabación.
+V4 de `Demo incident inputs` en development atravesó HappyRobot → hook → T46 para los dos inputs: runs `6f1b0605-d1dd-4f62-983d-ea34cf0ff1a6` y `37ebdc95-56cf-4385-89c2-b31387ba0df1`; Principal y Muelle Este cerraron y CAT-01/CAT-02 quedaron bloqueadas. El ensayo API local alcanzó M0, M2 y M3, pero la puerta final falla honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`. No hubo grabación.
 
 ## Qué falta, por riesgo para la demo
 
@@ -59,7 +59,7 @@ Un ensayo API local real desde `calm` alcanzó M0, M2 y M3: Principal cerró, lo
 
 | Qué | Depende de | Externo |
 |---|---|---|
-| Verificar producción T47/T52 | V4 segura publicada y hook de producción probado | Sí |
+| Verificar producción T47/T52 | HappyRobot bloquea publish: `phoneNumberService is not configured`; API key devuelve 404 al publicar | Sí |
 | Superar la puerta API T52 | `reason` y `lastResult` coherentes en los cuatro especialistas; cerrar Transporte T51 | No |
 | Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
 
@@ -76,7 +76,7 @@ Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists
 ## Decisiones pendientes
 
 1. Carlos/equipo aprueban los textos literales y la narración de T45.
-2. Qué owner de HappyRobot ejecuta el instalador T47.
+2. Quién del sponsor corrige el publish de producción bloqueado por `phoneNumberService`.
 3. Quién termina Transporte y verifica los cuatro shuttles.
 4. Qué ordenador graba la toma maestra y quién opera el frontend.
 5. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
