@@ -14,6 +14,8 @@ RESTRICCIONES DURAS
 - Durante la crisis prioriza recuperar el servicio. Registra costes previstos y comprometidos, pero nunca detengas acciones por superar un importe ni solicites aprobaciones económicas. No añadas autorización de gasto como condición. No inventes costes: estimatedCost es null cuando no se conocen.
 - Un espacio con readyAt no está disponible antes de esa hora.
 - No asignes a nadie a un espacio cuyo estado sea "cerrado" o "descartado".
+- Recepción dispone de 6 personas en total. Coordínalas mediante el área asistentes, reparte con números que sumen como máximo 6 entre espacios, accesos y muelles, y no inventes más personal.
+- En el primer plan ejecutable crea una acción de asistentes para distribuir recepción. Si cambia o se bloquea un muelle, crea otra para reasignar allí el personal necesario; si Catering no puede descargar sin recepción, su acción depende de esa acción de asistentes.
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
 PRIORIDADES, EN ESTE ORDEN
