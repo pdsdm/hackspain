@@ -18,6 +18,11 @@ export type FixtureName =
   | "pabellon_b_400";
 
 const STATES_DIRECTORY = resolve(dirname(fileURLToPath(import.meta.url)), "../../../fixtures/madring/states");
+const RECEPTION_STAFF_CONSTRAINT = "Recepción disponible: 6 personas";
+
+function coordinatorConstraints(values: string[]): string[] {
+  return values.includes(RECEPTION_STAFF_CONSTRAINT) ? values : [...values, RECEPTION_STAFF_CONSTRAINT];
+}
 
 interface RawState {
   clock: { simSeconds: number; openingAt: number; lunchAt: number; raceAt: number };
@@ -70,7 +75,7 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
       conditions: commitment.conditions,
     })),
     budget: state.budget,
-    constraints: state.constraints,
+    constraints: coordinatorConstraints(state.constraints),
   };
 }
 
@@ -117,9 +122,9 @@ export function liveCoordinatorInput(
       : [],
   }));
   const budget = state.budget as CoordinatorInput["budget"];
-  const constraints = Array.isArray(state.constraints)
+  const constraints = coordinatorConstraints(Array.isArray(state.constraints)
     ? state.constraints.filter((item): item is string => typeof item === "string")
-    : [];
+    : []);
   const shuttles = asRecords(state.shuttles).map((shuttle) => ({
     id: String(shuttle.id),
     passengers: Number(shuttle.passengers ?? 0),

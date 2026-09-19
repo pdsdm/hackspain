@@ -3,6 +3,7 @@ import { once } from "node:events";
 import test from "node:test";
 
 import { createApp } from "../src/app.js";
+import type { CompleteFn } from "../src/agents/coordinator/loop.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
 import { openDatabase } from "../src/state/database.js";
 import { StateRepository } from "../src/state/state-repository.js";
@@ -34,11 +35,15 @@ async function withServer(
     tasks: TaskRepository,
   ) => Promise<void>,
   workflowToken: string | undefined | null = TOKEN,
+  completeFn?: CompleteFn,
 ): Promise<void> {
   const database = openDatabase(":memory:");
   const states = new StateRepository(database.connection);
   const tasks = new TaskRepository(database.connection);
-  const server = createApp(database, { workflowToken: workflowToken ?? undefined }).listen(0, "127.0.0.1");
+  const server = createApp(database, {
+    workflowToken: workflowToken ?? undefined,
+    ...(completeFn ? { completeFn } : {}),
+  }).listen(0, "127.0.0.1");
   try {
     await once(server, "listening");
     const address = server.address();
@@ -272,7 +277,8 @@ test("specialist results apply once and stale callbacks remain evidence", async 
     secondResult.eventId = "specialist-event-2";
     response = await post(base, "/workflow/results", secondResult, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
-    assert.equal(states.getPublicState().coordinatorStatus, "estable");
+    assert.equal(states.getPublicState().coordinatorStatus, "atascado");
+    assert.equal(states.getPublicState().resolved, false);
 
     response = await post(base, "/workflow/results", result, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: true });
@@ -288,9 +294,89 @@ test("specialist results apply once and stale callbacks remain evidence", async 
     states.reset();
     const stale = specialistBody(secondTask.taskId, oldRunId, proposal.planVersion);
     stale.eventId = "specialist-event-stale";
+    stale.result.data = { spaces: [{ id: "pabellonB", capacity: 1 }] };
     response = await post(base, "/workflow/results", stale, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
+    assert.equal(states.ensureActiveRun().state.spaces.find((space) => space.id === "pabellonB")?.capacity, 450);
   });
+});
+
+test("rejected and no-answer results never apply claimed space facts", async () => {
+  for (const resultCase of [
+    { status: "completed" as const, outcome: "rejected" as const },
+    { status: "no_answer" as const, outcome: "no_answer" as const },
+  ]) {
+    await withServer(async (base, states) => {
+      const run = states.ensureActiveRun();
+      const proposalResponse = await post(base, "/workflow/coordinator/proposals", coordinatorBody(run.id, run.state.planVersion), TOKEN);
+      const proposal = (await proposalResponse.json()) as { planVersion: number; tasks: Array<{ taskId: string }> };
+      const result = specialistBody(proposal.tasks[0]!.taskId, run.id, proposal.planVersion);
+      result.eventId = `result-${resultCase.outcome}`;
+      result.status = resultCase.status;
+      result.result.outcome = resultCase.outcome;
+      result.result.conditions = [];
+      result.result.data = { spaces: [{ id: "pabellonB", capacity: 1, readyAt: "23:59" }] };
+      const response = await post(base, "/workflow/results", result, TOKEN);
+      assert.equal(response.status, 200);
+      const space = states.ensureActiveRun().state.spaces.find((item) => item.id === "pabellonB");
+      assert.equal(space?.capacity, 450);
+      assert.equal(space?.readyAt, undefined);
+    });
+  }
+});
+
+test("a material accepted result reaches the coordinator after the new facts are persisted once", async () => {
+  let statesRef: StateRepository | undefined;
+  let calls = 0;
+  let observedCapacity = 0;
+  let observedConditions: unknown[] = [];
+  let release: () => void = () => {};
+  const observed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const completeFn: CompleteFn = async () => {
+    calls += 1;
+    const state = statesRef!.ensureActiveRun().state;
+    observedCapacity = Number(state.spaces.find((space) => space.id === "pabellonB")?.capacity ?? 0);
+    observedConditions = state.commitments.find((commitment) => commitment.id === "c-pabB")?.conditions as unknown[];
+    release();
+    return JSON.stringify({
+      reading: "Hechos de Espacios incorporados",
+      planVersion: state.planVersion,
+      coordinatorStatus: "replanificando",
+      actions: [],
+      commitments: [],
+      assignments: [],
+      decision: null,
+      unverified: [],
+      operations: [],
+      queries: [],
+      done: true,
+    });
+  };
+  await withServer(async (base, states) => {
+    statesRef = states;
+    const run = states.ensureActiveRun();
+    const body = coordinatorBody(run.id, run.state.planVersion);
+    body.actions = body.actions.slice(0, 1);
+    const proposalResponse = await post(base, "/workflow/coordinator/proposals", body, TOKEN);
+    const proposal = (await proposalResponse.json()) as { planVersion: number; tasks: Array<{ taskId: string }> };
+    const result = specialistBody(proposal.tasks[0]!.taskId, run.id, proposal.planVersion);
+    result.result.summary = "Pabellón B limitado a 400 plazas y listo a las 13:15";
+    result.result.conditions = ["Montaje no termina hasta las 13:15"];
+    result.result.data = { spaces: [{ id: "pabellonB", capacity: 400, readyAt: "13:15" }] };
+    let response = await post(base, "/workflow/results", result, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
+    await Promise.race([observed, new Promise((_, reject) => setTimeout(() => reject(new Error("coordinator not called")), 1_000))]);
+    assert.equal(calls, 1);
+    assert.equal(observedCapacity, 400);
+    assert.deepEqual(observedConditions, ["Confirmar reserva", "Montaje no termina hasta las 13:15"]);
+
+    response = await post(base, "/workflow/results", result, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: true });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(calls, 1);
+  }, TOKEN, completeFn);
 });
 
 test("an accepted result does not mark the coordinator stable while another cycle is running", () => {

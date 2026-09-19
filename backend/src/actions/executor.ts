@@ -201,7 +201,10 @@ export class ActionExecutor {
       void this.engine?.handle({
         source: "happyrobot",
         kind: "call_result",
-        payload: envelope as unknown as Record<string, unknown>,
+        payload: {
+          ...(envelope as unknown as Record<string, unknown>),
+          ...(recorded.materialChange ? { materialChange: true, materialSummary: recorded.materialSummary } : {}),
+        },
       });
     }
   }

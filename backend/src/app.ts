@@ -20,6 +20,7 @@ import {
   ContractError,
   parseCoordinatorProposal,
   parseEvent,
+  parseHappyRobotIncident,
   parseIntervention,
   parseLive,
   parseReset,
@@ -34,6 +35,7 @@ import { verifyCallAcceptance, type CallAcceptanceVerification } from "./domain/
 import { WorkflowService } from "./domain/workflow-service.js";
 import type { CrisisDatabase } from "./state/database.js";
 import { EventRepository } from "./state/event-repository.js";
+import { HappyRobotEventRepository } from "./state/happyrobot-event-repository.js";
 import { StateRepository } from "./state/state-repository.js";
 import { TaskRepository } from "./state/task-repository.js";
 import { WorkflowEventRepository } from "./state/workflow-event-repository.js";
@@ -89,6 +91,8 @@ export function createApp(
   else stateRepository.ensureActiveRun();
   const taskRepository = new TaskRepository(database.connection);
   const eventRepository = new EventRepository(database.connection);
+  const happyrobotEventRepository = new HappyRobotEventRepository(database.connection);
+  const pendingHappyRobotEvents = new Map<string, Promise<Record<string, unknown>>>();
   const controlService = new ControlService(stateRepository, config.simSeed, config.clockSpeed);
   const workflowService = new WorkflowService(
     stateRepository,
@@ -198,10 +202,13 @@ export function createApp(
       void engine.handle({
         source: "happyrobot",
         kind: "call_result",
-        payload: envelope as unknown as Record<string, unknown>,
+        payload: {
+          ...(envelope as unknown as Record<string, unknown>),
+          ...(recorded.materialChange ? { materialChange: true, materialSummary: recorded.materialSummary } : {}),
+        },
       });
     }
-    return recorded;
+    return { ok: recorded.ok, applied: recorded.applied, duplicate: recorded.duplicate };
   };
 
   // JEV evalúa la evidencia antes de registrar el resultado (T35). Con JEV apagado
@@ -303,6 +310,60 @@ export function createApp(
       console.log("[events] POST /events", event.source, event.kind, event.text ?? "", eventId);
       void engine.handle({ ...event, id: eventId }).catch((error) => console.error("[events] handle", error));
       response.status(202).json({ ok: true, eventId });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/workflow/happyrobot/events", authorizeWorkflow, (request, response, next) => {
+    try {
+      const envelope = parseHappyRobotIncident(request.body);
+      const reservation = happyrobotEventRepository.reserve(envelope);
+      if (reservation.response) {
+        response.status(200).json({ ...reservation.response, duplicate: true });
+        return;
+      }
+      if (reservation.pending) {
+        const pending = pendingHappyRobotEvents.get(envelope.eventId);
+        if (!pending) throw new ContractError(`eventId is still being processed: ${envelope.eventId}`, 409);
+        void pending
+          .then((result) => response.status(200).json({ ...result, duplicate: true }))
+          .catch(next);
+        return;
+      }
+
+      const processing = engine.handle({
+        id: envelope.eventId,
+        source: "happyrobot",
+        kind: envelope.incidentId,
+        text: envelope.summary,
+        actorId: envelope.actor,
+        payload: {
+          channel: envelope.channel,
+          actor: envelope.actor,
+          evidence: envelope.evidence,
+          sessionId: envelope.evidence.sessionId,
+        },
+      }).then(() => {
+        const state = stateRepository.ensureActiveRun().state;
+        const result = {
+          ok: true,
+          duplicate: false,
+          eventId: envelope.eventId,
+          incidentId: envelope.incidentId,
+          planVersion: state.planVersion,
+        };
+        happyrobotEventRepository.complete(envelope.eventId, result);
+        return result;
+      }).catch((error) => {
+        happyrobotEventRepository.release(envelope.eventId);
+        throw error;
+      });
+      pendingHappyRobotEvents.set(envelope.eventId, processing);
+      void processing
+        .then((result) => response.status(200).json(result))
+        .catch(next)
+        .finally(() => pendingHappyRobotEvents.delete(envelope.eventId));
     } catch (error) {
       next(error);
     }

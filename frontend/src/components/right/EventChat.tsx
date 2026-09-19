@@ -1,13 +1,15 @@
-import { useState } from 'react'
-import { Send } from 'lucide-react'
+import { useId, useState } from 'react'
+import { ArrowUp, LoaderCircle, Plus } from 'lucide-react'
+
+const EXAMPLE = 'Un shuttle pincha una rueda de camino al evento'
 
 export function EventChat({
   disabled,
   pending,
   feedback,
   onSend,
-  className = 'bg-panel border border-line p-3',
-  placeholder = 'p. ej. no se puede entrar por el Acceso Sur',
+  className = 'event-chat',
+  placeholder = 'Describe qué está pasando…',
 }: {
   disabled: boolean
   pending: boolean
@@ -17,34 +19,39 @@ export function EventChat({
   placeholder?: string
 }) {
   const [text, setText] = useState('')
+  const hintId = useId()
   const submit = async () => {
     const value = text.trim()
     if (!value || disabled || pending) return
     if (await onSend(value)) setText('')
   }
   return (
-    <section className={className}>
-      <h3 className="label mb-2">Evento libre</h3>
-      <div className="flex gap-2">
-        <input
+    <section className={className} aria-label="Comunicar un evento">
+      <div className="event-chat-heading"><h3>Comunicar un evento</h3><span>Al coordinador</span></div>
+      <form className="event-composer" onSubmit={(e) => { e.preventDefault(); void submit() }}>
+        <textarea
           aria-label="Describir un evento"
+          aria-describedby={hintId}
           disabled={disabled || pending}
           value={text}
+          rows={2}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              void submit()
+            }
+          }}
           placeholder={placeholder}
-          className="min-w-0 flex-1 h-9 px-2 bg-bg border border-line text-[12px] outline-none focus:border-ink"
         />
-        <button
-          disabled={disabled || pending || !text.trim()}
-          onClick={() => void submit()}
-          className="h-9 px-3 border border-ink text-ink disabled:opacity-40"
-          aria-label="Enviar evento"
-        >
-          <Send size={14} />
+        <button type="submit" disabled={disabled || pending || !text.trim()} className="event-send" aria-label={pending ? 'Enviando evento' : 'Enviar evento'} title="Enviar evento">
+          {pending ? <LoaderCircle size={18} className="animate-spin" /> : <ArrowUp size={20} strokeWidth={2} />}
         </button>
-      </div>
-      {feedback && <p role="status" className="mt-2 text-[11px] text-muted">{feedback}</p>}
+      </form>
+      <button type="button" id={hintId} className="event-example" disabled={disabled || pending} onClick={() => setText(EXAMPLE)}>
+        <Plus size={13} aria-hidden="true" /><span>Prueba: «{EXAMPLE}»</span>
+      </button>
+      {feedback && <p role="status" className="event-feedback">{feedback}</p>}
     </section>
   )
 }

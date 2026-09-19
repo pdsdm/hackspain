@@ -100,6 +100,14 @@ const SCHEMA = `
     mode TEXT NOT NULL CHECK (mode IN ('llm', 'rules', 'none')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS happyrobot_incident_events (
+    event_id TEXT PRIMARY KEY,
+    request_json TEXT NOT NULL CHECK (json_valid(request_json)),
+    response_json TEXT CHECK (response_json IS NULL OR json_valid(response_json)),
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT
+  ) STRICT;
 `;
 
 export function openDatabase(path: string): CrisisDatabase {
@@ -117,7 +125,7 @@ export function openDatabase(path: string): CrisisDatabase {
   connection
     .prepare(`
       INSERT INTO app_metadata (key, value)
-      VALUES ('schema_version', '4')
+      VALUES ('schema_version', '5')
       ON CONFLICT (key) DO UPDATE SET
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP

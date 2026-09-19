@@ -17,16 +17,16 @@
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` (PR #7, mergeada) | [T5](docs/specs/T5-seed.md) | done |
 | T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro (apoyo: Zhi) | `Prueba-de-plataforma-y-llamada-real` (sin mergear), `fix/zhi-real-call-robustez` (PR #40) | [T6](docs/specs/T6-prueba-voz.md) | doing |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/t7-estado` (PR #8, mergeada) | [T7](docs/specs/T7-estado.md) | done |
-| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada) | [T8](docs/specs/T8-dashboard.md) | done |
+| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada); retoque visual local en `fix/carlos-demo-ui`; panel de agentes en `feat/carlos-panel-agentes` (revisión local) | [T8](docs/specs/T8-dashboard.md) | done |
 | T9 | Adaptador HappyRobot y callbacks | Álvaro (apoyo: Zhi) | `feat/alvaro-integracion` (PR #26, mergeada), `fix/zhi-real-call-robustez` (PR #40) | [T9](docs/specs/T9-integracion.md) | review |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` (PR #14, mergeada) | [T10](docs/specs/T10-coordinador.md) | done |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
-| T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | review |
+| T12 | Agente de Catering | Ventura (relevo de Pep) | `feat/ventura-demo-specialists` | [T12](docs/specs/T12-catering.md) | review |
 | T13 | Agente de Transporte | Álvaro | `feat/alvaro-transporte` | [T13](docs/specs/T13-transporte.md) | todo |
-| T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | review |
+| T14 | Agente de Asistentes y avisos segmentados | Ventura (relevo de Pep) | `feat/ventura-demo-specialists` | [T14](docs/specs/T14-asistentes.md) | doing |
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
-| T17 | Integración y pruebas críticas | Zhi | `fix/zhi-demo-readiness` | [T17](docs/specs/T17-integracion-final.md) | doing |
+| T17 | Integración y pruebas críticas | Zhi | `feat/zhi-demo-gaps` | [T17](docs/specs/T17-integracion-final.md) | doing |
 | T18 | Entorno de demo y recuperación | Zhi | `fix/zhi-demo-readiness` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
@@ -53,7 +53,16 @@
 | T42 | Arranque limpio y pausado en cada despliegue | Zhi + Devin | `fix/zhi-clean-deploy-state` (PR #64, mergeada) | [T42](docs/specs/T42-arranque-limpio.md) | done |
 | T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62, mergeada) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | done |
 | T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
+| T45 | Congelar escenario y storyboard técnico de la demo | Ventura (revisión: Carlos) | `docs/ventura-video-scenario` | [T45](docs/specs/T45-video-scenario.md) | review |
+| T46 | Entrada autenticada de incidentes desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
+| T47 | Workflow HappyRobot determinista para inputs simulados de llamada y SMS | Ventura | `feat/ventura-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | bloqueada |
+| T48 | Director reproducible del recorrido de vídeo | Ventura (revisión: Zhi + Carlos) | `feat/ventura-demo-director` | [T48](docs/specs/T48-demo-director.md) | doing |
+| T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` (PR #75) | [T49](docs/specs/T49-demo-incidents-ui.md) | done |
+| T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |
+| T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Ventura (Catering + Asistentes) + Álvaro (Transporte) | `feat/ventura-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | doing |
+| T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | todo |
 
+**Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**
 Prioridad hoy, por riesgo: **T6 → T27 → T16**. Lo demás se recorta antes que esos tres.

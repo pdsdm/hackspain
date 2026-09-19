@@ -72,6 +72,8 @@ export async function dispatchHappyRobot(input: {
         runId: input.runId,
         planVersion: input.planVersion,
         area: input.task.area,
+        kind: input.task.kind,
+        channel: input.task.kind,
         objective: payload.objective ?? "",
         counterpart: payload.counterpart ?? "",
         reason: payload.reason ?? "",

@@ -89,11 +89,15 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
     await new Promise((resolve) => setImmediate(resolve));
     executor.fireDue(Number(run.state.clock.simSeconds) + 60);
 
-    const after = (states.ensureActiveRun().state.guestGroups as Array<Record<string, unknown>>).find((group) => group.id === "g-shuttles")!;
+    const acceptedState = states.ensureActiveRun().state;
+    const after = (acceptedState.guestGroups as Array<Record<string, unknown>>).find((group) => group.id === "g-shuttles")!;
+    const asistentesAgent = (acceptedState.agents as Array<Record<string, unknown>>).find((item) => item.id === "asistentes");
     assert(Number(after.informedCount) > 0);
     assert(Number(after.informedCount) <= Number(after.count));
     assert.equal(after.acceptedCount, after.informedCount);
-    const call = (states.ensureActiveRun().state.calls as Array<Record<string, unknown>>)[0]!;
+    assert.match(String(asistentesAgent?.lastResult), /acepta/i);
+    assert.equal(acceptedState.events.some((event) => event.area === "asistentes"), true);
+    const call = (acceptedState.calls as Array<Record<string, unknown>>)[0]!;
     assert.equal(call.channel, "sms");
     assert.equal(call.simulated, true);
   } finally {

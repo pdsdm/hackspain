@@ -8,7 +8,7 @@ El especialista que avisa a los 600 invitados cuando cambia su destino, por segm
 
 - [x] Hay una plantilla por segmento (`g-acceso`, `g-shuttles`, `g-propios`) y por canal (`sms`, `email`) en `backend/src/agents/attendees/`, con el texto del §6.5 del escenario: destino, hora, «no entres por Norte». Máximo 300 caracteres el SMS.
 - [x] Solo se avisa a un grupo cuya instrucción vigente cambia (`assignedSpaceId` distinto al que recibió). Un grupo ya informado del destino correcto no recibe otro mensaje.
-- [ ] Los 12 invitados con accesibilidad y los 38 con dieta de `g-propios` generan una tarea aparte (`kind: call` o `sms`) que pregunta si la alternativa cubre su necesidad; el resultado deja `needs` cubierto o pendiente, nunca lo borra.
+- [x] Los 12 invitados con accesibilidad y los 38 con dieta de `g-propios` generan una tarea aparte (`kind: call` o `sms`) que pregunta si la alternativa cubre su necesidad; el resultado deja `needs` cubierto o pendiente, nunca lo borra.
 - [x] El extractor traduce el resultado (`POST /workflow/results` o `sim`) a `data.guestGroups[]` con `informedCount` y `acceptedCount`, y el backend los aplica a `guestGroups` en `/state`. «Enviado», «entregado» y «aceptado» son cuentas distintas.
 - [x] Un mensaje que HappyRobot no confirma como entregado no suma a `informedCount`.
 - [ ] Con `HAPPYROBOT_HOOK_ASISTENTES` y clave, un SMS llega a un móvil del equipo y su resultado aparece en `/state` con `simulated: false`. Sin hook, la llamada va por `sim` y el panel la etiqueta «simulada».
@@ -23,7 +23,9 @@ El especialista que avisa a los 600 invitados cuando cambia su destino, por segm
 ## Notas
 
 - Referencia de estructura: `backend/src/agents/spaces/` (`prompt.ts`, `extract.ts`, `types.ts`).
-- Endpoints: `POST /workflow/results` (`docs/api-contract.md`). Hoy `workflow-service.ts` solo aplica `data.commitmentId`; hay que añadir `data.guestGroups`. Contrato: añadir el ejemplo en el mismo PR.
-- El coordinador ya crea tareas `area: asistentes, kind: sms` tras un giro (`prompt.ts` línea 17). El adaptador `sim` debe devolver `data.guestGroups` para que el KPI se mueva también sin HappyRobot.
+- Endpoints: `POST /workflow/results` (`docs/api-contract.md`). `workflow-service.ts` ya aplica `data.guestGroups`; el contrato conserva el ejemplo y sus límites.
+- El coordinador crea tareas `area: asistentes, kind: sms` tras un giro y el adaptador `sim` devuelve `data.guestGroups` para mover el KPI sin HappyRobot.
+- El payload saliente incluye `kind` y `channel` (`call` | `sms` | `email`) para que el hook
+  del área no infiera el canal. La prueba real del criterio anterior sigue pendiente.
 - Tipos: `GuestGroup` en `frontend/src/domain/types.ts`. `needs` es texto libre hoy; no cambiar el tipo.
 - Zona: `backend/src/agents/attendees/` es de Pep. `workflow-service.ts` es de Zhi: avisar.

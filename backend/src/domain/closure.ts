@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import type { CrisisStateDocument } from "./crisis-state.js";
 
-/** Un lugar donde de verdad se puede meter gente. */
-const USABLE_SPACE: ReadonlySet<string> = new Set(["operativo", "propuesto", "pendiente", "confirmado"]);
+/** Un lugar asignable, aunque todavía no esté confirmado. */
+const ASSIGNABLE_SPACE: ReadonlySet<string> = new Set(["operativo", "propuesto", "pendiente", "confirmado"]);
+const CONFIRMED_SPACE: ReadonlySet<string> = new Set(["operativo", "confirmado"]);
+const HOSPITALITY_KIND: ReadonlySet<string> = new Set(["pabellon", "lounge", "espera"]);
 /** Compromisos que todavía esperan respuesta de la contraparte. */
 const WAITING: ReadonlySet<string> = new Set(["propuesto", "en_consulta"]);
 /** Compromisos con respuesta afirmativa, con o sin condiciones abiertas. */
@@ -30,6 +32,8 @@ export interface ClosureReport {
   /** Nada en marcha y el plan sin terminar: nadie va a mover esto si no se hace algo. */
   stalled: boolean;
   seated: number;
+  assigned: number;
+  confirmed: number;
   total: number;
   agreed: number;
   pendingConditions: number;
@@ -39,26 +43,57 @@ export interface ClosureReport {
 }
 
 /**
- * ¿Ha terminado el trabajo? Cierra cuando cada grupo tiene sede, cada acuerdo abierto tiene
- * respuesta y no queda nada en vuelo. No exige que no haya condiciones pendientes: las
- * cuenta y las dice, porque una recuperación honesta puede dejar flecos.
+ * ¿Ha terminado el trabajo? Cierra cuando cada grupo tiene plaza confirmada, cada acuerdo
+ * abierto tiene respuesta, no quedan condiciones abiertas y no hay nada en vuelo.
  */
 export function evaluateClosure(state: CrisisStateDocument, openTasks: number): ClosureReport {
   const spaces = new Map(state.spaces.map((space) => [space.id, space]));
   const groups = records(state, "guestGroups");
   const total = groups.reduce((sum, group) => sum + Number(group.count ?? 0), 0);
-  const seated = groups.reduce((sum, group) => {
-    const space = typeof group.assignedSpaceId === "string" ? spaces.get(group.assignedSpaceId) : undefined;
-    return sum + (space && USABLE_SPACE.has(String(space.status)) ? Number(group.count ?? 0) : 0);
-  }, 0);
+  const assignedGroups = groups.map((group) => {
+    const count = Math.max(0, Number(group.count ?? 0));
+    const confirmedCount = Math.min(count, Math.max(0, Number(group.confirmedCount ?? 0)));
+    const hasAssignedSpace = typeof group.assignedSpaceId === "string";
+    const space = hasAssignedSpace ? spaces.get(String(group.assignedSpaceId)) : undefined;
+    const assignable = space !== undefined && HOSPITALITY_KIND.has(String(space.kind)) && ASSIGNABLE_SPACE.has(String(space.status));
+    const confirmedSpace = space !== undefined && HOSPITALITY_KIND.has(String(space.kind)) && CONFIRMED_SPACE.has(String(space.status));
+    return {
+      group,
+      count,
+      confirmedCount: !hasAssignedSpace ? confirmedCount : confirmedSpace ? confirmedCount : 0,
+      assignedCount: assignable ? count : !hasAssignedSpace ? confirmedCount : 0,
+      space,
+    };
+  });
+  const assigned = assignedGroups.reduce((sum, item) => sum + item.assignedCount, 0);
+  const confirmed = assignedGroups.reduce((sum, item) => sum + item.confirmedCount, 0);
+
+  const occupancy = new Map<string, number>();
+  for (const item of assignedGroups) {
+    if (item.space && item.assignedCount > 0) {
+      occupancy.set(item.space.id, (occupancy.get(item.space.id) ?? 0) + item.assignedCount);
+    }
+  }
+  const capacityGaps = [...occupancy.entries()]
+    .filter(([id, count]) => {
+      const capacity = spaces.get(id)?.capacity;
+      return typeof capacity !== "number" || !Number.isFinite(capacity) || count > capacity;
+    })
+    .map(([id, count]) => `${id} ${count}/${Number(spaces.get(id)?.capacity ?? 0)}`);
+  const assignedZones = new Set(assignedGroups.filter((item) => item.assignedCount > 0 && item.space).map((item) => item.space!.zone));
+  const accessGaps = [...assignedZones].filter((zone) =>
+    !state.spaces.some((space) => space.kind === "acceso" && space.zone === zone && CONFIRMED_SPACE.has(String(space.status))),
+  );
 
   const current = state.commitments.filter((commitment) => commitment.planVersion === state.planVersion);
   const agreed = current.filter((commitment) => AGREED.has(commitment.status));
   const waiting = current.filter((commitment) => WAITING.has(commitment.status));
-  const pendingConditions = agreed.reduce(
-    (sum, commitment) => sum + (Array.isArray(commitment.conditions) ? commitment.conditions.length : 0),
-    0,
+  const conditions = agreed.flatMap((commitment) =>
+    Array.isArray(commitment.conditions)
+      ? commitment.conditions.filter((condition): condition is string => typeof condition === "string" && condition.trim() !== "")
+      : [],
   );
+  const pendingConditions = conditions.length;
 
   const callsInFlight = records(state, "calls").some((call) => call.status === "en_curso");
   const pendingDecision =
@@ -66,27 +101,32 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
     records(state, "decisions").some((decision) => decision.status === "pendiente");
 
   const quiet = openTasks === 0 && !callsInFlight && state.agentsPaused !== true;
-  const closed = total > 0 && seated === total && agreed.length > 0 && waiting.length === 0 && quiet && !pendingDecision;
-  // Atascado: no queda nada en marcha y sin embargo el plan no está terminado.
-  const stalled = !closed && quiet && !pendingDecision && waiting.length === 0 && seated < total;
-  const homeless = groups
-    .filter((group) => {
-      const space = typeof group.assignedSpaceId === "string" ? spaces.get(group.assignedSpaceId) : undefined;
-      return !space || !USABLE_SPACE.has(String(space.status));
-    })
-    .map((group) => `${String(group.name ?? group.id)} (${Number(group.count ?? 0)})`);
-  const gap = homeless.length > 0
-    ? `${total - seated} invitados sin sede: ${homeless.join(", ")}. No queda ninguna consulta en marcha.`
-    : "";
+  const closed = total > 0 && assigned === total && confirmed === total && capacityGaps.length === 0 &&
+    accessGaps.length === 0 && agreed.length > 0 && waiting.length === 0 && pendingConditions === 0 &&
+    quiet && !pendingDecision;
+  const stalled = !closed && quiet && !pendingDecision && waiting.length === 0;
+  const gaps: string[] = [];
+  if (assigned < total) {
+    const homeless = assignedGroups
+      .filter((item) => item.assignedCount < item.count)
+      .map((item) => `${String(item.group.name ?? item.group.id)} (${item.count - item.assignedCount})`);
+    gaps.push(`${total - assigned} invitados sin sede asignada: ${homeless.join(", ")}`);
+  }
+  if (confirmed < total) gaps.push(`${total - confirmed} invitados sin plaza confirmada`);
+  if (pendingConditions > 0) {
+    gaps.push(`${pendingConditions} ${pendingConditions === 1 ? "condición abierta" : "condiciones abiertas"}: ${conditions.join("; ")}`);
+  }
+  if (capacityGaps.length > 0) gaps.push(`aforo insuficiente: ${capacityGaps.join(", ")}`);
+  if (accessGaps.length > 0) gaps.push(`${accessGaps.map((zone) => `acceso ${String(zone)[0]!.toUpperCase()}${String(zone).slice(1)} no operativo`).join(", ")}`);
+  const gap = gaps.length > 0 ? `${gaps.join(" · ")}. No queda ninguna consulta en marcha.` : "";
 
   const cost = state.budget.committed > 0 ? state.budget.committed : state.budget.forecast;
   const costLabel = typeof cost === "number" && cost > 0 ? `${cost.toLocaleString("es-ES")} €` : "sin estimar";
   const summary =
-    `Plan cerrado a las ${clockLabel(Number(state.clock.simSeconds))} · ${seated} de ${total} invitados con sede · ` +
-    `${agreed.length} ${agreed.length === 1 ? "acuerdo aceptado" : "acuerdos aceptados"} · ` +
-    `${pendingConditions} ${pendingConditions === 1 ? "condición pendiente" : "condiciones pendientes"} · coste ${costLabel}`;
+    `Plan cerrado a las ${clockLabel(Number(state.clock.simSeconds))} · ${confirmed} de ${total} invitados con plaza confirmada · ` +
+    `${assigned} con sede asignada · ${agreed.length} ${agreed.length === 1 ? "acuerdo aceptado" : "acuerdos aceptados"} · coste ${costLabel}`;
 
-  return { closed, stalled, seated, total, agreed: agreed.length, pendingConditions, summary, gap };
+  return { closed, stalled, seated: assigned, assigned, confirmed, total, agreed: agreed.length, pendingConditions, summary, gap };
 }
 
 /**

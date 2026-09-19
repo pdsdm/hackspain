@@ -9,6 +9,7 @@ import {
 import { PlanService } from "./plan-service.js";
 import { confirmationBlocker, decideAcceptance, readVerificationTarget, resolvedConditions, verificationSnapshot, type VerificationTarget } from "./acceptance-policy.js";
 import { commitmentIdForAction, commitmentIdFromTaskPayload } from "./commitment-link.js";
+import { parseClock } from "../agents/spaces/extract.js";
 import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
@@ -26,6 +27,53 @@ export interface CoordinatorResponse extends Record<string, unknown> {
 function records(state: CrisisStateDocument, field: string): Array<Record<string, unknown>> {
   const value = state[field];
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function taskData(task: DispatchTask): Record<string, unknown> {
+  if (!isRecord(task.payload) || !isRecord(task.payload.data)) return {};
+  return task.payload.data;
+}
+
+function acceptedResult(envelope: SpecialistResultEnvelope): boolean {
+  return envelope.status === "completed" &&
+    (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions");
+}
+
+function applySpaceFacts(
+  state: CrisisStateDocument,
+  envelope: SpecialistResultEnvelope,
+  task: DispatchTask,
+  changes: string[],
+): void {
+  const updates = envelope.result.data.spaces;
+  if (task.area !== "espacios" || !acceptedResult(envelope) || !Array.isArray(updates)) return;
+  const data = taskData(task);
+  const candidates = Array.isArray(data.candidateIds)
+    ? new Set(data.candidateIds.filter((id): id is string => typeof id === "string" && id.trim() !== ""))
+    : new Set<string>();
+  const target = readVerificationTarget(task.payload);
+  if (target) candidates.add(target.resourceId);
+  for (const raw of updates) {
+    if (!isRecord(raw) || typeof raw.id !== "string" || raw.id.trim() === "") continue;
+    const id = raw.id.trim();
+    if (candidates.size > 0 && !candidates.has(id)) continue;
+    const space = state.spaces.find((item) => item.id === id);
+    if (!space) continue;
+    if (typeof raw.capacity === "number" && Number.isFinite(raw.capacity) && raw.capacity > 0) {
+      const capacity = Math.floor(raw.capacity);
+      if (space.capacity !== capacity) {
+        space.capacity = capacity;
+        changes.push(`${id}: aforo ${capacity}`);
+      }
+    }
+    if (typeof raw.readyAt === "number" || typeof raw.readyAt === "string") {
+      const readyAt = parseClock(raw.readyAt);
+      if (readyAt !== undefined && space.readyAt !== readyAt) {
+        space.readyAt = readyAt;
+        changes.push(`${id}: utilizable a los ${readyAt} segundos del día`);
+      }
+    }
+  }
 }
 
 function verificationTargetFor(
@@ -82,10 +130,15 @@ function applySpecialistState(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
   task: DispatchTask,
+  changes: string[],
   verification?: CallAcceptanceVerification,
 ): CrisisStateDocument {
   const area = task.area;
   const next = structuredClone(state);
+  applySpaceFacts(next, envelope, task, changes);
+  if (verification?.decision === "confirm_target" && changes.length > 0) {
+    verification = { ...verification, decision: "keep_conditional", reason: "terminos_modificados" };
+  }
   const cost = envelope.result.data.committedCost;
   if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0 &&
     ["dispatching", "dispatched", "unknown"].includes(task.status) && envelope.status === "completed" &&
@@ -187,12 +240,23 @@ function applySpecialistState(
     if (commitment && commitment.planVersion === next.planVersion &&
       ["propuesto", "en_consulta", "aceptado_condiciones"].includes(commitment.status)) {
       const resource = next.spaces.find((item) => item.id === verification?.target?.resourceId);
-      if (verification?.decision === "confirm_target" && resource) {
+      if (verification?.decision === "confirm_target" && resource && changes.length === 0) {
         commitment.status = "confirmado";
         commitment.conditions = resolvedConditions(commitment.conditions);
         resource.status = "confirmado";
       } else if (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions") {
         commitment.status = "aceptado_condiciones";
+        const conditions = Array.isArray(commitment.conditions)
+          ? commitment.conditions.filter((condition): condition is string => typeof condition === "string")
+          : [];
+        for (const raw of envelope.result.conditions) {
+          const condition = raw.trim();
+          if (condition !== "" && !conditions.includes(condition)) {
+            conditions.push(condition);
+            changes.push(`${commitment.id}: condición «${condition}»`);
+          }
+        }
+        commitment.conditions = conditions;
       } else if (envelope.result.outcome === "rejected") {
         commitment.status = "invalidado";
       }
@@ -320,6 +384,7 @@ export class WorkflowService {
       );
     }
 
+    const materialChanges: string[] = [];
     const recorded = this.tasks.recordResult(
       task.id,
       envelope.eventId,
@@ -341,7 +406,7 @@ export class WorkflowService {
         }
         if (checked && target) checked = { ...checked, target };
         else if (checked) checked = { decision: "keep_conditional", reason: "target_no_admitido" };
-        return applySpecialistState(state, envelope, currentTask, checked);
+        return applySpecialistState(state, envelope, currentTask, materialChanges, checked);
       },
       envelope.status === "completed" ? "completed" : "failed",
     );
@@ -354,6 +419,11 @@ export class WorkflowService {
         this.states.saveState(run.id, state);
       }
     }
-    return { ok: true as const, ...recorded };
+    return {
+      ok: true as const,
+      ...recorded,
+      materialChange: recorded.applied && !recorded.duplicate && materialChanges.length > 0,
+      materialSummary: materialChanges.length > 0 ? `Resultado material de ${task.area}: ${materialChanges.join("; ")}` : undefined,
+    };
   }
 }

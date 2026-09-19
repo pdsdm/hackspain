@@ -274,6 +274,22 @@ export function buildReplan(
       reason: `${name} ya recibió un aviso y su assignedSpaceId cambia.`,
     });
   }
+  const spaceDependency = actions.find((action) => action.area === "espacios")?.id;
+  for (const group of groups) {
+    const needs = typeof group.needs === "string" ? group.needs.trim() : "";
+    if (!needs || staysPut(group, assignments, discarded)) continue;
+    const id = String(group.id);
+    actions.push({
+      id: `verify-needs-${id}`,
+      area: "asistentes",
+      channel: "sms",
+      counterpart: String(group.name ?? id),
+      objective: `Confirmar para ${id} que la nueva alternativa cubre: ${needs}`,
+      dueAt,
+      dependsOn: spaceDependency ? [spaceDependency] : [],
+      reason: "El cambio de sede exige volver a verificar accesibilidad y dieta por separado.",
+    });
+  }
 
   operations.push({ op: "log_event", kind: "accion", text: reading, area: "espacios" });
   operations.push({

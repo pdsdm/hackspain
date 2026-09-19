@@ -61,7 +61,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "waitingForDecision": "decision-plan-2",
   "agentsPaused": false,
   "resolved": false,
-  "closureSummary": "Plan cerrado a las 12:41 · 600 de 600 invitados con sede · 2 acuerdos aceptados · 1 condición pendiente · coste 12.150 €"
+  "closureSummary": "Plan cerrado a las 12:41 · 600 de 600 invitados con plaza confirmada · 600 con sede asignada · 2 acuerdos aceptados · coste 12.150 €"
 }
 ```
 
@@ -73,9 +73,9 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 
 `coordinatorStatus`: `estable` | `replanificando` | `esperando_decision` | `pausado` | `atascado`. El backend evalúa el cierre después de cada evento, cuando el coordinador no está trabajando:
 
-- **`resolved: true`** cuando cada grupo de invitados tiene un espacio utilizable (`operativo`, `propuesto`, `pendiente` o `confirmado`), ningún compromiso de la versión vigente sigue en `propuesto` ni `en_consulta`, hay al menos uno aceptado, no queda ninguna tarea abierta ni llamada `en_curso`, y no hay decisión pendiente ni agentes pausados. Al cerrar, `coordinatorStatus` pasa a `estable` y se añade una línea `acuerdo` a la cronología. Las condiciones abiertas no impiden el cierre: se cuentan y se dicen.
-- **`coordinatorStatus: "atascado"`** cuando no queda nada en marcha (ni tareas, ni llamadas, ni acuerdos esperando respuesta) y sin embargo hay invitados sin sede. No relanza el coordinador por su cuenta: lo dice en pantalla y añade una línea `espera` a la cronología, para que el responsable decida. Si aparece una llamada o una consulta nueva, deja de estar atascado.
-- **`closureSummary`** es el texto que resume el desenlace: el cierre si `resolved`, o el hueco pendiente si está atascado. Ausente en cualquier otro caso.
+- **`resolved: true`** cuando `guestGroups[].confirmedCount` cubre a todos los invitados, las sedes asignadas son de hospitalidad y tienen aforo y acceso operativo en su zona, ningún compromiso vigente sigue en `propuesto` ni `en_consulta`, no queda ninguna condición abierta, hay al menos un acuerdo aceptado y no quedan tareas, llamadas, decisiones ni pausa. `propuesto` y `pendiente` cuentan como sede asignada, pero no como plaza confirmada. Al cerrar, `coordinatorStatus` pasa a `estable` y se añade una línea `acuerdo` a la cronología.
+- **`coordinatorStatus: "atascado"`** cuando no queda nada en marcha ni acuerdos esperando respuesta y la recuperación sigue incompleta o condicionada: invitados sin sede o confirmación, condiciones abiertas, aforo insuficiente o acceso de zona no operativo. No relanza el coordinador por su cuenta: lo dice en pantalla y añade una línea `espera` a la cronología. Si aparece una llamada o una consulta nueva, deja de estar atascado.
+- **`closureSummary`** resume el cierre confirmado cuando `resolved`, o el hueco pendiente/condicionado si está atascado. Ausente en cualquier otro caso.
 
 Un giro o un replan vuelven a poner `resolved: false`: el cierre se recalcula entero en cada evento, nunca se hereda.
 
@@ -216,6 +216,32 @@ Estos endpoints exigen `Authorization: Bearer <HAPPYROBOT_WEBHOOK_TOKEN>`. El se
 
 `eventId` identifica globalmente un mensaje y permite reintentos seguros. `runId` y `planVersion` son los entregados por el backend; no se sustituyen por IDs de sesión de HappyRobot.
 
+### `POST /workflow/happyrobot/events`
+
+Entrada autenticada y estricta para incidentes reales detectados por workflows de voz y SMS:
+
+```json
+{
+  "eventId": "hr-incident-018f…",
+  "channel": "call",
+  "actor": "Responsable de recinto",
+  "incidentId": "principal_pipe_burst",
+  "summary": "Una tubería rota obliga a cerrar el Pabellón Principal",
+  "evidence": { "sessionId": "id-real-de-happyrobot" }
+}
+```
+
+- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `principal_pipe_burst` | `dock_blocked`.
+- El cuerpo y `evidence` no admiten campos adicionales: el workflow no puede enviar operaciones, parches ni versiones de estado.
+- `principal_pipe_burst` cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
+- Las solicitudes se serializan por orden de llegada. Cada efecto lee el run y la versión vigentes cuando alcanza la cola.
+- Repetir el mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`, sin aplicar ni coordinar de nuevo. Reutilizarlo con otro cuerpo devuelve `409`.
+- La línea añadida a `events[]` puede incluir los campos opcionales y retrocompatibles `channel`, `actor` y `provenance: { source: "happyrobot", eventId, sessionId }`.
+
+```json
+{ "ok": true, "duplicate": false, "eventId": "hr-incident-018f…", "incidentId": "principal_pipe_burst", "planVersion": 2 }
+```
+
 ### `POST /workflow/coordinator/proposals`
 
 Salida estructurada del coordinador sobre una versión concreta:
@@ -332,7 +358,7 @@ puerta traducida de abajo.
 { "ok": true, "duplicate": false, "applied": true }
 ```
 
-Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result`. Solo los rechazos, fallos o llamadas sin respuesta relanzan el coordinador; las aceptaciones no. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
+Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result`. Rechazos, fallos y llamadas sin respuesta relanzan el coordinador; una aceptación solo lo hace si acaba de incorporar una condición o hecho material válido. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
 
 #### Verificación opcional JEV (T35)
 
@@ -373,10 +399,11 @@ Reproducir desde `backend/`, con `TYPESAFE_API_KEY` en el entorno: `JEV_LIVE_EVA
 Campos de `result.data` que el backend aplica al estado:
 
 - `committedCost` (T38): importe adicional de esta tarea, finito y no negativo, con aceptación firme y evidencia; no es el total del plan ni una cotización. Solo suma una vez si la tarea está despachada o en despacho/resultado incierto, el resultado es `completed/accepted` sin condiciones y hay una intervención humana no vacía vinculada a `call-<taskId>`. No confirma recursos. Duplicados, tareas antiguas, rechazadas o sin evidencia no suman. Un importe ausente no se inventa. El simulador puede devolverlo cuando la contraparte acuerda explícitamente un precio; el fallback sin precio no lo genera.
-- `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
+- `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`). Con una aceptación, las `result.conditions` nuevas se fusionan sin borrar condiciones anteriores ni confirmar automáticamente el compromiso.
+- `spaces[]` (área `espacios`, T11): actualizaciones parciales con `id` exacto, `capacity` positiva y/o `readyAt` como segundos desde medianoche o `HH:MM`. Solo se aplican a espacios existentes y, cuando la tarea declara `candidateIds` o `verificationTarget`, a esos IDs. Un valor inválido o un ID ajeno no muta el estado. La llamada no pone el espacio en `confirmado`.
 - `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
 - `deliveries[]` (área `catering`, T12): `{ "id": "CAT-02", "status": "confirmada", "dockId": "muelleEste", "arriveAt": 47700, "services": 240, "note": "pendiente: recepción abre el muelle" }`. Solo con `status: "completed"`. `status` admite `confirmada`, `programada` o `bloqueada`; nunca `entregada` ni `invalidada`. `dockId` solo se aplica si el muelle existe y no está `cerrado`/`descartado`; una `confirmada` sobre un muelle cerrado queda en `programada`. Una entrega ya `entregada` no cambia.
-- Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` **no** relanza al coordinador: aplica su efecto y el plan sigue. `rejected`, `no_answer` y `failed` sí lo relanzan. Sin esta regla cada plan generaba 4-7 replanificaciones en cascada y la cola bloqueaba giros e intervenciones.
+- Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` solo relanza al coordinador si aplicó una condición nueva o cambió materialmente un hecho seguro de `spaces[]`; una aceptación sin novedad no lo relanza. `rejected`, `no_answer` y `failed` sí lo relanzan si todavía pertenecen al run y versión vigentes. Duplicados, resultados obsoletos y datos inválidos no generan otra reconsideración.
 - El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot, y `deliveries[]` para las tareas `catering` (`confirmada` si el muelle está abierto, `bloqueada` si está cerrado; la entrega nombrada en el objetivo, o todas las no entregadas).
 
 ### `POST /workflow/happyrobot/results`
@@ -415,6 +442,8 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "runId": "3bd0…",
   "planVersion": 2,
   "area": "transporte",
+  "kind": "call",
+  "channel": "call",
   "objective": "Confirmar el nuevo punto de parada",
   "counterpart": "Transportes Ibéricos",
   "reason": "El Acceso Sur está cerrado",
@@ -428,6 +457,8 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "callbackUrl": "https://demo.example/workflow/happyrobot/results"
 }
 ```
+
+`kind` y `channel` llevan la misma señal explícita (`call` | `sms` | `email`) para que un hook por área elija el canal de la tarea sin inferirlo del área. Esto no acredita por sí solo que el proveedor haya enviado, entregado o recibido un mensaje.
 
 El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
 
