@@ -12,6 +12,7 @@ COORDINATOR_MODE=${DEMO_COORDINATOR_MODE:-rules}
 CALL_MODE=${DEMO_CALL_MODE:-sim}
 INITIAL_FIXTURE=${DEMO_INITIAL_FIXTURE:-calm}
 CLOCK_SPEED=${DEMO_CLOCK_SPEED:-1}
+TUNNEL=${DEMO_TUNNEL:-cloudflared}
 
 usage() {
   cat <<'EOF'
@@ -22,10 +23,13 @@ Uso: ./scripts/demo.sh <comando>
   restart-backend    Reinicia el backend conservando SQLite y la URL pública
   reset [fixture]    Crea una ejecución limpia (calm por defecto)
   status             Comprueba procesos y endpoints
+  doctor             Dice qué falta para llamar de verdad, sin enseñar ningún valor
   down               Detiene los procesos arrancados por este script
 
 Variables: DEMO_COORDINATOR_MODE=rules|llm, DEMO_CALL_MODE=sim|real,
-DEMO_DATABASE_URL, DEMO_CLOCK_SPEED, DEMO_BACKEND_PORT, DEMO_FRONTEND_PORT.
+DEMO_TUNNEL=cloudflared|lhr (lhr = localhost.run por SSH, para redes que bloquean
+trycloudflare.com), DEMO_DATABASE_URL, DEMO_CLOCK_SPEED, DEMO_BACKEND_PORT,
+DEMO_FRONTEND_PORT.
 EOF
 }
 
@@ -94,6 +98,7 @@ save_settings() {
   printf '%s\n' "$CALL_MODE" >"$RUNTIME_DIR/call-mode"
   printf '%s\n' "$INITIAL_FIXTURE" >"$RUNTIME_DIR/initial-fixture"
   printf '%s\n' "$CLOCK_SPEED" >"$RUNTIME_DIR/clock-speed"
+  printf '%s\n' "$TUNNEL" >"$RUNTIME_DIR/tunnel-kind"
 }
 
 load_settings() {
@@ -104,6 +109,7 @@ load_settings() {
   if [[ -z ${DEMO_CALL_MODE+x} && -s "$RUNTIME_DIR/call-mode" ]]; then CALL_MODE=$(cat "$RUNTIME_DIR/call-mode"); fi
   if [[ -z ${DEMO_INITIAL_FIXTURE+x} && -s "$RUNTIME_DIR/initial-fixture" ]]; then INITIAL_FIXTURE=$(cat "$RUNTIME_DIR/initial-fixture"); fi
   if [[ -z ${DEMO_CLOCK_SPEED+x} && -s "$RUNTIME_DIR/clock-speed" ]]; then CLOCK_SPEED=$(cat "$RUNTIME_DIR/clock-speed"); fi
+  if [[ -z ${DEMO_TUNNEL+x} && -s "$RUNTIME_DIR/tunnel-kind" ]]; then TUNNEL=$(cat "$RUNTIME_DIR/tunnel-kind"); fi
   BACKEND_URL="http://127.0.0.1:$BACKEND_PORT"
   FRONTEND_URL="http://127.0.0.1:$FRONTEND_PORT"
 }
@@ -207,25 +213,48 @@ start_frontend() {
 }
 
 start_tunnel() {
-  require cloudflared
   ensure_stopped tunnel
   : >"$RUNTIME_DIR/tunnel.log"
-  cloudflared tunnel --url "$BACKEND_URL" --no-autoupdate >"$RUNTIME_DIR/tunnel.log" 2>&1 &
+  # El patrón excluye api.trycloudflare.com: aparece en la línea de error cuando el túnel
+  # falla, y tomarlo por la URL pública deja el callback apuntando a ninguna parte.
+  local pattern='https://[A-Za-z0-9-]+\.trycloudflare\.com'
+  local label="Quick Tunnel"
+  case "$TUNNEL" in
+    cloudflared)
+      require cloudflared
+      cloudflared tunnel --url "$BACKEND_URL" --no-autoupdate >"$RUNTIME_DIR/tunnel.log" 2>&1 &
+      ;;
+    lhr)
+      # localhost.run por SSH: no necesita cuenta y resuelve en redes donde
+      # trycloudflare.com está bloqueado (por ejemplo la wifi de la ETSIT).
+      require ssh
+      pattern='https://[a-z0-9]+\.lhr\.life'
+      label="localhost.run"
+      # Sin -N a propósito: localhost.run anuncia la URL por la sesión, y con -N no llega.
+      ssh -o StrictHostKeyChecking=accept-new -o ExitOnForwardFailure=yes \
+        -o ServerAliveInterval=30 -R "80:127.0.0.1:$BACKEND_PORT" nokey@localhost.run \
+        >"$RUNTIME_DIR/tunnel.log" 2>&1 &
+      ;;
+    *)
+      echo "DEMO_TUNNEL debe ser cloudflared o lhr" >&2
+      exit 1
+      ;;
+  esac
   echo $! >"$RUNTIME_DIR/tunnel.pid"
   local public_url=""
   for _ in {1..300}; do
-    public_url=$(sed -nE 's|.*(https://[A-Za-z0-9-]+\.trycloudflare\.com).*|\1|p' "$RUNTIME_DIR/tunnel.log" | head -n 1)
+    public_url=$(grep -oE "$pattern" "$RUNTIME_DIR/tunnel.log" | grep -v '//api\.' | head -n 1)
     [[ -n "$public_url" ]] && break
     running tunnel || {
       tail -n 30 "$RUNTIME_DIR/tunnel.log" >&2
-      echo "cloudflared terminó antes de publicar una URL" >&2
+      echo "$label terminó antes de publicar una URL" >&2
       exit 1
     }
     sleep 0.1
   done
   [[ -n "$public_url" ]] || {
     tail -n 30 "$RUNTIME_DIR/tunnel.log" >&2
-    echo "No se pudo descubrir la URL del Quick Tunnel" >&2
+    echo "No se pudo descubrir la URL de $label" >&2
     exit 1
   }
   printf '%s\n' "$public_url" >"$RUNTIME_DIR/public-url"
@@ -300,6 +329,35 @@ case "$command" in
         echo "health público: ERROR"
       fi
     fi
+    ;;
+  doctor)
+    # Solo dice si una variable está puesta o no. Nunca imprime su valor.
+    node --env-file-if-exists="$ROOT/.env" -e '
+      const show = (label, ok, hint) => console.log(`${ok ? "OK  " : "FALTA"} ${label}${ok || !hint ? "" : ` · ${hint}`}`);
+      const set = (key) => Boolean(process.env[key]?.trim());
+      const llm = ["COGNITION_API_KEY", "DEVIN_API_KEY", "OPENAI_API_KEY", "HELMCODE_API_KEY", "ANTHROPIC_API_KEY"];
+      console.log("Coordinador con LLM:");
+      show(`una clave de ${llm.join(", ")}`, llm.some(set));
+      console.log("Llamada real por HappyRobot:");
+      for (const key of ["HAPPYROBOT_API_KEY", "HAPPYROBOT_TEST_PHONE", "HAPPYROBOT_WEBHOOK_TOKEN"]) show(key, set(key));
+      const hooks = ["ESPACIOS", "CATERING", "TRANSPORTE", "ASISTENTES"].filter((area) => set(`HAPPYROBOT_HOOK_${area}`));
+      show("al menos un HAPPYROBOT_HOOK_*", hooks.length > 0, "pídeselo a quien administre los workflows");
+      if (hooks.length > 0) console.log(`      hooks configurados: ${hooks.join(", ").toLowerCase()}`);
+    '
+    echo "Túnel para el callback:"
+    if command -v cloudflared >/dev/null 2>&1; then
+      echo "OK   cloudflared en PATH"
+    else
+      echo "FALTA cloudflared en PATH · sin túnel el callback no vuelve y todo acaba en no_answer"
+    fi
+    # Una red que no resuelve trycloudflare.com deja el Quick Tunnel inservible por mucho
+    # que el binario esté instalado. Pasa en la wifi de la ETSIT.
+    if host -W 4 trycloudflare.com >/dev/null 2>&1; then
+      echo "OK   esta red resuelve trycloudflare.com"
+    else
+      echo "AVISO esta red NO resuelve trycloudflare.com · usa DEMO_TUNNEL=lhr (localhost.run) o un móvil como punto de acceso"
+    fi
+    node -e 'const major = Number(process.versions.node.split(".")[0]); console.log(`${major >= 22 ? "OK  " : "FALTA"} Node ${process.versions.node} (mínimo 22)`)'
     ;;
   down)
     stop_one frontend

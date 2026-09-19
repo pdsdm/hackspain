@@ -47,6 +47,36 @@ test("sim adapter opens a call and applies a canned result", async () => {
   }
 });
 
+test("un resultado fuera de contexto se descarta y no tumba el proceso", async () => {
+  const { database, states, tasks, executor } = harness();
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
+      idempotencyKey: "sim-call-obsoleta",
+    });
+    useAcceptingSeed(states, task);
+    executor.pump();
+    await new Promise((resolve) => setImmediate(resolve));
+    // El plan avanza mientras la llamada está en vuelo: el resultado programado ya no
+    // corresponde a la versión de la tarea. Antes esta excepción salía en el tick del reloj
+    // y se llevaba el backend por delante.
+    const current = states.ensureActiveRun();
+    const moved = structuredClone(current.state);
+    moved.planVersion += 1;
+    states.saveState(current.id, moved);
+    tasks.carryToPlan(task.id, moved.planVersion);
+    assert.doesNotThrow(() => executor.fireDue(Number(moved.clock.simSeconds) + 60));
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+  } finally {
+    database.close();
+  }
+});
+
 test("paused agents are not dispatched", () => {
   const { database, states, tasks, executor } = harness();
   try {

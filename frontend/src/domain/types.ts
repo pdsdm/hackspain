@@ -197,7 +197,7 @@ export type TwistId =
   | 'reject_split'
   | 'guest_need'
 
-export type CoordinatorStatus = 'estable' | 'replanificando' | 'esperando_decision' | 'pausado'
+export type CoordinatorStatus = 'estable' | 'replanificando' | 'esperando_decision' | 'pausado' | 'atascado'
 
 export interface Clock {
   simSeconds: number
@@ -239,6 +239,7 @@ export interface CrisisState {
   waitingForDecision: string | null
   agentsPaused: boolean
   resolved: boolean
+  closureSummary?: string
 }
 
 export type InterventionType =

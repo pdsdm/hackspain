@@ -25,6 +25,7 @@ export const COORD: Record<CoordinatorStatus, { label: string; tone: Tone }> = {
   replanificando: { label: 'Replanificando', tone: 'ink' },
   esperando_decision: { label: 'Esperando decisión', tone: 'amber' },
   pausado: { label: 'Pausado', tone: 'muted' },
+  atascado: { label: 'Plan incompleto', tone: 'red' },
 }
 
 export const SPACE: Record<SpaceStatus, { label: string; tone: Tone; cls: string }> = {

@@ -176,7 +176,20 @@ export class ActionExecutor {
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {
-    const recorded = this.workflows.recordSpecialistResult(envelope);
+    let recorded;
+    try {
+      recorded = this.workflows.recordSpecialistResult(envelope);
+    } catch (error) {
+      // Un resultado fuera de contexto (plan ya cambiado, tarea cancelada) se descarta con
+      // un aviso. Esto corre dentro del tick del reloj: sin este límite, una excepción aquí
+      // se lleva por delante el proceso entero en mitad de la demo.
+      logActionError("result descartado", {
+        taskId: envelope.taskId,
+        eventId: envelope.eventId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     logAction("result", {
       taskId: envelope.taskId,
       eventId: envelope.eventId,

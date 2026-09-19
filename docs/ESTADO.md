@@ -134,6 +134,24 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 - Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
 - Haz `git fetch` antes de analizar: `main` se mueve rápido.
 
+## Cierre reproducible de la crisis (T43, PR #62 sin mergear)
+
+Verificado sobre `main` actualizado con T42. `make check`: **301 de 308 pasan, 0 fallan,
+7 live omitidos**.
+
+- Los compromisos avanzan a `aceptado_condiciones`; el despacho enlaza cada acción con su
+  compromiso cuando hay un ganador claro.
+- `resolved`, `closureSummary` y `coordinatorStatus: atascado` dan al recorrido un final
+  cerrado o una limitación explícita.
+- Las intervenciones humanas se reflejan inmediatamente; la replanificación sigue en cola.
+- Las tareas `pending` del plan anterior se arrastran si siguen vigentes y se cancelan si
+  están supersedidas o dependen de una acción fallida. Esto elimina la tarea zombi que
+  bloqueaba el cierre indefinidamente.
+- Un callback simulado fuera de contexto se descarta con log: antes la excepción escapaba
+  del tick del reloj y terminaba el backend.
+- `DEMO_TUNNEL=lhr` usa localhost.run cuando la wifi de la ETSIT no resuelve
+  `trycloudflare.com`; `/health` público y autenticación del callback verificados.
+
 ## Piloto de routing con JEV (T41, sin activar)
 
 Medido el 19/09/2026 con corpus sintético congelado (40 textos: 20 desarrollo, 20 holdout;

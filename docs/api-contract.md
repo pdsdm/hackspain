@@ -60,13 +60,24 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "nextScriptAt": null,
   "waitingForDecision": "decision-plan-2",
   "agentsPaused": false,
-  "resolved": false
+  "resolved": false,
+  "closureSummary": "Plan cerrado a las 12:41 · 600 de 600 invitados con sede · 2 acuerdos aceptados · 1 condición pendiente · coste 12.150 €"
 }
 ```
 
 `spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
 
 En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
+
+### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
+
+`coordinatorStatus`: `estable` | `replanificando` | `esperando_decision` | `pausado` | `atascado`. El backend evalúa el cierre después de cada evento, cuando el coordinador no está trabajando:
+
+- **`resolved: true`** cuando cada grupo de invitados tiene un espacio utilizable (`operativo`, `propuesto`, `pendiente` o `confirmado`), ningún compromiso de la versión vigente sigue en `propuesto` ni `en_consulta`, hay al menos uno aceptado, no queda ninguna tarea abierta ni llamada `en_curso`, y no hay decisión pendiente ni agentes pausados. Al cerrar, `coordinatorStatus` pasa a `estable` y se añade una línea `acuerdo` a la cronología. Las condiciones abiertas no impiden el cierre: se cuentan y se dicen.
+- **`coordinatorStatus: "atascado"`** cuando no queda nada en marcha (ni tareas, ni llamadas, ni acuerdos esperando respuesta) y sin embargo hay invitados sin sede. No relanza el coordinador por su cuenta: lo dice en pantalla y añade una línea `espera` a la cronología, para que el responsable decida. Si aparece una llamada o una consulta nueva, deja de estar atascado.
+- **`closureSummary`** es el texto que resume el desenlace: el cierre si `resolved`, o el hueco pendiente si está atascado. Ausente en cualquier otro caso.
+
+Un giro o un replan vuelven a poner `resolved: false`: el cierre se recalcula entero en cada evento, nunca se hereda.
 
 ### Costes informativos (T38)
 
