@@ -6,8 +6,8 @@
 | | |
 |---|---|
 | **Foto tomada** | 19 de septiembre de 2026, 19:05 CEST |
-| **Commit de `main`** | `3450107` (PR #64) |
-| **Trabajo verificado** | T42 en Vercel y Railway de producción |
+| **Commit de `main`** | `36d9af7` (PR #62, T43) |
+| **Trabajo verificado** | T42 en producción; T43 en `main`, `make check` y recorridos locales |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -134,7 +134,7 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 - Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
 - Haz `git fetch` antes de analizar: `main` se mueve rápido.
 
-## Cierre reproducible de la crisis (T43, PR #62 sin mergear)
+## Cierre reproducible de la crisis (T43, PR #62 mergeada en `36d9af7`)
 
 Verificado sobre `main` actualizado con T42. `make check`: **301 de 308 pasan, 0 fallan,
 7 live omitidos**.
