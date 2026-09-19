@@ -92,6 +92,14 @@ Amplía el JSON con:
 "done": true
 `;
 
+export const TOOL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
+
+HARNESS
+Trabajas con herramientas, no con un único JSON suelto.
+- consult_world: pregunta al mundo (affected_by, alternatives_for, route) antes de reencaminar a ciegas.
+- submit_plan: entrega el plan completo (mismo objeto JSON de arriba, con operations y done).
+Si submit_plan devuelve errores de regla, corrige y vuelve a enviarlo. No confirmes espacios por tu cuenta.`;
+
 function hhmm(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
