@@ -40,7 +40,7 @@ export function pendingDecision(s: CrisisState) {
 }
 
 export function activeCall(s: CrisisState) {
-  return s.calls.find((c) => c.status === 'en_curso') ?? [...s.calls].reverse()[0] ?? null
+  return s.calls.find((c) => c.status === 'en_curso') ?? null
 }
 
 export function attendance(s: CrisisState) {
