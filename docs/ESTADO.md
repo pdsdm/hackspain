@@ -229,3 +229,12 @@ responde `409`.
 Verificación local: 5 pruebas focalizadas pasan; `make check` OK con 321 pruebas pasando,
 7 live omitidas y 10 fixtures. Quedan pendientes los workflows reales T47 y el E2E T52;
 no se ha probado todavía un canal HappyRobot real contra este endpoint.
+
+## T47 · workflow de inputs simulados
+
+En `feat/ventura-happyrobot-incident-inputs`, un instalador idempotente define `Demo
+Incident Inputs`: trigger API, variable bearer oculta y POST estricto a T46, sin telefonía
+ni LLM. La clave disponible puede leer y ejecutar workflows, pero crear devuelve `403
+Cannot create use cases`; la interfaz de Orca tampoco tiene sesión HappyRobot. T47 queda
+bloqueada hasta que un owner ejecute el instalador o cree/publique el workflow en
+`development`. Prueba focalizada y `make check` pasan: 322 tests, 7 live omitidos.
