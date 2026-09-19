@@ -79,7 +79,7 @@ test("the authenticated E2E reset creates an isolated sim-only run", async () =>
     assert.equal(state.e2eMode, "production-isolated");
     assert.equal(state.e2eInputTokenHash, inputTokenHash);
     assert.equal((state.clock as Record<string, unknown>).paused, false);
-    assert.equal((state.clock as Record<string, unknown>).speed, 120);
+    assert.equal((state.clock as Record<string, unknown>).speed, 1);
     const incident = {
       eventId: "e2e-legacy-token",
       channel: "call",

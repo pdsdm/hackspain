@@ -343,7 +343,7 @@ export function createApp(
         state.agentsPaused = false;
         state.clock.paused = false;
         state.clock.live = false;
-        state.clock.speed = 120;
+        state.clock.speed = 1;
         stateRepository.saveState(run.id, state);
         response.status(200).json({ ok: true, ...result, externalActions: "sim" });
       })
