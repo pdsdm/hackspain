@@ -189,7 +189,7 @@ Una solicitud manual de llamada usa un payload validado y encola una tarea aunqu
 
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `COORDINATOR_REASONING_EFFORT=low`: unos 20-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `reasoning_effort` `low` por defecto: unos 20-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
 
 ### `GET /actions`
 
