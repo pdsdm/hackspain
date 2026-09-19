@@ -6,7 +6,7 @@ import {
   HAPPYROBOT_COORDINATOR_MODEL,
   loadHappyRobotCoordinatorConfig,
   type HappyRobotCoordinatorConfig,
-} from "./happyrobot.js";
+} from "./happyrobot-config.js";
 
 const TIMEOUT_MS = 120_000;
 
