@@ -67,6 +67,20 @@ html, body, #root {
 .vehicle.delayed { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
 .vehicle.truck { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
 .vehicle svg { width: 12px; height: 12px; }
+.vehicle-wrap { position: relative; width: 22px; height: 22px; }
+.vehicle-eta {
+  position: absolute; left: 26px; top: 50%; transform: translateY(-50%);
+  padding: 2px 6px; white-space: nowrap; background: #ffffffe6; border: 1px solid #1a1d24;
+  color: #1a1d24; font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: .04em;
+  font-variant-numeric: tabular-nums; backdrop-filter: blur(4px);
+}
+.vehicle-eta.delayed, .vehicle-eta.truck { border-color: #c47a00; color: #c47a00; }
+.route-hover { cursor: pointer; }
+.leaflet-tooltip.veh { padding: 8px 10px; }
+.leaflet-tooltip.veh .row { display: flex; gap: 8px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.leaflet-tooltip.veh .row + .row { margin-top: 3px; }
+.leaflet-tooltip.veh .tag { font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.leaflet-tooltip.veh .amber { color: #c47a00; } .leaflet-tooltip.veh .red { color: #e5484d; } .leaflet-tooltip.veh .green { color: #1f9d55; } .leaflet-tooltip.veh .muted { color: #6b7079; }
 
 .zone-label {
   background: transparent; border: none; box-shadow: none;

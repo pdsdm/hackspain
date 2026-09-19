@@ -11,9 +11,10 @@ export function pinIcon(label: string, cls: string, sub?: string) {
 const busSvg = renderToStaticMarkup(createElement(Bus))
 const truckSvg = renderToStaticMarkup(createElement(Truck))
 
-export function vehicleIcon(kind: 'bus' | 'truck', delayed = false) {
+export function vehicleIcon(kind: 'bus' | 'truck', delayed = false, label?: string) {
   const cls = kind === 'truck' ? 'truck' : delayed ? 'delayed' : ''
-  return L.divIcon({ html: `<div class="vehicle ${cls}">${kind === 'bus' ? busSvg : truckSvg}</div>`, className: '', iconSize: [22, 22], iconAnchor: [11, 11] })
+  const chip = label ? `<div class="vehicle-eta ${cls}">${label}</div>` : ''
+  return L.divIcon({ html: `<div class="vehicle-wrap"><div class="vehicle ${cls}">${kind === 'bus' ? busSvg : truckSvg}</div>${chip}</div>`, className: '', iconSize: [22, 22], iconAnchor: [11, 11] })
 }
 
 export const zoneLabelIcon = (text: string) => L.divIcon({ html: `<div class="zone-label">${text}</div>`, className: '', iconSize: [160, 20], iconAnchor: [80, 10] })
