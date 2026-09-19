@@ -217,3 +217,13 @@ inferior del dashboard; en móvil se conserva solo la cronología.
 Solo presentación, sin cambios de backend ni contratos. `make check` OK: 316
 tests pasan, 7 live omitidos y 10 fixtures verificadas. Revisión visual local en
 localhost:5178. Pendiente de revisión humana, sin commit ni push.
+
+## T50 · coordinación de staff mediante Asistentes
+
+En `feat/ventura-demo-staff-coordination`, el coordinador recibe la restricción agregada
+de seis personas de recepción, exige una acción de Asistentes en el primer plan y su
+reasignación cuando cambia el muelle. Catering puede depender de que Recepción abra el
+punto de descarga. No se añade `Staff[]` ni un quinto agente. El panel de agentes muestra
+también el motivo de cada especialista. `make check` OK: 316 tests pasan, 7 live omitidos
+y 10 fixtures verificadas; permanecen los dos avisos de lint y el aviso de chunk ya
+presentes en `main`.

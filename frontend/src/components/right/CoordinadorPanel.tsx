@@ -34,6 +34,7 @@ export function CoordinadorPanel({ s, className = '' }: { s: CrisisState; classN
               <Pill tone={st.tone} pulse={a.status === 'llamada'}>{st.label}</Pill>
               <div className="agent-tile-detail" tabIndex={0} aria-label={`Actividad de ${a.name}`}>
                 <p>{a.objective}</p>
+                {a.reason && <p className="agent-role">{a.reason}</p>}
                 {a.lastResult && <p className="agent-result"><span>Último resultado</span>{a.lastResult}</p>}
               </div>
             </li>

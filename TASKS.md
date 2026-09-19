@@ -58,7 +58,7 @@
 | T47 | Workflows HappyRobot reales de llamada y SMS entrantes | Álvaro | `feat/alvaro-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | todo |
 | T48 | Director reproducible del recorrido de vídeo | Carlos (revisión: Zhi) | `feat/carlos-demo-director` | [T48](docs/specs/T48-demo-director.md) | todo |
 | T49 | Incidencias activas y procedencia de inputs en el frontend | Pep (revisión: Carlos) | `feat/pep-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | todo |
-| T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | todo |
+| T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |
 | T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Pep + Álvaro | `feat/pep-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | todo |
 | T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | todo |
 

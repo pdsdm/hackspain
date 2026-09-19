@@ -27,14 +27,24 @@ function validPlan(): CoordinatorOutput {
         reason: "Sin espacio confirmado en Sur no hay ningún plan ejecutable.",
       },
       {
+        id: "a3",
+        area: "asistentes",
+        channel: "sms",
+        counterpart: "Recepción MADRING",
+        objective: "Distribuir las 6 personas: 2 en Pabellón B, 1 en Lounge Sur, 2 en accesos y 1 en el muelle",
+        dueAt: hm(12, 30),
+        dependsOn: ["a1"],
+        reason: "Los dos espacios y el muelle necesitan recepción sin superar las 6 personas disponibles.",
+      },
+      {
         id: "a2",
         area: "catering",
         channel: "llamada",
         counterpart: "Responsable de catering",
         objective: "Repartir 450 y 150 servicios entre los dos espacios",
         dueAt: hm(12, 35),
-        dependsOn: ["a1"],
-        reason: "El reparto depende de que el recinto confirme los dos espacios.",
+        dependsOn: ["a1", "a3"],
+        reason: "El reparto depende de los espacios y de que Recepción abra el muelle.",
       },
     ],
     commitments: [
@@ -71,6 +81,18 @@ test("el plan de referencia del escenario inicial pasa la validación", () => {
 
   assert.deepEqual(issues, []);
   assert.equal(output?.assignments.length, 4);
+});
+
+test("el plan de referencia coordina seis personas de recepción antes de Catering", () => {
+  const plan = validPlan();
+  const staff = plan.actions.find((action) => action.area === "asistentes");
+  const catering = plan.actions.find((action) => action.area === "catering");
+
+  assert.ok(staff);
+  assert.ok(catering);
+  assert.match(staff.objective, /6 personas/);
+  assert.match(staff.objective, /2 en Pabellón B, 1 en Lounge Sur, 2 en accesos y 1 en el muelle/);
+  assert.ok(catering.dependsOn.includes(staff.id));
 });
 
 test("un verificationTarget fuera de la demo se descarta sin invalidar el plan", () => {
@@ -222,12 +244,16 @@ test("los giros del jurado llegan como estados cargables", () => {
 });
 
 test("el prompt lleva las horas en segundos y las restricciones del escenario", () => {
-  const prompt = buildUserPrompt(crisisInput());
+  const input = crisisInput();
+  const prompt = buildUserPrompt(input);
 
   assert.match(prompt, /12:15 \(44100\)/);
   assert.match(prompt, /Norte y Sur sin conexión interior/);
+  assert.match(prompt, /Recepción disponible: 6 personas/);
   assert.match(prompt, /pabellonB .* capacidad 450/);
   assert.match(prompt, /listo a las 13:45/);
+  assert.match(SYSTEM_PROMPT, /sumen como máximo 6/);
+  assert.match(SYSTEM_PROMPT, /se bloquea un muelle/);
 });
 
 test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
