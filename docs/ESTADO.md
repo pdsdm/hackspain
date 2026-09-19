@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:45 |
-| **Commit de `main`** | `deafd54` (PR #24) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 11:55 |
+| **Commit de `main`** | `c371546` (PR #26) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, recuperación T6/T9 |
+| **Generado por** | Claude (Opus 5), sesión de coordinación de Carlos |
 
 ## Salud
 
@@ -22,7 +22,7 @@
 | `make check` | ✅ OK |
 | Tests de backend | ✅ **102 de 102** |
 
-Ambos verificados en `feat/alvaro-integracion`, basada en `deafd54`, con Node 22.23.2.
+Verificados sobre `c371546` en un worktree limpio de `origin/main`, con Node 22.23.2.
 
 ## Qué funciona
 
@@ -41,7 +41,11 @@ Todo lo de aquí está mergeado en `main`.
   consultas → validación → persistir`, sin SDK. Proveedores: Cognition (por defecto),
   Helmcode/Deepseek, OpenAI, Anthropic.
 - **Motor de eventos** (T24): `POST /events` con texto libre; reloj simulado que avanza.
-- **Trazabilidad de integración** (T17): logs de acciones/callbacks, prueba del payload HappyRobot y guía de pruebas mergeados en PR #24.
+- **Camino de llamada conectado** (T9, PR #26): «Avisar a…» → `POST /events` → backend →
+  adaptador que hace `POST` al hook del área con `callbackUrl` a `/workflow/results`. Sin
+  secretos en el frontend. **Verificado con el adaptador `sim`, no con una llamada real.**
+- **Trazabilidad de integración** (T17, PR #24): logs de acciones y callbacks, prueba del
+  payload de HappyRobot y `docs/guia-pruebas.md`.
 - **Replanificación tras giro** (T16, en `review`): invalidación determinista de acuerdos.
 - **Agente de Espacios** (T11): guion de conversación y extractor de resultados.
 - **Frontend** (T4, T8, T23): panel de 3 columnas, plano Norte/Sur, mapa Leaflet, KPIs con
@@ -50,30 +54,40 @@ Todo lo de aquí está mergeado en `main`.
 
 ## Qué falta, por riesgo para la demo
 
-### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`doing`)
+### 🔴 1. Ninguna llamada real todavía · T6 (`doing`), T9 (`doing`)
 
-Es el **requisito obligatorio del enunciado** ("interacción de verdad") y lo único que no
-se resuelve con horas de código, porque depende del equipo de HappyRobot, que está en el
-evento.
+Es el **requisito obligatorio del enunciado** («interacción de verdad»).
 
-La rama `feat/alvaro-integracion` ya valida `call_request`, encola una llamada sin LLM,
-inyecta el destino E.164 desde entorno y porta «Avisar a…» sin secretos en el frontend.
-El recorrido Vite → backend → tarea → llamada simulada → callback está verificado.
+**Lo que ya está resuelto:** el formato de la URL del hook, que era lo que bloqueaba —
+`https://workflows.platform.eu.happyrobot.ai/hooks/<id-del-workflow>`. Y el camino
+completo Avisar → backend → hook → callback está mergeado en `main`.
 
-**Lo que falta exactamente:** `HAPPYROBOT_HOOK_ESPACIOS`, `HAPPYROBOT_WEBHOOK_TOKEN`,
-`PUBLIC_BASE_URL` y la prueba contra una llamada saliente real. El Web call de la rama
-antigua sigue disponible como respaldo.
+**Lo que falta exactamente:** rellenar `HAPPYROBOT_HOOK_ESPACIOS`,
+`HAPPYROBOT_WEBHOOK_TOKEN` y `PUBLIC_BASE_URL`, y hacer **una llamada saliente real que
+termine con un compromiso en `/state`**. Los criterios de aceptación de
+`agent/happyrobot/SPEC.md` siguen todos sin marcar.
 
 **Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
 llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →
 `sim` etiquetado como simulado en pantalla. Nunca presentar una grabación como llamada en
 vivo.
 
-### 🟡 2. Proveedor LLM sin prueba de demo
+### 🔴 2. No existe ningún `.env` · sin tarea asignada
 
-Hay `HELMCODE_API_KEY` en el `.env` local; Cognition y Devin siguen sin clave. El camino
-Helmcode no se ha probado en esta sesión con un evento real. `rules` mantiene el respaldo
-determinista para los giros.
+**Verificado a las 11:55: no hay fichero `.env` en el repo principal ni en ninguno de los
+worktrees.** Solo `.env.example`.
+
+Sin clave de LLM el coordinador no decide nada: comprobado que `POST /events` con texto
+libre solo escribe en la cronología y el mundo no cambia. Los giros mantienen su efecto
+determinista, así que **la demo puede parecer que funciona cuando en realidad no hay nadie
+pensando**.
+
+> Una foto anterior de este documento (11:45, generada por Devin) decía que existía una
+> `HELMCODE_API_KEY` local. No es cierto en las máquinas del equipo: Devin corre en la nube
+> con su propio entorno. Si vuelves a leer algo parecido, compruébalo con
+> `ls -la .env` antes de bajar la prioridad de este bloqueo.
+
+Hay créditos de Cognition y de Helmcode sin usar.
 
 ### 🟠 3. El panel enseña la simulación, no el backend · T27 (`todo`)
 
@@ -84,37 +98,39 @@ es el sistema.**
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
 
-### 🟠 4. Camino de llamada pendiente de merge · T28 (`todo`)
+### 🟡 4. Bug verificado sin arreglar: decisiones huérfanas · T15 (`todo`)
 
-`feat/alvaro-integracion` deja un único camino: «Avisar» → `POST /events` → backend →
-HappyRobot → callback. No contiene la sala Twilio. Falta mergear el PR y probar el trigger
-real.
+`applyPlanProposal` invalida los compromisos por `planVersion` pero **nunca las decisiones
+pendientes**. Consecuencias: se puede autorizar el gasto de un plan descartado, y el giro
+`reject_spend` puede resolver la decisión equivocada dejando la viva pendiente.
+
+Está en el camino exacto de la demo (aprobar los 3.200 € → giro → replanificar).
+Diagnóstico completo, reproducción sin LLM y dos opciones de arreglo en
+[`specs/T15-control.md`](specs/T15-control.md). Arreglo recomendado: ~1 hora.
 
 ### 🟡 5. Resto
 
 - Agentes de Catering, Transporte y Asistentes (T12, T13, T14): sin guion ni extractor.
-- Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
-  comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
-  coordinador después.
-- Integración (T17): logs y runbook ya están en `main`; sigue sin llamada real. Entorno,
-  pitch y vídeo (T18, T19, T21): nada.
+- Control humano verificado (T15): nadie ha comprobado que `pause`, `set_constraint` y
+  `take_call` cambien lo que hace el coordinador después.
+- Entorno de demo, pitch, vídeo y entrega (T18, T19, T21): nada.
 - Aprendizaje entre ejecuciones (T20, bonus): nada.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Llamada real | hook, token de callback y backend público | **Sí — equipo de HappyRobot + despliegue** |
-| Coordinador Helmcode | prueba real con la clave local | No |
-| Panel real | T27, y de que el backend aguante | No |
+| Llamada real | id del hook, token de callback y un backend accesible desde fuera | **Sí — cuenta de HappyRobot + despliegue** |
+| Que el coordinador decida | crear un `.env` con una clave de LLM | No |
+| Panel real | T27 | No |
 | Guion del pitch | decidir giro principal y desenlace | No |
 
 ## Ramas vivas sin mergear
 
 | Rama | Qué tiene |
 |---|---|
-| `feat/alvaro-integracion` | T6/T9/T28: `call_request` determinista, destino por entorno y panel «Avisar a…»; dos commits locales pendientes de push/PR. |
-| `Prueba-de-plataforma-y-llamada-real` | Web call y sala Twilio de respaldo; no portar a `main` mientras HappyRobot siga disponible. |
+| `Prueba-de-plataforma-y-llamada-real` | 6 commits. Web call por navegador (respaldo que funciona), sala de tres en `agent/demo/main.py`, y `agent/happyrobot/SPEC.md` con el formato del hook. **Su propia sección «Deuda de esta rama» dice que el atajo del servidor de Vite hay que deshacerlo al mergear** — y eso ya está hecho en `main` por el PR #26. |
+| `feat/ventura-specs-cerebro` | Obsoleta: su contenido ya está en `main`. Se puede borrar. |
 
 ## Decisiones pendientes que bloquean a otros
 
@@ -127,16 +143,21 @@ real.
 4. **Quién hace de responsable de recinto** al teléfono y con qué respuestas.
 5. **Qué proveedor LLM** y quién tiene la clave.
 
+*(La de por dónde se lanza la llamada, T28, ya está decidida y resuelta: va por el backend.)*
+
 ## Avisos para el siguiente agente
 
 - **Usa Node 22** (`nvm use 22`). Con Node 20, `make check` falla con dos errores que
   parecen del repo y no lo son: el glob de `node --test` y `node:sqlite`.
 - **`main` se mueve muy rápido.** Haz `git fetch` antes de cualquier análisis; una foto de
-  hace una hora ya no vale.
+  hace veinte minutos ya no vale.
+- **Verifica lo que diga este documento antes de apoyarte en ello.** Ya ha pasado una vez
+  que una foto afirmaba que existía una clave de API que no existe en las máquinas del
+  equipo. Los agentes en la nube ven un entorno distinto al vuestro.
 - **`TASKS.md` no lo cuenta todo.** Lista las ramas remotas: hay trabajo real en ramas que
   no figuran en el tablero o figuran con otro nombre.
 - **Antes de dar por perdido el trabajo de alguien**, mira si su rama ya se mergeó por PR.
-  Una rama borrada del remoto casi siempre significa "PR mergeada".
+  Una rama borrada del remoto casi siempre significa «PR mergeada».
 - **Los 9 giros son una lista cerrada** en `backend/src/contracts/api.ts`. Uno inventado
   devuelve HTTP 400. El texto libre va por `POST /events` y necesita LLM.
 - **Reparto de zonas para no pisarse**: backend base → Zhi · HappyRobot → Álvaro ·
