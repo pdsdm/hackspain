@@ -44,3 +44,9 @@
 - **Qué:** Node.js 22 + TypeScript + Express 5 en `backend/`; persistencia local con `node:sqlite` para evitar un driver nativo adicional.
 - **Por qué:** comparte lenguaje con el frontend y el SDK de HappyRobot, arranca rápido y mantiene el estado en una sola instancia. Descartados FastAPI y dos backends paralelos.
 - **Nota:** `node:sqlite` es experimental en Node 22 y avisa con `ExperimentalWarning` al arrancar; se acepta. Requiere Node ≥ 22.13 (también en el entorno de demo). No sustituir por `better-sqlite3` u otro driver nativo.
+
+### D8: rutas del mapa con OSRM público y respaldo a polilínea
+
+- **Qué:** el frontend pide la geometría de cada ruta (shuttles y entregas) a `https://router.project-osrm.org` (perfil `driving`) con origen, destino y los puntos intermedios que coinciden con un espacio del escenario. Sin dependencia nueva: `fetch` y caché en memoria. Si la petición falla, se usa la polilínea del dominio (`route`).
+- **Por qué:** los vehículos circulan por calles reales y la ruta cambia sola cuando un evento cambia el destino (`destinationId` / `dockId`). Sin clave de API y sin servidor propio.
+- **Nota:** el servidor demo de OSRM no garantiza disponibilidad. La demo no depende de él: sin red, el mapa muestra las rutas rectas.
