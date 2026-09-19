@@ -1,38 +1,38 @@
 <!--
-  PARA EL EQUIPO: contrato entre backend y frontend. Es la fuente de verdad.
+  PARA EL EQUIPO: contrato entre backend, frontend y workflows. Es la fuente de verdad.
   - Permite trabajar en paralelo: el frontend hace mocks con este formato mientras el backend lo implementa.
   - Cambiarlo = PR que lo diga en la descripción y aviso a quien consuma ese endpoint.
-  - Si el backend acaba generando OpenAPI automáticamente (p. ej. FastAPI en /docs), este archivo puede
-    quedarse como resumen y enlazarlo.
+  - Los IDs reales de HappyRobot se descubren en la cuenta; nunca se inventan ni se versionan secretos.
 -->
 
 # Contrato de API
 
-Base URL local: `http://localhost:8000` (variable `VITE_API_URL` en el frontend, ver D6)
+Base URL local: `http://localhost:8000` (`VITE_API_URL` en el frontend, ver D6).
 
-Errores: todas las respuestas de error usan el formato `{ "error": "mensaje legible" }` con el código HTTP adecuado.
+Todos los cuerpos son JSON. Los errores usan `{ "error": "mensaje legible" }`:
 
-## `GET /health`
+- `400`: cuerpo, campo o enum inválido.
+- `401`: token de workflow ausente o incorrecto.
+- `404`: ejecución, tarea, llamada o decisión inexistente.
+- `409`: ejecución/versión obsoleta, decisión resuelta o `eventId` en conflicto.
+- `500`: error interno no esperado.
+- `503`: integración de workflows no configurada.
 
-<!-- Ejemplo: copia este bloque para cada endpoint nuevo. -->
+Los tiempos del escenario son segundos desde medianoche (`12:15 = 44100`) y los importes están en euros. `planVersion` aumenta cuando cambia el plan. Un resultado anterior se conserva como evidencia, pero no muta el estado vigente.
 
-Comprueba que el backend está vivo.
+## Salud
 
-**Respuesta 200**
+### `GET /health`
 
-```json
-{ "status": "ok" }
-```
+**Respuesta 200**: `{ "status": "ok" }`.
 
 ## Panel de supervisión
 
-El frontend consume estos tres endpoints cuando `VITE_DATA_SOURCE=api`. Los tipos exactos están en `frontend/src/domain/types.ts` (`CrisisState`); ese archivo es la referencia de campos.
+El frontend usa estos endpoints con `VITE_DATA_SOURCE=api`. El tipo público es `CrisisState` en `frontend/src/domain/types.ts` y sus ejemplos completos están en `backend/fixtures/madring/states/`.
 
 ### `GET /state`
 
-Estado completo de la crisis. El frontend hace polling cada 2 s.
-
-**Respuesta 200** (resumen de campos; ver `CrisisState`)
+Devuelve el estado completo de la ejecución activa; el frontend hace polling cada dos segundos.
 
 ```json
 {
@@ -40,48 +40,48 @@ Estado completo de la crisis. El frontend hace polling cada 2 s.
   "clock": { "simSeconds": 44100, "speed": 1, "paused": false, "openingAt": 46800, "lunchAt": 48600, "raceAt": 54000 },
   "planVersion": 1,
   "coordinatorStatus": "replanificando",
-  "spaces": [{ "id": "pabellonB", "name": "Pabellón B", "kind": "pabellon", "zone": "sur", "capacity": 450, "status": "pendiente", "note": "…", "pos": [40.468, -3.6172] }],
+  "spaces": [{ "id": "pabellonB", "name": "Pabellón B", "kind": "pabellon", "zone": "sur", "capacity": 450, "status": "pendiente", "pos": [40.468, -3.6172] }],
   "commitments": [{ "id": "c-pabB", "title": "…", "area": "espacios", "status": "aceptado_condiciones", "counterpart": "Recinto", "conditions": ["…"], "planVersion": 1, "updatedAt": 44160 }],
-  "agents": [{ "id": "espacios", "name": "Espacios", "objective": "…", "status": "llamada", "lastResult": "…" }],
-  "shuttles": [{ "id": "BUS-01", "name": "BUS-01", "passengers": 45, "origin": "Chamartín", "destinationId": "accesoSur", "route": [[40.47, -3.68]], "departAt": 43200, "arriveAt": 45600, "delayMin": 0, "accepted": false, "status": "en_ruta" }],
-  "deliveries": [{ "id": "CAT-01", "name": "…", "services": 360, "dockId": "muelleEste", "route": [[40.44, -3.58]], "departAt": 43500, "arriveAt": 45600, "status": "confirmada" }],
-  "guestGroups": [{ "id": "g-acceso", "name": "…", "count": 90, "where": "Acceso Sur", "confirmedCount": 0, "informedCount": 0, "acceptedCount": 0 }],
+  "agents": [{ "id": "espacios", "name": "Espacios", "objective": "…", "reason": "El aforo bloquea el resto del plan", "status": "llamada" }],
+  "shuttles": [],
+  "deliveries": [],
+  "guestGroups": [],
+  "gates": [],
   "attendanceExpected": 110000,
-  "gates": [{ "id": "gate-sur", "name": "Puerta Sur · Feria de Madrid", "zone": "sur", "pos": [40.4631, -3.6158], "capacity": 42000, "entered": 19600, "waiting": 4300, "arrivalsPerMin": 640, "throughputPerMin": 480, "status": "saturado" }],
-  "decisions": [{ "id": "d-plan-sur", "title": "…", "summary": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
-  "calls": [{ "id": "call-1", "agent": "espacios", "counterpart": "…", "channel": "llamada", "startedAt": 44120, "endsAfter": 42, "status": "en_curso", "transcript": [{ "who": "agente", "text": "…", "at": 3 }] }],
-  "events": [{ "id": "e0", "time": 44100, "kind": "incidencia", "text": "…", "area": "espacios" }],
+  "decisions": [{ "id": "decision-plan-2", "title": "…", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
+  "calls": [],
+  "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
   "constraints": ["Norte y Sur sin conexión interior"],
   "twistsApplied": [],
   "selectedId": null,
-  "scriptId": "main", "scriptCursor": 0, "nextScriptAt": null, "waitingForDecision": "d-plan-sur", "agentsPaused": false, "resolved": false
+  "scriptId": "main",
+  "scriptCursor": 0,
+  "nextScriptAt": null,
+  "waitingForDecision": "decision-plan-2",
+  "agentsPaused": false,
+  "resolved": false
 }
 ```
 
-Los tiempos son segundos desde medianoche (12:15 = 44100). En modo API el backend devuelve `simulated: false` y fija `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; el coordinador no consume ni modifica esos campos.
-
-Los importes de `budget` y `decisions[].cost` se expresan en euros. Hay seis ejemplos completos y reproducibles de `CrisisState` en [`backend/fixtures/madring/states/`](../backend/fixtures/madring/states/), con [guía y reglas de los datos](../backend/fixtures/README.md). Son snapshots sintéticos pausados para desarrollo; no implementan `/state` ni cambian su formato. El roster individual y las asignaciones auxiliares están en `seed.json` y `manifest.json`, fuera de la respuesta de este endpoint.
+En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`.
 
 ### `POST /interventions`
 
-Acción del responsable humano.
-
-**Body**
-
 ```json
-{ "type": "approve_spend", "payload": { "decisionId": "d-plan-sur" } }
+{ "type": "approve_spend", "payload": { "decisionId": "decision-plan-2" } }
 ```
 
-`type`: `approve_spend` | `reject_spend` | `reject_split` | `pause` | `resume` | `set_constraint` (`payload.text`) | `take_call` (`payload.callId`).
+- `approve_spend`, `reject_spend`, `reject_split`: requieren `payload.decisionId`.
+- `pause`, `resume`: sin payload.
+- `set_constraint`: requiere `payload.text`.
+- `take_call`: requiere `payload.callId` de una llamada `en_curso`.
 
-**Respuesta 200**: `{ "ok": true }`
+Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+
+**Respuesta 200**: `{ "ok": true }`.
 
 ### `POST /simulation/twists`
-
-Giro introducido desde el control de simulación (jurado).
-
-**Body**
 
 ```json
 { "twist": "lounge_unavailable" }
@@ -89,4 +89,159 @@ Giro introducido desde el control de simulación (jurado).
 
 `twist`: `lounge_unavailable` | `pabellon_b_400` | `shuttle_delay` | `delivery_delay` | `dock_blocked` | `provider_silent` | `reject_spend` | `reject_split` | `guest_need`.
 
-**Respuesta 200**: `{ "ok": true }`
+Repetir un giro es idempotente. El backend aplica el efecto inmediato comprobable; el nuevo plan pertenece al coordinador/T16.
+
+**Respuesta 200**: `{ "ok": true }`.
+
+### `POST /simulation/reset`
+
+Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (por defecto `calm`: 12:00, Principal confirmado, sin incidente). La anterior queda inactiva y sus callbacks no alteran la nueva.
+
+```json
+{ "fixture": "calm" }
+```
+
+`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`. La ejecución arranca siempre con `clock.paused: false`, aunque el fixture sea una instantánea pausada.
+
+```json
+{ "ok": true, "runId": "3bd0…", "planVersion": 1 }
+```
+
+### `POST /events`
+
+Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre en proceso.
+
+```json
+{ "source": "chat", "kind": "free_text", "text": "No se puede entrar por el Acceso Sur", "payload": {}, "actorId": "operador" }
+```
+
+- `source`: `chat` | `happyrobot` | `jury` | `human`. El reloj interno usa `clock` y no se envía por HTTP.
+- `kind`: texto no vacío (`free_text`, `call_result`, un giro, un tipo de intervención…).
+- `text`, `payload` y `actorId` son opcionales.
+
+**Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
+
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+
+### `GET /actions`
+
+Tareas abiertas de la ejecución activa (`pending`, `dispatching`, `dispatched`), para depurar la cola en la demo.
+
+```json
+{ "tasks": [{ "taskId": "7a31…", "area": "transporte", "kind": "call", "status": "pending", "planVersion": 2, "objective": "Confirmar desvío" }] }
+```
+
+## Workflows
+
+Estos endpoints exigen `Authorization: Bearer <HAPPYROBOT_WEBHOOK_TOKEN>`. El secreto solo existe en entorno.
+
+`eventId` identifica globalmente un mensaje y permite reintentos seguros. `runId` y `planVersion` son los entregados por el backend; no se sustituyen por IDs de sesión de HappyRobot.
+
+### `POST /workflow/coordinator/proposals`
+
+Salida estructurada del coordinador sobre una versión concreta:
+
+```json
+{
+  "eventId": "coord-event-018f…",
+  "runId": "3bd0…",
+  "planVersion": 1,
+  "reading": "El cierre deja 600 invitados sin ubicación.",
+  "proposal": {
+    "title": "Plan Sur escalonado",
+    "summary": "Pabellón B para 450 y Lounge Sur para 150",
+    "rationale": "Evita el traslado exterior.",
+    "cost": 3200,
+    "conditions": ["Lounge operativo a las 13:15"],
+    "allocations": [{ "guestId": "guest-001", "spaceId": "pabellonB", "status": "proposed" }],
+    "confirmedNorthGuestIds": [],
+    "confirmedExternalTransferSeats": 0
+  },
+  "commitments": [{ "id": "c-pabB-v2", "title": "Reservar Pabellón B", "area": "espacios", "status": "aceptado_condiciones", "counterpart": "Recinto", "conditions": ["Confirmar reserva"] }],
+  "actions": [{
+    "actionId": "consultar-pabellon-b",
+    "area": "espacios",
+    "kind": "call",
+    "objective": "Confirmar capacidad, hora, acceso y coste",
+    "counterpart": "Responsable de recinto",
+    "dueAt": 44400,
+    "reason": "Sin espacio no se puede cerrar el resto del plan.",
+    "dependsOn": [],
+    "payload": { "candidateIds": ["pabellonB", "loungeSur"] }
+  }],
+  "unverified": ["Coste final del Lounge Sur"]
+}
+```
+
+Reglas:
+
+- `planVersion` es la versión leída; otra ejecución o versión devuelve `409` sin efectos.
+- `area`: `espacios` | `catering` | `transporte` | `asistentes`.
+- `kind`: `call` | `sms` | `email` | `manual`.
+- `dueAt`: entero `0..86399`; `dependsOn` referencia `actionId` del mismo mensaje.
+- Compromisos: `propuesto` | `en_consulta` | `aceptado_condiciones`; el coordinador nunca confirma.
+- El backend valida aforo, acceso Norte, transporte, gasto y versión antes de persistir.
+- El mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`; reutilizarlo con otro contexto devuelve `409`.
+
+```json
+{ "ok": true, "duplicate": false, "runId": "3bd0…", "planVersion": 2, "tasks": [{ "actionId": "consultar-pabellon-b", "taskId": "7a31…" }] }
+```
+
+### `POST /workflow/results`
+
+Callback común al que T9 traduce el payload de HappyRobot:
+
+```json
+{
+  "eventId": "hr-event-018f…",
+  "taskId": "7a31…",
+  "runId": "3bd0…",
+  "planVersion": 2,
+  "status": "completed",
+  "result": {
+    "outcome": "accepted_with_conditions",
+    "summary": "Lounge disponible desde las 13:15 por 900 €.",
+    "conditions": ["Montaje termina a las 13:15"],
+    "evidence": {
+      "sessionId": "id-real-de-happyrobot",
+      "callId": "call-espacios-1",
+      "transcript": [{ "who": "humano", "text": "El montaje termina a las 13:15", "at": 31 }]
+    },
+    "data": { "spaces": [{ "id": "loungeSur", "availability": "condicionada", "readyAt": 47700, "cost": 900 }] }
+  }
+}
+```
+
+- `status`: `completed` | `failed` | `no_answer`.
+- `outcome`: `accepted` | `accepted_with_conditions` | `rejected` | `no_answer` | `failed`.
+- `evidence.sessionId` solo contiene un ID real descubierto en la cuenta.
+- `data` no es un parche: el backend decide mediante adaptadores qué campos seguros mutan.
+- El callback usa el contexto original de la tarea. Una tarea antigua responde `200` con `applied: false` y conserva evidencia. Un `eventId` duplicado no se aplica dos veces.
+
+```json
+{ "ok": true, "duplicate": false, "applied": true }
+```
+
+Si `applied` es true, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador.
+
+### Salida del backend hacia HappyRobot
+
+Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL con `Authorization: Bearer <HAPPYROBOT_API_KEY>`:
+
+```json
+{
+  "taskId": "7a31…",
+  "runId": "3bd0…",
+  "planVersion": 2,
+  "area": "transporte",
+  "objective": "Confirmar el nuevo punto de parada",
+  "counterpart": "Transportes Ibéricos",
+  "reason": "El Acceso Sur está cerrado",
+  "callId": "call-7a31…",
+  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": null, "email": null },
+  "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
+  "callbackUrl": "https://demo.example/workflow/results"
+}
+```
+
+El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.

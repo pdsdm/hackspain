@@ -1,14 +1,14 @@
 import { ArrowUpDown, Ban, Bus, Truck, MapPin } from 'lucide-react'
 import type { CrisisState, Space } from '../../domain/types'
 import type { StateChange } from '../../domain/changes'
-import { SPACE } from '../ui/status'
+import { spaceLook } from '../ui/status'
 import { fmtClock } from '../../domain/time'
 
 export function PlanoOperativo({ s, changes, onSelect }: { s: CrisisState; changes: StateChange[]; onSelect: (id: string) => void }) {
   const changed = new Set(changes.map((c) => c.resourceId))
   const location = (id: string) => s.spaces.find((sp) => sp.id === id)?.name ?? id
   function card(sp: Space) {
-    const status = SPACE[sp.status]
+    const status = spaceLook(sp.status)
     return <button key={sp.id} onClick={() => onSelect(sp.id)} aria-pressed={s.selectedId === sp.id} className={`site-node ${changed.has(sp.id) ? 'site-changed' : ''} ${s.selectedId === sp.id ? 'site-selected' : ''}`}>
       <span className="flex justify-between gap-2"><span className={`site-status status-${status.tone}`}>{status.label}</span>{changed.has(sp.id) && <span className="change-tag">Cambio</span>}</span>
       <strong>{sp.name}</strong>

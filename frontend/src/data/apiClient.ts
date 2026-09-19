@@ -1,6 +1,9 @@
 import type { CrisisState, Intervention, TwistId } from '../domain/types'
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+const BASE = import.meta.env.DEV
+  ? ''
+  : (configured || 'http://127.0.0.1:8000').replace('://localhost', '://127.0.0.1')
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const ctrl = new AbortController()
@@ -22,4 +25,7 @@ export const api = {
   getState: () => req<CrisisState>('/state'),
   intervene: (intervention: Intervention) => req<{ ok: boolean }>('/interventions', { method: 'POST', body: JSON.stringify(intervention) }),
   twist: (twist: TwistId) => req<{ ok: boolean }>('/simulation/twists', { method: 'POST', body: JSON.stringify({ twist }) }),
+  reset: () => req<{ ok: boolean; runId: string; planVersion: number }>('/simulation/reset', { method: 'POST' }),
+  sendEvent: (text: string) =>
+    req<{ ok: boolean; eventId: string }>('/events', { method: 'POST', body: JSON.stringify({ source: 'chat', kind: 'free_text', text }) }),
 }

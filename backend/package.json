@@ -10,6 +10,7 @@
     "dev": "node --env-file-if-exists=../.env --watch --import tsx src/server.ts",
     "start": "node --env-file-if-exists=../.env dist/server.js",
     "build": "tsc -p tsconfig.json",
+    "coordinator": "node --env-file-if-exists=../.env --import tsx src/agents/coordinator/run.ts",
     "lint": "cd .. && backend/node_modules/.bin/oxlint backend/src backend/test backend/fixtures scripts/generate-fixtures.mts",
     "test": "node --import tsx --test \"test/**/*.test.ts\"",
     "fixtures:generate": "node --import tsx ../scripts/generate-fixtures.mts",

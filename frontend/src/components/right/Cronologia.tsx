@@ -20,7 +20,7 @@ export function Cronologia({ s }: { s: CrisisState }) {
           return (
             <li key={e.id} className={`flex gap-2.5 py-1.5 ${latest ? 'fade-in' : ''}`}>
               <span className="flex flex-col items-center pt-1.5">
-                <span className={`w-2 h-2 flex-none ${EVENT_DOT[e.kind]} ${latest ? 'animate-pulse' : ''}`} />
+                <span className={`w-2 h-2 flex-none ${EVENT_DOT[e.kind] ?? 'bg-ink'} ${latest ? 'animate-pulse' : ''}`} />
                 <span className="w-px flex-1 bg-line mt-1" />
               </span>
               <div className="min-w-0">

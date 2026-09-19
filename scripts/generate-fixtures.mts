@@ -4,9 +4,9 @@ import { buildMadringFixtures } from '../backend/fixtures/madring.ts';
 
 const check = process.argv.includes('--check');
 const root = new URL('../backend/fixtures/madring/', import.meta.url);
-const { seed, manifest, fixtures } = buildMadringFixtures();
+const { seed, manifest, fixtures, world } = buildMadringFixtures();
 const outputs: Array<[string, unknown]> = [
-  ['seed.json', seed], ['manifest.json', manifest],
+  ['seed.json', seed], ['manifest.json', manifest], ['world.json', world],
   ...Object.entries(fixtures).map(([name, f]): [string, unknown] => [`states/${name}.json`, f.state]),
 ];
 const stale: string[] = [];

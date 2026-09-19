@@ -1,0 +1,583 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": "madring-hospitality",
+  "places": [
+    {
+      "id": "principal",
+      "name": "Pabellón Principal",
+      "kind": "pabellon",
+      "zone": "sur",
+      "pos": [
+        40.4662,
+        -3.62
+      ],
+      "capacity": 600,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "pabellonB",
+      "name": "Pabellón B",
+      "kind": "pabellon",
+      "zone": "sur",
+      "pos": [
+        40.4685,
+        -3.6195
+      ],
+      "capacity": 450,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "loungeSur",
+      "name": "Lounge Fan Zone Sur",
+      "kind": "lounge",
+      "zone": "sur",
+      "pos": [
+        40.4672,
+        -3.6228
+      ],
+      "capacity": 150,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "norteC",
+      "name": "Pabellón Norte C",
+      "kind": "pabellon",
+      "zone": "norte",
+      "pos": [
+        40.4765,
+        -3.6215
+      ],
+      "capacity": 600,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "accesoSur",
+      "name": "Acceso Sur",
+      "kind": "acceso",
+      "zone": "sur",
+      "pos": [
+        40.464,
+        -3.6165
+      ],
+      "serves": [
+        "principal",
+        "pabellonB",
+        "loungeSur",
+        "esperaSur"
+      ],
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "accesoNorte",
+      "name": "Acceso Norte",
+      "kind": "acceso",
+      "zone": "norte",
+      "pos": [
+        40.4815,
+        -3.618
+      ],
+      "serves": [
+        "norteC"
+      ],
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "muelleSur",
+      "name": "Muelle Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "pos": [
+        40.4645,
+        -3.6245
+      ],
+      "serves": [
+        "principal"
+      ],
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "muelleEste",
+      "name": "Muelle Este Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "pos": [
+        40.47,
+        -3.615
+      ],
+      "serves": [
+        "pabellonB",
+        "loungeSur"
+      ],
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "esperaSur",
+      "name": "Zona de espera Sur",
+      "kind": "espera",
+      "zone": "sur",
+      "pos": [
+        40.4645,
+        -3.615
+      ],
+      "capacity": 150,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "gate-norte",
+      "name": "Puerta Norte · Valdebebas",
+      "kind": "puerta",
+      "zone": "norte",
+      "pos": [
+        40.4829,
+        -3.616
+      ],
+      "capacity": 38000
+    },
+    {
+      "id": "gate-sur",
+      "name": "Puerta Sur · Feria de Madrid",
+      "kind": "puerta",
+      "zone": "sur",
+      "pos": [
+        40.4631,
+        -3.6158
+      ],
+      "capacity": 42000
+    },
+    {
+      "id": "gate-este",
+      "name": "Puerta Este · Campo de las Naciones",
+      "kind": "puerta",
+      "zone": "sur",
+      "pos": [
+        40.4625,
+        -3.6112
+      ],
+      "capacity": 18000
+    },
+    {
+      "id": "gate-oeste",
+      "name": "Puerta Oeste · Ribera del Sena",
+      "kind": "puerta",
+      "zone": "sur",
+      "pos": [
+        40.469,
+        -3.6262
+      ],
+      "capacity": 12000
+    },
+    {
+      "id": "chamartin",
+      "name": "Chamartín",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.4728,
+        -3.6826
+      ]
+    },
+    {
+      "id": "castilla",
+      "name": "Plaza de Castilla",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.4666,
+        -3.6892
+      ]
+    },
+    {
+      "id": "t4",
+      "name": "Aeropuerto T4",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.4919,
+        -3.5928
+      ]
+    },
+    {
+      "id": "coslada",
+      "name": "Coslada",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.4405,
+        -3.585
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "chamartin",
+      "to": "accesoSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "minutes": 40
+    },
+    {
+      "from": "chamartin",
+      "to": "esperaSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.4645,
+          -3.615
+        ]
+      ],
+      "minutes": 43
+    },
+    {
+      "from": "castilla",
+      "to": "accesoSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.469,
+          -3.629
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "minutes": 43
+    },
+    {
+      "from": "castilla",
+      "to": "esperaSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.469,
+          -3.629
+        ],
+        [
+          40.4645,
+          -3.615
+        ]
+      ],
+      "minutes": 46
+    },
+    {
+      "from": "t4",
+      "to": "accesoSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.484,
+          -3.602
+        ],
+        [
+          40.476,
+          -3.605
+        ],
+        [
+          40.469,
+          -3.608
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "minutes": 33
+    },
+    {
+      "from": "t4",
+      "to": "esperaSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.484,
+          -3.602
+        ],
+        [
+          40.476,
+          -3.605
+        ],
+        [
+          40.469,
+          -3.608
+        ],
+        [
+          40.4645,
+          -3.615
+        ]
+      ],
+      "minutes": 36
+    },
+    {
+      "from": "coslada",
+      "to": "muelleSur",
+      "kind": "road",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.4645,
+          -3.6245
+        ]
+      ],
+      "minutes": 35
+    },
+    {
+      "from": "coslada",
+      "to": "muelleEste",
+      "kind": "road",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.47,
+          -3.615
+        ]
+      ],
+      "minutes": 38
+    },
+    {
+      "from": "accesoSur",
+      "to": "accesoNorte",
+      "kind": "external_transfer",
+      "route": [
+        [
+          40.464,
+          -3.6165
+        ],
+        [
+          40.464,
+          -3.612
+        ],
+        [
+          40.47,
+          -3.61
+        ],
+        [
+          40.479,
+          -3.612
+        ],
+        [
+          40.4815,
+          -3.618
+        ]
+      ],
+      "minutes": 15,
+      "requiresNorthAccess": true
+    }
+  ],
+  "zones": {
+    "sur": [
+      [
+        40.46757,
+        -3.62348
+      ],
+      [
+        40.47011,
+        -3.6245
+      ],
+      [
+        40.47127,
+        -3.62408
+      ],
+      [
+        40.47179,
+        -3.62329
+      ],
+      [
+        40.47156,
+        -3.61427
+      ],
+      [
+        40.47057,
+        -3.61287
+      ],
+      [
+        40.46529,
+        -3.61177
+      ],
+      [
+        40.46095,
+        -3.61521
+      ],
+      [
+        40.46093,
+        -3.61602
+      ],
+      [
+        40.46346,
+        -3.62006
+      ]
+    ],
+    "norte": [
+      [
+        40.47292,
+        -3.61872
+      ],
+      [
+        40.48168,
+        -3.61875
+      ],
+      [
+        40.4818,
+        -3.6248
+      ],
+      [
+        40.48138,
+        -3.62549
+      ],
+      [
+        40.477,
+        -3.62557
+      ],
+      [
+        40.47532,
+        -3.62556
+      ],
+      [
+        40.47475,
+        -3.62483
+      ],
+      [
+        40.47386,
+        -3.62473
+      ],
+      [
+        40.47387,
+        -3.62381
+      ],
+      [
+        40.47322,
+        -3.62378
+      ],
+      [
+        40.47266,
+        -3.62191
+      ],
+      [
+        40.4726,
+        -3.61931
+      ]
+    ]
+  }
+}

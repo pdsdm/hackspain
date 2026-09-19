@@ -1,0 +1,151 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { runCoordinatorLoop } from "../src/agents/coordinator/loop.js";
+import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
+import { WorkflowService } from "../src/domain/workflow-service.js";
+import { openDatabase } from "../src/state/database.js";
+import { StateRepository } from "../src/state/state-repository.js";
+import { TaskRepository } from "../src/state/task-repository.js";
+import { WorkflowEventRepository } from "../src/state/workflow-event-repository.js";
+import { loadWorld } from "../src/world/world.js";
+
+function baseOutput(overrides: Partial<CoordinatorOutput> = {}): CoordinatorOutput {
+  return {
+    reading: "Hay que revisar el Acceso Sur.",
+    planVersion: 1,
+    coordinatorStatus: "replanificando",
+    actions: [],
+    commitments: [],
+    assignments: [],
+    decision: null,
+    unverified: [],
+    operations: [],
+    queries: [],
+    done: true,
+    ...overrides,
+  };
+}
+
+test("the coordinator loop answers queries, feeds errors back and finishes", async () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(
+      states,
+      tasks,
+      new WorkflowEventRepository(database.connection),
+    );
+    const scripts = [
+      baseOutput({
+        done: false,
+        queries: [{ type: "affected_by", placeId: "accesoSur" }],
+      }),
+      baseOutput({
+        operations: [{ op: "set_place", id: "accesoSur", status: "confirmado" }],
+        done: false,
+      }),
+      baseOutput({
+        operations: [{ op: "log_event", kind: "incidencia", text: "Acceso Sur en revisión", area: "espacios" }],
+        done: true,
+      }),
+    ];
+    let round = 0;
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "tubería en Acceso Sur" },
+      {
+        world: loadWorld(),
+        states,
+        tasks,
+        workflows,
+        config: undefined,
+        completeFn: async () => JSON.stringify(scripts[round++]!),
+      },
+    );
+    assert.equal(result, "ok");
+    assert.equal(round, 3);
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => String(event.text).includes("Acceso Sur en revisión")));
+  } finally {
+    database.close();
+  }
+});
+
+test("the Cognition tool harness consults the world and submits a plan", async () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(
+      states,
+      tasks,
+      new WorkflowEventRepository(database.connection),
+    );
+    let calls = 0;
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "tubería en Acceso Sur" },
+      {
+        world: loadWorld(),
+        states,
+        tasks,
+        workflows,
+        config: {
+          provider: "cognition",
+          apiKey: "cog_test",
+          model: "swe-1.7",
+          baseUrl: "https://example.invalid/v1",
+          harness: "tools",
+          jsonObject: false,
+          sessionApiUrl: "https://api.devin.ai/v3",
+          devinMode: "fast",
+        },
+        chatFn: async (_config, messages) => {
+          calls += 1;
+          const last = messages[messages.length - 1];
+          if (last?.role !== "tool") {
+            return {
+              content: null,
+              tool_calls: [
+                {
+                  id: "call-consult",
+                  type: "function",
+                  function: {
+                    name: "consult_world",
+                    arguments: JSON.stringify({ type: "affected_by", placeId: "accesoSur" }),
+                  },
+                },
+              ],
+            };
+          }
+          return {
+            content: null,
+            tool_calls: [
+              {
+                id: "call-submit",
+                type: "function",
+                function: {
+                  name: "submit_plan",
+                  arguments: JSON.stringify(
+                    baseOutput({
+                      operations: [
+                        { op: "log_event", kind: "incidencia", text: "Acceso Sur vía harness", area: "espacios" },
+                      ],
+                      done: true,
+                    }),
+                  ),
+                },
+              },
+            ],
+          };
+        },
+      },
+    );
+    assert.equal(result, "ok");
+    assert.equal(calls, 2);
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => String(event.text).includes("Acceso Sur vía harness")));
+  } finally {
+    database.close();
+  }
+});

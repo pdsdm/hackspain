@@ -61,3 +61,15 @@
 - **Qué:** `frontend/src/domain/types.ts` define el estado público compartido por panel, backend y agentes. Los tiempos son segundos desde medianoche y la replanificación usa `planVersion`; el coordinador propone y el backend valida aforo y presupuesto. SQLite puede mantener tablas operativas internas fuera de `/state`.
 - **Por qué:** el panel y los fixtures ya usan ese formato; conservar el objeto completo evita traductores y pérdida de campos durante la demo.
 - **Descartado:** un contrato público propio del backend, claves traducidas y confiar al coordinador reglas con efectos externos.
+
+### D11: coordinador en proceso con bucle JSON sobre `llm.ts`
+
+- **Qué:** el coordinador corre dentro del backend. Cada evento dispara un bucle de hasta 3 rondas: `complete()` de `llm.ts` (Helmcode/OpenAI/Anthropic, sin SDK) devuelve JSON con `operations[]`, `queries[]` y `done`. El backend responde las consultas del mundo, aplica las operaciones en un borrador y reintenta si hay errores de regla. HappyRobot solo ejecuta conversaciones (llamadas, SMS, email). `POST /workflow/coordinator/proposals` se mantiene para un coordinador externo.
+- **Por qué:** un evento de texto libre no cabe en reglas fijas; el bucle JSON permite consultar geografía y corregir rechazos sin bloquear el proveedor ni añadir dependencias.
+- **Descartado:** tool use con SDK (deps nuevas y atado a un proveedor) y solo reglas deterministas (no cubren el chat del jurado). Ampliado por D12.
+
+### D12: Cognition/Devin como inferencia y harness (amplía D11)
+
+- **Qué:** con `COGNITION_API_KEY` o `DEVIN_API_KEY` el coordinador usa SWE (`swe-1.7`) por `/v1/chat/completions` (compatible con OpenAI, sin SDK). El harness por defecto (`COORDINATOR_HARNESS=tools`) es function calling local: `consult_world` y `submit_plan`, validadas igual que D11. `COORDINATOR_HARNESS=json` conserva el bucle D11. `COORDINATOR_HARNESS=devin` crea una sesión en `api.devin.ai` (`DEVIN_ORG_ID`, `devin_mode=fast`) y lee structured output. HappyRobot sigue siendo solo voz/SMS/email.
+- **Por qué:** SWE está entrenado en el harness de Devin; las sesiones cloud tardan de más para un replan de <60 s. El tool loop local da el mismo estilo de agente a tiempo de demo.
+- **Descartado:** LiteLLM u otro proxy, y usar Devin cloud como camino por defecto.

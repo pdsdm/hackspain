@@ -37,6 +37,12 @@ export const SPACE: Record<SpaceStatus, { label: string; tone: Tone; cls: string
   inactivo: { label: 'Sin usar', tone: 'muted', cls: 'idle ghost' },
 }
 
+const SPACE_FALLBACK = { label: 'Estado no previsto', tone: 'amber' as Tone, cls: 'pending' }
+
+export function spaceLook(status: string): { label: string; tone: Tone; cls: string } {
+  return SPACE[status as SpaceStatus] ?? { ...SPACE_FALLBACK, label: status || SPACE_FALLBACK.label }
+}
+
 export const EVENT_DOT: Record<EventKind, string> = {
   incidencia: 'bg-red',
   fallo: 'bg-red',

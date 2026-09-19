@@ -24,7 +24,8 @@ function spaceName(s: CrisisState, id: string) {
   return s.spaces.find((x) => x.id === id)?.name ?? id
 }
 
-function viaPoints(s: CrisisState, route: LatLng[]): LatLng[] {
+function viaPoints(s: CrisisState, route: LatLng[] | undefined): LatLng[] {
+  if (!route || route.length < 2) return [[40.4732, -3.6195], [40.4732, -3.6195]]
   const inner = route.slice(1, -1)
   const vias = inner.filter((p) => s.spaces.some((sp) => Math.abs(sp.pos[0] - p[0]) < 1e-6 && Math.abs(sp.pos[1] - p[1]) < 1e-6))
   return [route[0], ...vias, route[route.length - 1]]
@@ -37,7 +38,7 @@ function shuttleView(s: CrisisState, sh: Shuttle, now: number): VehicleView {
   return {
     id: sh.id, kind: 'bus', name: sh.name, load: `${sh.passengers} pax`, destId: sh.destinationId, destName: spaceName(s, sh.destinationId),
     eta: sh.arriveAt, etaLabel: fmtClock(sh.arriveAt), pct: Math.round(progress(sh.departAt, sh.arriveAt, now) * 100),
-    status, tone, delayed, done: sh.status === 'llegado', waypoints: viaPoints(s, sh.route), fallback: sh.route,
+    status, tone, delayed, done: sh.status === 'llegado', waypoints: viaPoints(s, sh.route), fallback: sh.route?.length ? sh.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 
@@ -48,7 +49,7 @@ function deliveryView(s: CrisisState, d: Delivery, now: number): VehicleView {
   return {
     id: d.id, kind: 'truck', name: d.name.split(' · ')[0], load: `${d.services} servicios`, destId: d.dockId, destName: spaceName(s, d.dockId),
     eta: d.arriveAt, etaLabel: fmtClock(d.arriveAt), pct: Math.round(progress(d.departAt, d.arriveAt, now) * 100),
-    status: label[d.status], tone, delayed: bad, done: d.status === 'entregada', waypoints: viaPoints(s, d.route), fallback: d.route,
+    status: label[d.status] ?? d.status, tone, delayed: bad, done: d.status === 'entregada', waypoints: viaPoints(s, d.route), fallback: d.route?.length ? d.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 

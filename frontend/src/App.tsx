@@ -17,6 +17,7 @@ import { AvisarPanel } from './components/right/AvisarPanel'
 import { DecisionCard } from './components/right/DecisionCard'
 import { Cronologia } from './components/right/Cronologia'
 import { IntervenirModal } from './components/right/IntervenirModal'
+import { EventChat } from './components/right/EventChat'
 import { SimulacionPanel } from './components/right/SimulacionPanel'
 import { Panel } from './components/ui/Panel'
 import { COMMITMENT } from './components/ui/status'
@@ -75,12 +76,15 @@ export default function App() {
           {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
           <Cronologia s={s} />
           <button onClick={() => setModal('decisiones')} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>
+          {ctl.source === 'api' && (
+            <EventChat disabled={disabled} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} />
+          )}
           {ctl.source === 'sim' && (
             <>
-              <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
-              <SimulacionPanel s={s} onTwist={ctl.twist} />
+              <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="calm">Estable · 12:00</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
             </>
           )}
+          <SimulacionPanel s={s} onTwist={ctl.twist} />
         </aside>
       </main>
 
