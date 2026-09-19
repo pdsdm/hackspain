@@ -31,13 +31,13 @@ const server = app.listen(config.port, config.host, () => {
 function shutdown(signal: string) {
   console.log(`${signal} received, shutting down`);
   clock.stop();
-  void (async () => {
-    await remote?.flush();
-    server.close(() => {
+  server.close(() => {
+    void (async () => {
+      await remote?.flush();
       database.close();
       process.exit(0);
-    });
-  })();
+    })();
+  });
 }
 
 process.once("SIGINT", () => shutdown("SIGINT"));

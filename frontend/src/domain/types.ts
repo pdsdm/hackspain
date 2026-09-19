@@ -90,7 +90,6 @@ export interface Vehicle {
   count: number
   from: string
   origin: string
-  originPos?: LatLng
   destinationId: string
   route: LatLng[]
   departAt: number
@@ -140,8 +139,7 @@ export interface Decision {
   title: string
   summary: string
   rationale?: string
-  kind?: 'operational'
-  cost: number | null
+  cost: number
   conditions: string[]
   effectApprove: string
   effectReject: string
@@ -183,7 +181,7 @@ export interface Budget {
   contingency: number
   autonomousLimit: number
   authorized: number
-  forecast: number | null
+  forecast: number
   committed: number
 }
 
@@ -194,6 +192,7 @@ export type TwistId =
   | 'delivery_delay'
   | 'dock_blocked'
   | 'provider_silent'
+  | 'reject_spend'
   | 'reject_split'
   | 'guest_need'
 
@@ -241,8 +240,8 @@ export interface CrisisState {
 }
 
 export type InterventionType =
-  | 'approve_plan'
-  | 'reject_plan'
+  | 'approve_spend'
+  | 'reject_spend'
   | 'reject_split'
   | 'pause'
   | 'resume'

@@ -15,7 +15,10 @@ function asJson(value: unknown): unknown {
 }
 
 function asTextJson(value: unknown): string {
-  return typeof value === "string" ? value : JSON.stringify(value);
+  if (typeof value === "string") return value;
+  const json = JSON.stringify(value);
+  if (json === undefined) throw new Error("Value must be JSON serializable");
+  return json;
 }
 
 function cell(value: unknown): string | number {

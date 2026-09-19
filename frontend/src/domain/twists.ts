@@ -1,5 +1,5 @@
 import type { CrisisState, TwistId } from './types'
-import { groups, invalidate, pushEvent, setAgent, setSpace, startCall, upsertCommitment } from './helpers'
+import { groups, invalidate, pushEvent, setAgent, setCommitment, setSpace, startCall, upsertCommitment } from './helpers'
 
 export interface TwistMeta {
   id: TwistId
@@ -14,6 +14,7 @@ export const TWISTS: TwistMeta[] = [
   { id: 'delivery_delay', label: 'Segunda entrega de catering se retrasa', consequence: '240 servicios fuera de hora' },
   { id: 'dock_blocked', label: 'Se bloquea el muelle de descarga', consequence: 'El proveedor no puede descargar' },
   { id: 'provider_silent', label: 'El transportista no responde', consequence: 'Alternativa sin confirmar' },
+  { id: 'reject_spend', label: 'Organizador rechaza el gasto adicional', consequence: 'Plan no autorizado' },
   { id: 'reject_split', label: 'Organizador rechaza dividir la hospitalidad', consequence: 'Buscar un único espacio de 600' },
   { id: 'guest_need', label: 'Invitado comunica necesidad no registrada', consequence: 'Asignación puede no ser adecuada' },
 ]
@@ -54,6 +55,38 @@ export function goToNorte(s: CrisisState, why: string) {
   s.scriptId = 'norte'
   s.scriptCursor = 0
   s.nextScriptAt = s.clock.simSeconds + 10
+  s.resolved = false
+}
+
+export function rejectSpend(s: CrisisState) {
+  const pend = pendingDecision(s)
+  if (pend && pend.id === 'd-plan-sur') {
+    pend.status = 'rechazada'
+    s.waitingForDecision = null
+    invalidate(s, 'c-lounge', 'Gasto no autorizado: se mantiene el límite de 1.500 €')
+    setSpace(s, 'loungeSur', 'descartado', 'Sin autorización de gasto')
+    pushEvent(s, 'intervencion', 'Responsable rechaza el gasto adicional. Límite: 1.500 €')
+    pushEvent(s, 'accion', 'Coordinador recalcula dentro del límite: solo Pabellón B (1.500 €)')
+    replan(s)
+    s.scriptId = 'reducido'
+    s.scriptCursor = 0
+    s.nextScriptAt = s.clock.simSeconds + 8
+    return
+  }
+  if (pend) { pend.status = 'rechazada'; s.waitingForDecision = null }
+  s.budget.authorized = 1500
+  const g = groups(s)
+  if (invalidate(s, 'c-lounge', 'Gasto retirado por el responsable')) {
+    setSpace(s, 'loungeSur', 'descartado', 'Gasto retirado')
+    setSpace(s, 'esperaSur', 'inactivo')
+    g.propios.confirmedCount = Math.max(0, g.propios.confirmedCount - 150)
+  }
+  s.budget.forecast = 1500
+  s.budget.committed = Math.min(s.budget.committed, 1500)
+  pushEvent(s, 'intervencion', 'Responsable retira la autorización de gasto adicional (límite 1.500 €)')
+  pushEvent(s, 'fallo', '150 invitados sin ubicación confirmada. El coordinador no declara cobertura completa')
+  setAgent(s, 'espacios', { status: 'incidencia', objective: '150 invitados sin ubicación · presentar impacto' })
+  replan(s)
   s.resolved = false
 }
 
@@ -172,6 +205,9 @@ export function applyTwist(s: CrisisState, t: TwistId) {
       replan(s)
       break
     }
+    case 'reject_spend':
+      rejectSpend(s)
+      break
     case 'reject_split':
       goToNorte(s, 'Responsable: «No aceptamos dividir la hospitalidad. Buscad ubicación para los 600 y presentad retraso y coste»')
       break
@@ -194,19 +230,46 @@ export function applyTwist(s: CrisisState, t: TwistId) {
 export function applyIntervention(s: CrisisState, type: string, text?: string) {
   const pend = pendingDecision(s)
   switch (type) {
-    case 'approve_plan':
-    case 'reject_plan': {
-      if (!pend || pend.kind !== 'operational') return
-      const approved = type === 'approve_plan'
-      pend.status = approved ? 'aprobada' : 'rechazada'
+    case 'approve_spend': {
+      if (!pend) { pushEvent(s, 'intervencion', 'Responsable confirma la autorización vigente'); return }
+      pend.status = 'aprobada'
       s.waitingForDecision = null
+      s.budget.authorized = Math.max(s.budget.authorized, pend.cost)
       s.coordinatorStatus = 'replanificando'
-      pushEvent(s, 'intervencion', `Responsable ${approved ? 'acepta' : 'rechaza'} la propuesta operativa: ${pend.title}`)
-      s.nextScriptAt = approved ? s.clock.simSeconds + 5 : null
+      pushEvent(s, 'intervencion', `Responsable autoriza: ${pend.title} · hasta ${pend.cost.toLocaleString('es-ES')} €`)
+      if (pend.id === 'd-lounge-solo') {
+        setSpace(s, 'loungeSur', 'pendiente', 'Autorizado · montaje hasta 13:15')
+        setCommitment(s, 'c-lounge', 'aceptado_condiciones', 'Autorizado por el responsable', ['Montaje termina 13:15', 'Zona de espera pendiente'])
+        s.budget.forecast = 2400
+        s.scriptId = 'main'
+        s.scriptCursor = 5
+      }
+      s.nextScriptAt = s.clock.simSeconds + 5
       return
     }
+    case 'reject_spend':
+      if (pend?.id === 'd-plan-norte') {
+        pend.status = 'rechazada'; s.waitingForDecision = null
+        pushEvent(s, 'intervencion', 'Responsable rechaza el plan Norte')
+        pushEvent(s, 'fallo', 'Sin plan viable para 600 juntos. 600 invitados sin ubicación confirmada. Impacto presentado al responsable')
+        s.coordinatorStatus = 'replanificando'
+        s.nextScriptAt = null
+        return
+      }
+      if (pend?.id === 'd-lounge-solo') {
+        pend.status = 'rechazada'; s.waitingForDecision = null
+        pushEvent(s, 'intervencion', 'Responsable rechaza 900 € para Lounge Sur')
+        pushEvent(s, 'fallo', '150 invitados sin ubicación. Asistentes prepara comunicación de cancelación parcial con compensación')
+        setAgent(s, 'asistentes', { status: 'activo', objective: 'Preparar aviso de cancelación parcial a 150 invitados' })
+        s.scriptId = 'main'
+        s.scriptCursor = 6
+        s.nextScriptAt = s.clock.simSeconds + 5
+        return
+      }
+      rejectSpend(s)
+      return
     case 'reject_split':
-      if (!s.twistsApplied.includes('reject_split')) applyTwist(s, 'reject_split')
+      goToNorte(s, 'Responsable: «No aceptamos dividir la hospitalidad. Buscad ubicación para los 600 y presentad retraso y coste»')
       return
     case 'pause':
       s.agentsPaused = true

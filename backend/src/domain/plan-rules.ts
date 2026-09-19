@@ -8,22 +8,11 @@ export interface GuestAllocation {
   status: "proposed" | "confirmed";
 }
 
-export interface OperationalApproval {
-  kind: "operational";
-  title: string;
-  summary: string;
-  rationale: string;
-  conditions: string[];
-  effectApprove: string;
-  effectReject: string;
-}
-
 export interface PlanProposal {
   title: string;
   summary: string;
   rationale: string;
-  cost: number | null;
-  approval?: OperationalApproval;
+  cost: number;
   conditions: string[];
   allocations: GuestAllocation[];
   confirmedNorthGuestIds: string[];
@@ -86,8 +75,18 @@ function validateAllocations(
     );
   }
 
-  if (proposal.cost !== null && (!Number.isFinite(proposal.cost) || proposal.cost < 0)) {
+  if (!Number.isFinite(proposal.cost) || proposal.cost < 0) {
     issues.push(`Invalid proposal cost: ${proposal.cost}`);
+  }
+
+  const contingency = state.budget.contingency;
+  if (
+    typeof contingency === "number" &&
+    state.budget.committed + proposal.cost > contingency
+  ) {
+    issues.push(
+      `Contingency exceeded: ${state.budget.committed + proposal.cost}/${contingency}`,
+    );
   }
 
   if (issues.length > 0) {
@@ -131,13 +130,17 @@ export function applyPlanProposal(
   }
   state.waitingForDecision = null;
 
-  state.coordinatorStatus = state.agentsPaused ? "pausado" : "replanificando";
-  if (proposal.approval) {
+  if (proposal.cost > Math.max(state.budget.autonomousLimit, state.budget.authorized)) {
     const decisionId = `decision-plan-${state.planVersion}`;
     state.decisions.push({
-      ...proposal.approval,
       id: decisionId,
+      title: proposal.title,
+      summary: proposal.summary,
+      rationale: proposal.rationale,
       cost: proposal.cost,
+      conditions: proposal.conditions,
+      effectApprove: "Autoriza el gasto de esta versión; las condiciones siguen requiriendo confirmación.",
+      effectReject: "Mantiene el gasto sin comprometer y solicita otra propuesta.",
       status: "pendiente",
       createdAt: state.clock.simSeconds,
     });

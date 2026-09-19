@@ -70,8 +70,8 @@ function otherView(s: CrisisState, v: Vehicle, now: number): VehicleView {
     id: v.id, kind, name: v.name, load, destId: v.destinationId, destName: spaceName(s, v.destinationId),
     eta: v.arriveAt, etaLabel: fmtClock(v.arriveAt), pct: v.status === 'retenido' ? Math.round(progress(v.departAt, v.arriveAt, now) * 100) : Math.round(progress(v.departAt, v.arriveAt, now) * 100),
     status: v.note ? `${label[v.status]} · ${v.note}` : label[v.status], tone, delayed: v.status === 'retenido', done: v.status === 'llegado',
-    originName: v.origin, originPos: v.originPos ?? v.route?.[0],
-    waypoints: endpoints(s, v.destinationId, v.route, v.originPos), fallback: v.route?.length ? v.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
+    originName: v.origin, originPos: v.route?.[0],
+    waypoints: endpoints(s, v.destinationId, v.route, v.route?.[0]), fallback: v.route?.length ? v.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 

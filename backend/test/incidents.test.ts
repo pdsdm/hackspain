@@ -6,7 +6,6 @@ import { createApp } from "../src/app.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { TWIST_IDS } from "../src/contracts/api.js";
-import { nextAutoTwist, twistSequence } from "../src/domain/auto-twists.js";
 import { SimulationClock } from "../src/domain/clock.js";
 import { ControlService } from "../src/domain/control-service.js";
 import { Engine } from "../src/domain/engine.js";
@@ -94,14 +93,12 @@ test("live mode fires at most one incident per interval, never while replanning,
     clock.tick();
     await settle();
     state = states.ensureActiveRun().state;
-    assert.equal((state.incidentsApplied as string[]).length, 1);
-    assert.equal((state.twistsApplied as string[]).length, 1);
+    assert.deepEqual(state.incidentsApplied, incidentSequence(7).slice(0, 2));
 
     control.setLive(false);
     for (let index = 0; index < ticksPerInterval + 1; index += 1) clock.tick();
     await settle();
-    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 1);
-    assert.equal((states.ensureActiveRun().state.twistsApplied as string[]).length, 1);
+    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 2);
   } finally {
     clock.stop();
     database.close();
@@ -188,38 +185,6 @@ test("with an LLM in catalog mode, or when the world agent fails, the catalogue 
   }
 });
 
-test("live mode fires a jury twist on the second live slot, skipping ineligible ones", async () => {
-  const { database, states, control, clock } = world();
-  try {
-    const first = nextAutoTwist(states.ensureActiveRun().state, 7);
-    assert.ok(first);
-    assert.ok((TWIST_IDS as readonly string[]).includes(first));
-    assert.notEqual(first, "reject_spend");
-    assert.deepEqual(twistSequence(7), twistSequence(7));
-    assert.notDeepEqual(twistSequence(7), twistSequence(8));
-
-    control.setLive(true, 7);
-    clock.tick();
-    await settle();
-    assert.deepEqual(states.ensureActiveRun().state.incidentsApplied, [incidentSequence(7)[0]]);
-    assert.deepEqual(states.ensureActiveRun().state.twistsApplied, []);
-
-    const run = states.ensureActiveRun();
-    const wait = structuredClone(run.state);
-    wait.coordinatorStatus = "estable";
-    wait.clock.liveLastAt = Number(wait.clock.simSeconds) - LIVE_INTERVAL_SECONDS;
-    wait.clock.liveIndex = 1;
-    states.saveState(run.id, wait);
-    clock.tick();
-    await settle();
-    const state = states.ensureActiveRun().state;
-    assert.deepEqual(state.twistsApplied, [first]);
-  } finally {
-    clock.stop();
-    database.close();
-  }
-});
-
 test("POST /simulation/live toggles clock.live", async () => {
 
   const database2 = openDatabase(":memory:");
@@ -246,5 +211,39 @@ test("POST /simulation/live toggles clock.live", async () => {
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database2.close();
+  }
+});
+
+test("el modo vivo sobrevive a «Reiniciar simulación»", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const control = new ControlService(states);
+
+    const encendido = control.setLive(true, 4242);
+    assert.equal(encendido.live, true);
+
+    control.reset("calm");
+
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.equal(clock.live, true, "el mundo tiene que seguir emitiendo tras el reinicio");
+    assert.equal(clock.liveSeed, 4242, "la semilla se conserva: la demo es reproducible");
+    // La secuencia arranca de cero: mundo nuevo, incidencias desde la primera.
+    assert.equal(clock.liveIndex, 0);
+    assert.equal(clock.liveLastAt, 0);
+  } finally {
+    database.close();
+  }
+});
+
+test("si el modo vivo estaba apagado, un reinicio no lo enciende", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    new ControlService(states).reset("calm");
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.notEqual(clock.live, true);
+  } finally {
+    database.close();
   }
 });

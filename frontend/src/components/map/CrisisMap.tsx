@@ -109,6 +109,9 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
       </MapContainer>
 
       <MapLayersControl layers={layers} onChange={setLayers} />
+      <div className="absolute bottom-1 left-1 z-[1000] text-[9px] text-muted pointer-events-auto">
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>
+      </div>
       {children}
     </div>
   )

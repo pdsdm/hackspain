@@ -132,21 +132,19 @@ test('approval, later incident and delivery commitments do not fabricate coverag
   const recovered = fixtures.recovered!.state;
   assert.equal(Object.values(seed.budget.proposedSurBreakdown).reduce((a, b) => a + b, 0), 3200);
   assert.equal(proposal.decisions[0]!.cost, 3200);
-  assert.equal(proposal.decisions[0]!.kind, 'operational');
-  assert.equal(proposal.budget.forecast, 3200);
+  assert.ok(proposal.budget.forecast > proposal.budget.autonomousLimit);
   assert.equal(proposal.budget.authorized, 1500);
   assert.equal(proposal.budget.committed, 0);
   assert.equal(proposal.waitingForDecision, proposal.decisions[0]!.id);
   assert.equal(recovered.budget.committed, 3200);
-  assert.equal(recovered.budget.authorized, proposal.budget.authorized);
+  assert.equal(recovered.budget.authorized, 3200);
   assert.equal(recovered.guestGroups.reduce((sum, g) => sum + g.informedCount, 0), 480);
   assert.equal(recovered.resolved, false, '120 recipients are still uncontacted');
   for (const name of ['lounge_unavailable', 'pabellon_b_400']) {
     const state = fixtures[name]!.state;
     assert.equal(state.planVersion, recovered.planVersion + 1);
     assert.equal(state.budget.committed, recovered.budget.committed);
-    assert.ok(state.budget.committed > state.budget.authorized);
-    assert.equal(state.budget.forecast, 3200);
+    assert.ok(state.budget.committed <= state.budget.authorized && state.budget.authorized <= state.budget.contingency);
     assert.ok(state.guestGroups.every((g) => g.informedCount === 0 && g.acceptedCount === 0));
     assert.ok(state.commitments.filter((c) => c.area === 'catering').every((c) => c.status === 'aceptado_condiciones'));
   }

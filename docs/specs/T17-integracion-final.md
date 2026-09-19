@@ -2,13 +2,13 @@
 
 ## Objetivo
 
-Demostrar el recorrido real del motor: evento libre → coordinador → propuesta con coste informativo → llamada sin aprobación económica → callback → giro → replanificación. Las decisiones operativas se verifican por separado (T38).
+Demostrar el recorrido real del motor: evento libre → coordinador → propuesta con gasto → aprobación humana → llamada → callback → giro → replanificación.
 
 ## Criterios de aceptación
 
 - Un test integrado arranca desde `calm`, inyecta la salida estructurada que se espera de Helmcode y atraviesa la API del panel.
-- Una propuesta de 6.000 € conserva esa previsión y despacha sin aprobación económica; no crea decisiones por importe ni compromete dinero al proponer.
-- El adaptador `sim` abre una llamada marcada como simulada y un callback autenticado a `/workflow/results` la termina. El resultado registra el coste comprometido explícito una sola vez; un replan conserva costes anteriores aunque el total supere los límites legacy.
+- Una propuesta por encima del límite deja exactamente una decisión pendiente y no despacha acciones antes de aprobarla.
+- Tras `approve_spend`, el adaptador `sim` abre una llamada marcada como simulada y un callback autenticado a `/workflow/results` la termina.
 - Repetir el mismo callback es idempotente: no vuelve a ejecutar el coordinador ni duplica decisiones o acciones.
 - `lounge_unavailable` invalida el compromiso afectado, aumenta `planVersion`, crea la acción de contingencia y termina sin llamadas `en_curso`.
 - `make check` pasa.

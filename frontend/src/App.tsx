@@ -58,7 +58,7 @@ export default function App() {
             </div>
             <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
               <KpiOverlay s={s} />
-              <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_plan', payload: { decisionId: decision!.id } })} />
+              <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
             </div>
             <div className="absolute bottom-3 left-3">
               <CoordinadorPanel s={s} className="glass w-[320px]" />
