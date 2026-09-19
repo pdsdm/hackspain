@@ -15,6 +15,12 @@ Un workflow determinista en `development` recibe por API los mensajes congelados
 - [ ] Dos runs reales del workflow crean un único evento cada uno en T46.
 - [x] Instalación, variables y procedimiento de ensayo quedan documentados sin secretos.
 
+## Si la key no puede crear el workflow
+
+Con una key sin permiso de owner la API devuelve `403 Cannot create use cases`. El montaje
+equivalente paso a paso en la UI está en
+[`docs/happyrobot-demo-incident-inputs.md`](../happyrobot-demo-incident-inputs.md).
+
 ## Fuera de alcance
 
 Modificar workflows salientes o sustituir el coordinador por T44.
