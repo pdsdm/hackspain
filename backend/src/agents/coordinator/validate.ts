@@ -33,6 +33,10 @@ const COORDINATOR_STATUSES: readonly CoordinatorStatus[] = [
   "pausado",
 ];
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function pickString(...values: unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value === "string" && value.trim() !== "") return value;

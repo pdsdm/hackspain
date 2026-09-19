@@ -5,6 +5,7 @@ import { parseOutput } from "./validate.js";
 import { persistCoordinatorOutput } from "../../domain/apply-coordinator.js";
 import type { CoordinatorLoopDeps } from "./loop.js";
 import { worldSummary } from "../../world/world.js";
+import { logCoord, logCoordError } from "../../log.js";
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -50,7 +51,10 @@ export async function runDevinSession(
 ): Promise<"ok" | "unavailable"> {
   const config = deps.config;
   const orgId = config?.orgId;
-  if (!config || !orgId) return "unavailable";
+  if (!config || !orgId) {
+    logCoordError("harness devin sin orgId (DEVIN_ORG_ID)");
+    return "unavailable";
+  }
 
   const run = deps.states.ensureActiveRun();
   const pending = deps.tasks.listOpen(run.id).map((task) => {
@@ -73,6 +77,7 @@ ${buildUserPrompt(input)}
 
 Usa el harness de Devin. Actualiza el structured output con el JSON del coordinador (operations + done true) en cuanto tengas un plan válido. No clones repos ni edites código: solo razona el plan de crisis.`;
 
+  logCoord("creando sesión Devin", config.devinMode, config.sessionApiUrl);
   const created = (await fetch(`${config.sessionApiUrl}/organizations/${orgId}/sessions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
@@ -91,8 +96,13 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
   })) as { session_id?: string; sessionId?: string };
 
   const sessionId = created.session_id ?? created.sessionId;
-  if (!sessionId) return "unavailable";
+  if (!sessionId) {
+    logCoordError("Devin no devolvió session_id", created);
+    return "unavailable";
+  }
+  logCoord("sesión", sessionId);
 
+  let lastFingerprint = "";
   while (!signal.aborted) {
     const session = (await getJson(
       `${config.sessionApiUrl}/organizations/${orgId}/sessions/${sessionId}`,
@@ -102,26 +112,41 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
     const output =
       session.structured_output ??
       (isRecord(session.structuredOutput) ? session.structuredOutput : undefined);
+    const status = String(session.status ?? "");
+    logCoord("poll", status, output === undefined || output === null ? "sin output" : "con output");
     if (output !== undefined && output !== null) {
-      const parsed = parseOutput(typeof output === "string" ? output : JSON.stringify(output), input);
-      if (parsed.output) {
-        const persistErrors = persistCoordinatorOutput({
-          runId: deps.states.ensureActiveRun().id,
-          planVersion: deps.states.ensureActiveRun().state.planVersion,
-          output: parsed.output,
-          world: deps.world,
-          workflows: deps.workflows,
-          tasks: deps.tasks,
-          states: deps.states,
-        });
-        if (persistErrors.length === 0) return "ok";
+      const fingerprint = typeof output === "string" ? output : JSON.stringify(output);
+      if (fingerprint !== lastFingerprint) {
+        lastFingerprint = fingerprint;
+        const parsed = parseOutput(fingerprint, input);
+        if (!parsed.output) {
+          logCoordError("JSON rechazado", parsed.issues);
+        } else {
+          const persistErrors = persistCoordinatorOutput({
+            runId: deps.states.ensureActiveRun().id,
+            planVersion: deps.states.ensureActiveRun().state.planVersion,
+            output: parsed.output,
+            world: deps.world,
+            workflows: deps.workflows,
+            tasks: deps.tasks,
+            states: deps.states,
+          });
+          if (persistErrors.length === 0) {
+            logCoord("plan aplicado");
+            return "ok";
+          }
+          logCoordError("reglas T7", persistErrors);
+        }
       }
     }
-    const status = String(session.status ?? "");
-    if (status === "exit" || status === "error" || status === "suspended") break;
+    if (status === "exit" || status === "error" || status === "suspended") {
+      logCoordError("sesión Devin terminó", status);
+      break;
+    }
     try {
       await sleep(4_000, signal);
     } catch {
+      logCoordError("timeout esperando a Devin");
       return "unavailable";
     }
   }

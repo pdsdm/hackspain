@@ -217,3 +217,30 @@ test("el harness Devin cloud exige DEVIN_ORG_ID", () => {
     /DEVIN_ORG_ID/,
   );
 });
+
+test("acepta operations de Devin con placeId/estado/vehicleId", () => {
+  const payload = JSON.stringify({
+    reading: "Acceso Sur cerrado, shuttles a esperaSur.",
+    planVersion: 2,
+    coordinatorStatus: "replanificando",
+    actions: [],
+    commitments: [],
+    assignments: [],
+    decision: null,
+    unverified: [],
+    operations: [
+      { op: "set_place", placeId: "accesoSur", estado: "cerrado" },
+      { op: "reroute_shuttle", vehicleId: "BUS-01", destinationId: "esperaSur" },
+      { op: "log_event", message: "Acceso Sur cortado" },
+    ],
+    done: true,
+  });
+  const { output, issues } = parseOutput(payload, crisisInput("calm"));
+  assert.deepEqual(issues, []);
+  assert.ok(output);
+  const first = output.operations?.[0];
+  const second = output.operations?.[1];
+  assert.equal(first?.op, "set_place");
+  assert.equal(first && "id" in first ? first.id : undefined, "accesoSur");
+  assert.equal(second && "id" in second ? second.id : undefined, "BUS-01");
+});

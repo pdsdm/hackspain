@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { logCoord, logCoordError, logEvent } from "../log.js";
 
 import { runCoordinatorLoop, type CompleteFn, type CoordinatorLoopDeps } from "../agents/coordinator/loop.js";
@@ -82,6 +84,11 @@ export class Engine {
 
   private async process(event: IncomingEvent & { id: string }): Promise<void> {
     const run = this.states.ensureActiveRun();
+    logEvent("recibido", event.source, event.kind, event.text ?? "", {
+      mode: this.options.mode,
+      harness: this.options.llmConfig?.harness ?? "none",
+      hasLlm: Boolean(this.options.llmConfig || this.options.completeFn),
+    });
     this.events.append({
       id: event.id,
       runId: run.id,
@@ -93,6 +100,10 @@ export class Engine {
       simSeconds: Number(run.state.clock.simSeconds),
       mode: "none",
     });
+    this.appendTimeline(
+      event.source === "jury" ? "incidencia" : "accion",
+      event.text ?? `${event.source}:${event.kind}`,
+    );
 
     try {
       if (event.source === "human") {
@@ -114,17 +125,20 @@ export class Engine {
         await this.runCoordinator(event);
       }
     } catch (error) {
+      logCoordError("excepción al procesar", error);
       if (error instanceof ContractError) throw error;
       this.markCoordinatorDown();
     }
+  }
 
+  private appendTimeline(kind: string, text: string): void {
     const after = this.states.ensureActiveRun();
     const events = records(after.state, "events");
     events.push({
-      id: `intake-${event.id}`,
+      id: `intake-${randomUUID()}`,
       time: after.state.clock.simSeconds,
-      kind: event.source === "jury" ? "incidencia" : "accion",
-      text: event.text ?? `${event.source}:${event.kind}`,
+      kind,
+      text,
     });
     after.state.events = events.slice(-80);
     this.states.saveState(after.id, after.state);
@@ -132,8 +146,10 @@ export class Engine {
 
   private async runCoordinator(event: IncomingEvent): Promise<"llm" | "rules" | "none"> {
     if (this.options.mode === "rules" && !this.options.completeFn) {
+      logCoord("modo rules, sin LLM");
       return "rules";
     }
+    logCoord("llamando al coordinador", event.kind, event.text ?? "");
     const result = await runCoordinatorLoop(
       { source: event.source, kind: event.kind, ...(event.text ? { text: event.text } : {}) },
       {
@@ -143,6 +159,7 @@ export class Engine {
         ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
       },
     );
+    logCoord("resultado", result);
     if (result === "unavailable") {
       this.markCoordinatorDown();
       return "none";
@@ -152,6 +169,7 @@ export class Engine {
   }
 
   private markCoordinatorDown(): void {
+    logCoordError("no disponible");
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
     const events = records(state, "events");

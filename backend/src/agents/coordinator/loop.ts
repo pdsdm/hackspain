@@ -12,6 +12,7 @@ import { worldSummary, type WorldModel } from "../../world/world.js";
 import { answerQuery } from "./queries.js";
 import { runToolHarness } from "./harness.js";
 import { runDevinSession } from "./devin.js";
+import { logCoord, logCoordError } from "../../log.js";
 
 export type CompleteFn = (
   config: LlmConfig,
@@ -76,6 +77,7 @@ async function runJsonLoop(
         signal,
       });
     } catch {
+      logCoordError("LLM complete() falló");
       return "unavailable";
     }
 
@@ -131,15 +133,21 @@ export async function runCoordinatorLoop(
   event: { source: string; kind: string; text?: string },
   deps: CoordinatorLoopDeps,
 ): Promise<"ok" | "unavailable"> {
-  if (!deps.config && !deps.completeFn) return "unavailable";
-  const timeout = AbortSignal.timeout(60_000);
+  if (!deps.config && !deps.completeFn) {
+    logCoordError("sin config LLM ni completeFn (¿COORDINATOR_MODE=llm sin clave, o loadLlmConfig falló?)");
+    return "unavailable";
+  }
+  const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 60_000;
+  const timeout = AbortSignal.timeout(timeoutMs);
+  logCoord("bucle", deps.config?.provider ?? "mock", deps.config?.harness ?? "json", `tope ${timeoutMs}ms`);
   if (deps.completeFn || !deps.config || deps.config.harness === "json" || deps.config.provider === "anthropic") {
     return runJsonLoop(event, deps, timeout);
   }
   try {
     if (deps.config.harness === "devin") return await runDevinSession(event, deps, timeout);
     return await runToolHarness(event, deps, timeout);
-  } catch {
+  } catch (error) {
+    logCoordError("excepción en harness", error);
     return "unavailable";
   }
 }
