@@ -1,93 +1,53 @@
 # Estado del proyecto
 
-> **Este es el documento de memoria del proyecto.** El contexto de una sesión de agente se
-> pierde; esto no. Si eres un agente y acabas de llegar: léelo entero antes de tocar nada,
-> y déjalo actualizado antes de irte.
->
-> Para regenerarlo, sigue el procedimiento de
-> [`.agents/skills/actualizar-estado/SKILL.md`](../.agents/skills/actualizar-estado/SKILL.md).
-> **Todo lo que hay aquí sale de comandos ejecutados sobre `origin/main`, no de recuerdos.**
+> Memoria del proyecto: contrastar esta foto con `origin/main` antes de trabajar.
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 13:32 CEST |
-| **Commit de `main`** | `027ea69` (PR #32) |
+| **Foto tomada** | 19 de septiembre de 2026, 17:50 CEST |
+| **Base de `main` integrada** | `origin/main` mergeado en `feat/pep-chat-anclado` (PR #56) |
+| **Trabajo verificado** | conflictos de merge resueltos; `make check` OK |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, cierre del tramo técnico T17/T18 |
+| **Generado por** | Cursor |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` | OK |
-| Tests de backend | **110 de 110** |
-| Lint y build | Backend y frontend OK |
+| `make check` en esta rama | OK |
+| Lint y build | Backend y frontend OK en la foto T40 anterior |
 | Fixtures | 10 JSON reproducibles OK |
+| Node de esta verificación | 22.22.3 |
 
-Verificado sobre `027ea69` con Node 22.23.2. El frontend mantiene el aviso conocido de
-chunk mayor de 500 kB; no falla el build.
+El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
 ## Qué funciona
 
-Todo lo de esta sección está mergeado en `main`.
-
-- **Panel real** (T27): frontend en modo `api`, eventos, intervenciones, giros y polling de
-  `/state` contra el backend.
-- **Motor y estado** (T2, T7, T24, T25): Express + SQLite, ejecuciones persistentes,
-  reloj, reglas deterministas y cola por `planVersion`.
-- **Coordinador** (T10, T26): bucle JSON/tools/Devin en proceso y proveedor Helmcode
-  configurado por D15, con `rules` como respaldo.
-- **Control y giro** (T15, T16): aprobación, decisiones obsoletas, invalidación de
-  compromisos, incremento de `planVersion`, cancelación/traslado de tareas y reavisos.
-- **Camino de llamada** (T9, T28): el backend despacha a HappyRobot y recibe resultados
-  autenticados en `/workflow/results`; el panel no maneja credenciales.
-- **Recorrido técnico T17** (PR #32): test integrado `evento → propuesta → aprobación →
-  llamada sim → callback HTTP → lounge_unavailable → replan`. Termina sin decisiones
-  duplicadas ni llamadas `en_curso`.
-- **Protecciones T17** (PR #32): no salen acciones nuevas antes de aprobar gasto y un
-  callback duplicado no vuelve a ejecutar el coordinador.
-- **Entorno T18 local** (PR #32): `scripts/demo.sh` arranca backend con SQLite persistente
-  y frontend API; permite `status`, `reset`, `restart-backend` y `down`. El arranque local,
-  el proxy de Vite y la persistencia tras reinicio se comprobaron manualmente.
-- **Especialistas**: Espacios (T11) y Asistentes/SMS segmentado (T14) tienen guion,
-  extractor y tests.
+- `main` incluye panel API, motor persistente, HappyRobot, JEV opcional, afluencia,
+  actores, incidencias, giros, rutas dinámicas, costes informativos (T38) y
+  `reasoning_effort` bajo en Helmcode (PR #52).
+- **T39 / PR #56:** el mapa ocupa toda la vista; KPIs, aforo, coordinador y
+  cronología (chat, lo nuevo abajo, anclado al fondo) flotan sobre él con estilo
+  cristal. La llamada solo aparece mientras está `en_curso`. Sin tarjeta de coste
+  ni panel de operaciones. Velocidad ×1→×2→×5→×10→×20 en modo `sim`. Lo secundario
+  va en un cajón lateral.
+- **T40:** el estado operativo (runs, tareas, eventos) se copia a Postgres del
+  proyecto `vdekfueryshivtdkbbti` cuando hay service role. SQLite sigue siendo el
+  motor. El panel no habla con Supabase directo.
+- T38 ya está en `main`: costes informativos, sin límites ni aprobaciones económicas.
+- T6 tiene código integrado en `main`. No se han repetido llamadas reales en esta sesión.
 
 ## Qué falta, por riesgo para la demo
 
-### 1. Llamada HappyRobot real — T6 (`doing`), T9 (`review`)
-
-No se ha verificado una llamada saliente real que termine con el callback y un compromiso
-visible en `/state`. Faltan, como mínimo, trigger, API key, teléfono E.164 y token de
-callback válidos en el `.env` del portátil de demo.
-
-> **Aviso del ensayo del sábado por la tarde (rama `feat/ventura-jev-confirmacion`).** La
-> ruta `POST /workflow/happyrobot/results`, que es la que viaja en `callbackUrl`, no estaba
-> registrada en `app.ts`: cualquier callback real habría recibido un 404, con el test de
-> contrato de `main` en rojo. Está arreglada y verificada por HTTP en esa rama, todavía sin
-> mergear. Hasta que se mergee, no se puede cerrar T6 aunque las credenciales estén bien.
-
-El equipo informó de un Quick Tunnel anterior, pero no se verificó en esta sesión. En este
-entorno `cloudflared` no está en `PATH` y no hay proceso activo. El modo `up` falla de forma
-explícita antes de arrancar nada si falta el binario.
-
-### 2. Recorrido T17 con servicios reales
-
-El test usa una salida estructurada inyectada equivalente a la esperada de Helmcode y un
-callback simulado. Falta repetir el mismo recorrido con Helmcode `deepseek-v4-flash` y
-HappyRobot reales. T17 permanece `doing` hasta esa validación.
-
-### 3. T18 público y ensayo
-
-La automatización del Quick Tunnel está mergeada, pero no se ejecutó contra una URL
-pública en esta sesión. Falta comprobar `/health` público, token del callback, recuperación
-tras reinicio y un ensayo completo. T18 permanece `doing`.
-
-### 4. Resto
-
-- Catering y Transporte (T12, T13): `todo`.
-- Pitch, ensayo y vídeo (T19): `todo`.
-- T30–T32: `todo`; no abrirlos antes de completar y ensayar el recorrido principal.
-- Aprendizaje entre ejecuciones (T20): bonus, `todo`.
+1. Pegar `SUPABASE_SERVICE_ROLE_KEY` en `.env` y comprobar que el backend loguea
+   `Supabase persistence enabled`; revisar tablas en el dashboard.
+2. Mergear PR #56 (`feat/pep-chat-anclado`) cuando `make check` y el preview estén verdes.
+3. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
+   comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
+4. Ensayar el recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por
+   pasar las pruebas simuladas.
+5. Al integrar el trabajo local de recursos y T20, retirar sus límites presupuestarios
+   y recomendaciones `ask_budget`; esas ramas no se han modificado aquí.
 
 ## Bloqueos y de quién dependen
 
@@ -100,12 +60,10 @@ tras reinicio y un ensayo completo. T18 permanece `doing`.
 
 ## Ramas vivas sin mergear
 
-| Rama | Qué tiene |
-|---|---|
-| `Prueba-de-plataforma-y-llamada-real` | 6 commits; Web call y sala de voz de respaldo, además de cambios frontend que no deben sustituir D14. |
-| `docs/estado-1200` | Un commit de `ESTADO.md` basado en `c371546`; está obsoleto y no tiene PR abierto. |
-
-No hay PRs abiertos en GitHub al tomar esta foto.
+- `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
+- `feat/pep-supabase`: T40 espejo Postgres; falta la clave de servicio en el `.env` local.
+- `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
+- `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
 ## Decisiones pendientes que bloquean a otros
 

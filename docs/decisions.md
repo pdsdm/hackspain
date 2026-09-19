@@ -90,6 +90,32 @@
 - **Qué:** mientras se valida Cognition, el backend usa Helmcode con `deepseek-v4-flash` y harness JSON. Es independiente del modelo de voz, que se elige dentro de HappyRobot.
 - **Por qué:** prioriza latencia de replanificación y mantiene `rules` como respaldo. Descartado: confundir `COORDINATOR_MODEL` con el LLM de la llamada en tiempo real.
 
+**Medición del 19/09/2026, `npm run coordinator -- --runs=4 --fixture=crisis`, cuatro ejecuciones por variante:**
+
+| `COORDINATOR_REASONING_EFFORT` | Latencias | Válidas | Invitados asignados |
+|---|---|---|---|
+| `low` (por defecto con Helmcode desde el 19/09) | 12,4 / 18,4 / 19,9 / 22,1 s | 4/4 | 600 en las cuatro |
+| sin campo, el default del proveedor (lo que corría antes) | 18,2 / 20,2 / 27,9 / 31,5 s | 4/4 | 600 en las cuatro |
+| `none` (sin thinking) | 6,1 / 7,4 / 7,7 / 8,5 s | 4/4 | **90 / 90 / 450 / 0** |
+
+Con Helmcode, `COORDINATOR_REASONING_EFFORT` vacío ya significa `low`: lo pone `loadLlmConfig`, no el `.env`. A los demás proveedores no se les manda ningún campo de thinking salvo que se pida, porque OpenAI y Cognition no conocen ese parámetro.
+
+**No pongas `none`.** Va tres veces más rápido, pero los planes dejan a la mayoría de los
+600 invitados sin asignar, que es justo el criterio de la demo. En otras 15 llamadas
+aparecieron dos respuestas de ~100 s y ~120 s: el bucle corta a 120 s y ese evento se queda
+sin plan, con el respaldo determinista solo para giros.
+
+### D17: costes informativos durante la crisis (T38, aprobada por Ventura)
+
+- **Qué:** recuperar el servicio tiene prioridad. Se registran costes previstos y comprometidos, sin topes de contingencia, límites autónomos ni aprobaciones económicas. Sustituye la parte presupuestaria de D10 y de las specs anteriores.
+- **Se conserva:** validación de importes, aforo, accesos, evidencia, condiciones, idempotencia y control humano operativo. Los campos de límites quedan como legado del contrato, sin efecto. Descartados presupuestos artificialmente altos y aprobaciones humanas automáticas.
+- **Integración pendiente:** los cambios locales de ciclo de recursos no deben reintroducir límites por recurso ni reservas de saldo; T20 debe excluir las recomendaciones históricas `ask_budget`. El prompt desplegado en HappyRobot debe sincronizarse con el guion del repo.
+
+### D18: Supabase Postgres como copia del estado (amplía D7)
+
+- **Qué:** el motor y los tests siguen en SQLite. Si hay `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, al arrancar se hidrata SQLite desde Postgres y cada escritura se copia a las mismas tablas (`demo_runs`, tareas, eventos). El frontend sigue hablando con Express (`VITE_DATA_SOURCE=api`).
+- **Por qué:** un único proyecto cloud (pdsdm's Project) para la demo, sin reescribir el motor síncrono ni romper `make check`. Descartado sustituir SQLite por Postgres en el hot path (todo el dominio es síncrono) y exponer el service role al navegador.
+
 ### Propuesta T35: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.

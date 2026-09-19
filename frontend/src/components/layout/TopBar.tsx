@@ -1,11 +1,13 @@
-import { Pause, Play, RotateCcw, Radio } from 'lucide-react'
+import { Pause, Play, RotateCcw, Radio, PanelRight } from 'lucide-react'
 import type { CrisisController } from '../../data/useCrisisState'
 import { fmtClock, fmtCountdown } from '../../domain/time'
 
-const SPEEDS = [1, 5, 20]
+const CYCLE = [1, 2, 5, 10, 20]
 
-export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onIntervenir: () => void }) {
+export function TopBar({ ctl, onIntervenir, onDrawer, drawerOpen }: { ctl: CrisisController; onIntervenir: () => void; onDrawer: () => void; drawerOpen: boolean }) {
   const { state: s } = ctl
+  const speedIndex = CYCLE.indexOf(s.clock.speed)
+  const nextSpeed = CYCLE[(speedIndex + 1) % CYCLE.length]
   const left = s.clock.openingAt - s.clock.simSeconds
   const late = left < 0
   return (
@@ -42,14 +44,9 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
             <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
               {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
             </button>
-            {SPEEDS.map((sp) => {
-              const on = s.clock.speed === sp && !s.clock.paused
-              return (
-                <button key={sp} onClick={() => ctl.setSpeed(sp)} className={`h-9 px-3 border display font-bold text-[12px] num ${on ? 'bg-ink border-ink text-bg' : 'border-line-2 text-muted hover:text-ink'}`}>
-                  ×{sp}
-                </button>
-              )
-            })}
+            <button onClick={() => ctl.setSpeed(nextSpeed)} title={`Velocidad ×${s.clock.speed} · pulsa para ×${nextSpeed}`} aria-label={`Velocidad ×${s.clock.speed}, cambiar a ×${nextSpeed}`} className={`h-9 min-w-12 px-3 border display font-bold text-[12px] num ${s.clock.speed !== 1 && !s.clock.paused ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
+              ×{s.clock.speed}
+            </button>
               </>
             )}
             <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">
@@ -60,6 +57,9 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
       )}
 
       <button disabled={ctl.pending || ctl.stale} onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
+      <button onClick={onDrawer} aria-pressed={drawerOpen} title="Panel de control" aria-label="Panel de control" className={`w-10 h-10 grid place-items-center border ${drawerOpen ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
+        <PanelRight size={16} />
+      </button>
     </header>
   )
 }
