@@ -14,7 +14,7 @@ import {
   routeTo,
   type WorldModel,
 } from "../world/world.js";
-import { planTrip } from "../world/locate.js";
+import { planTripCached } from "../world/locate.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -58,12 +58,12 @@ function coerceSpaceStatus(status: string): string {
   return "pendiente";
 }
 
-export async function applyOperation(
+export function applyOperation(
   draft: CrisisStateDocument,
   world: WorldModel,
   operation: CoordinatorOperation,
   openTaskIds: ReadonlySet<string>,
-): Promise<{ ok: true; cancelTaskId?: string } | { ok: false; error: string }> {
+): { ok: true; cancelTaskId?: string } | { ok: false; error: string } {
   const now = Number(draft.clock.simSeconds);
   switch (operation.op) {
     case "set_place": {
@@ -145,7 +145,7 @@ export async function applyOperation(
       }
       if (operation.delayMin !== undefined) vehicle.delayMin = operation.delayMin;
       const fromQuery = String(vehicle.from ?? vehicle.origin ?? "");
-      const trip = await planTrip(world, fromQuery, operation.destinationId);
+      const trip = planTripCached(world, fromQuery, operation.destinationId);
       if (!trip) return { ok: false, error: `redirect_vehicle ${operation.id}: no hay ruta ${fromQuery} → ${operation.destinationId}` };
       vehicle.destinationId = operation.destinationId;
       vehicle.route = trip.route;
@@ -164,8 +164,8 @@ export async function applyOperation(
       if (destination.status === "cerrado" || destination.status === "descartado") {
         return { ok: false, error: `spawn_vehicle: destino ${operation.destinationId} ${String(destination.status)}` };
       }
-      const trip = await planTrip(world, operation.from, operation.destinationId);
-      if (!trip) return { ok: false, error: `spawn_vehicle: no encuentro origen «${operation.from}»` };
+      const trip = planTripCached(world, operation.from, operation.destinationId);
+      if (!trip) return { ok: false, error: `spawn_vehicle: no encuentro origen «${operation.from}»; consulta route con fromId antes` };
       const vehicles = records(draft, "vehicles");
       const id = operation.id?.trim() || `MOV-${randomUUID().slice(0, 8)}`;
       if (vehicles.some((item) => item.id === id)) {
@@ -248,16 +248,16 @@ export async function applyOperation(
   }
 }
 
-export async function applyOperations(
+export function applyOperations(
   draft: CrisisStateDocument,
   world: WorldModel,
   operations: CoordinatorOperation[],
   openTaskIds: ReadonlySet<string>,
-): Promise<{ errors: string[]; cancelled: string[] }> {
+): { errors: string[]; cancelled: string[] } {
   const errors: string[] = [];
   const cancelled: string[] = [];
   for (const operation of operations) {
-    const result = await applyOperation(draft, world, operation, openTaskIds);
+    const result = applyOperation(draft, world, operation, openTaskIds);
     if (!result.ok) errors.push(result.error);
     else if (result.cancelTaskId) cancelled.push(result.cancelTaskId);
   }
@@ -279,7 +279,7 @@ function allocationsFrom(output: CoordinatorOutput): GuestAllocation[] {
 
 const CHANNEL_KIND = { llamada: "call", sms: "sms", email: "email" } as const;
 
-export async function persistCoordinatorOutput(input: {
+export function persistCoordinatorOutput(input: {
   runId: string;
   planVersion: number;
   output: CoordinatorOutput;
@@ -287,11 +287,11 @@ export async function persistCoordinatorOutput(input: {
   workflows: WorkflowService;
   tasks: TaskRepository;
   states: StateRepository;
-}): Promise<string[]> {
+}): string[] {
   const openTaskIds = new Set(input.tasks.listOpen(input.runId).map((task) => task.id));
   const current = input.states.ensureActiveRun();
   const dry = structuredClone(current.state);
-  const { errors, cancelled } = await applyOperations(dry, input.world, input.output.operations ?? [], openTaskIds);
+  const { errors, cancelled } = applyOperations(dry, input.world, input.output.operations ?? [], openTaskIds);
   if (errors.length > 0) return errors;
 
   const hasPlan =
@@ -349,25 +349,25 @@ export async function persistCoordinatorOutput(input: {
 
   const run = input.states.ensureActiveRun();
   const next = structuredClone(run.state);
-  await applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
+  applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
   if (!next.waitingForDecision) next.coordinatorStatus = input.output.coordinatorStatus;
   input.states.saveState(run.id, next);
   return [];
 }
 
-export async function persistReplan(input: {
+export function persistReplan(input: {
   runId: string;
   output: CoordinatorOutput;
   world: WorldModel;
   tasks: TaskRepository;
   states: StateRepository;
-}): Promise<string[]> {
+}): string[] {
   const open = input.tasks.listOpen(input.runId);
   const openTaskIds = new Set(open.map((task) => task.id));
   const current = input.states.ensureActiveRun();
   const next = structuredClone(current.state);
-  const { errors, cancelled } = await applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
+  const { errors, cancelled } = applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   if (errors.length > 0) return errors;
 
   const now = Number(next.clock.simSeconds);

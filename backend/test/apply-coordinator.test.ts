@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { applyOperation, hasNorthAccess } from "../src/domain/apply-coordinator.js";
 import { parseCrisisState, type CrisisStateDocument } from "../src/domain/crisis-state.js";
-import { clearLocateCache, findPlaceInWorld, setLocateFetch } from "../src/world/locate.js";
+import { clearLocateCache, findPlaceInWorld, planTrip, setLocateFetch } from "../src/world/locate.js";
 import { loadWorld } from "../src/world/world.js";
 
 function crisis(): CrisisStateDocument {
@@ -147,7 +147,9 @@ test("spawn_vehicle geocodes an origin that is not in the world", async () => {
   });
   const world = loadWorld();
   const draft = crisis();
-  const ok = await applyOperation(
+  const trip = await planTrip(world, "taller de prueba inventado en madrid", "paddockNorte");
+  assert.ok(trip);
+  const ok = applyOperation(
     draft,
     world,
     {

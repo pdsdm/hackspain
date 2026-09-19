@@ -107,7 +107,7 @@ export async function runToolHarness(
         });
         continue;
       }
-      const persistErrors = await persistCoordinatorOutput({
+      const persistErrors = persistCoordinatorOutput({
         runId: run.id,
         planVersion: deps.states.ensureActiveRun().state.planVersion,
         output: parsed.output,
@@ -147,16 +147,16 @@ export async function runToolHarness(
           toolContent = { ok: false, errors: parsed.issues.map((issue) => `${issue.code}: ${issue.detail}`) };
         } else {
           const openTaskIds = new Set(deps.tasks.listOpen(live.id).map((task) => task.id));
-          const dry = (await applyOperations(
+          const dry = applyOperations(
             structuredClone(live.state),
             deps.world,
             parsed.output.operations ?? [],
             openTaskIds,
-          )).errors;
+          ).errors;
           if (dry.length > 0) {
             toolContent = { ok: false, errors: dry };
           } else {
-            const persistErrors = await persistCoordinatorOutput({
+            const persistErrors = persistCoordinatorOutput({
               runId: live.id,
               planVersion: live.state.planVersion,
               output: parsed.output,

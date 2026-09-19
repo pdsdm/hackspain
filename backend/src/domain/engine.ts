@@ -73,11 +73,11 @@ export class Engine {
     };
   }
 
-  private async applyGenerated(incident: GeneratedIncident): Promise<void> {
+  private applyGenerated(incident: GeneratedIncident): void {
     const run = this.states.ensureActiveRun();
     const draft = structuredClone(run.state);
     for (const operation of incident.operations) {
-      const result = await applyOperation(draft, this.options.world, operation, new Set());
+      const result = applyOperation(draft, this.options.world, operation, new Set());
       if (!result.ok) logCoord("incidencia generada: operación rechazada", result.error);
     }
     const events = records(draft, "events");
@@ -188,7 +188,7 @@ export class Engine {
           happened,
         );
         if (generated) {
-          await this.applyGenerated(generated);
+          this.applyGenerated(generated);
           logCoord("incidencia generada", generated.text);
           mode = await this.runCoordinator({ ...event, text: generated.text });
         } else {
@@ -256,7 +256,7 @@ export class Engine {
     }
   }
 
-  private async applyRulesReplan(event: IncomingEvent): Promise<boolean> {
+  private applyRulesReplan(event: IncomingEvent): boolean {
     const twist = this.twistOf(event);
     if (!twist) return false;
     const run = this.states.ensureActiveRun();
@@ -270,7 +270,7 @@ export class Engine {
       logCoordError("replan rules", blocking.map((issue) => `${issue.code}: ${issue.detail}`).join("; "));
       return false;
     }
-    const errors = await persistReplan({
+    const errors = persistReplan({
       runId: run.id,
       output,
       world: this.options.world,
@@ -288,7 +288,7 @@ export class Engine {
   private async runCoordinator(event: IncomingEvent): Promise<"llm" | "rules" | "none"> {
     if (this.options.mode === "rules" && !this.options.completeFn) {
       logCoord("modo rules, sin LLM");
-      await this.applyRulesReplan(event);
+      this.applyRulesReplan(event);
       return "rules";
     }
     logCoord("llamando al coordinador", event.kind, event.text ?? "");
@@ -309,7 +309,7 @@ export class Engine {
     }
     logCoord("resultado", result);
     if (result === "unavailable") {
-      if (await this.applyRulesReplan(event)) return "rules";
+      if (this.applyRulesReplan(event)) return "rules";
       this.markCoordinatorDown();
       return "none";
     }
