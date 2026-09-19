@@ -53,6 +53,11 @@ const ORIGIN_STOPS: Record<string, string> = {
   "Plaza de Castilla": "castilla",
   "Aeropuerto T4": "t4",
   Coslada: "coslada",
+  "Hub DHL Coslada": "coslada",
+  DHL: "coslada",
+  "Concesionario McLaren Madrid": "dealerMclaren",
+  "McLaren Madrid": "dealerMclaren",
+  McLaren: "dealerMclaren",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,9 +135,12 @@ export function affectedBy(state: CrisisStateDocument, world: WorldModel, placeI
   return { shuttles, deliveries, guestGroups, gates, commitments };
 }
 
-function originStopId(origin: string | undefined, fallbackId: string): string {
+export function originStopId(origin: string | undefined, fallbackId: string): string {
   if (!origin) return fallbackId;
-  return ORIGIN_STOPS[origin] ?? origin;
+  if (ORIGIN_STOPS[origin]) return ORIGIN_STOPS[origin];
+  const key = Object.keys(ORIGIN_STOPS).find((name) => name.toLowerCase() === origin.toLowerCase());
+  if (key) return ORIGIN_STOPS[key];
+  return origin;
 }
 
 export function routeTo(
@@ -140,9 +148,10 @@ export function routeTo(
   fromId: string,
   toPlaceId: string,
 ): RouteEstimate {
-  const from = placeById(world, fromId);
+  const resolvedFrom = originStopId(fromId, fromId);
+  const from = placeById(world, resolvedFrom);
   const to = placeById(world, toPlaceId);
-  const direct = world.links.find((link) => link.from === fromId && link.to === toPlaceId);
+  const direct = world.links.find((link) => link.from === resolvedFrom && link.to === toPlaceId);
   if (direct) {
     return {
       route: direct.route,
@@ -151,7 +160,7 @@ export function routeTo(
     };
   }
 
-  const viaAccess = world.links.find((link) => link.from === fromId && link.to === "accesoSur");
+  const viaAccess = world.links.find((link) => link.from === resolvedFrom && link.to === "accesoSur");
   const transfer = world.links.find((link) => link.from === "accesoSur" && link.to === toPlaceId);
   if (viaAccess && transfer) {
     return {
@@ -195,7 +204,7 @@ export function worldSummary(world: WorldModel, state: CrisisStateDocument) {
       kind: place.kind,
       zone: place.zone,
       capacity: place.capacity,
-      status: liveStatus(state, place.id) ?? "desconocido",
+      status: liveStatus(state, place.id) ?? (place.kind === "parada" ? "origen" : "desconocido"),
     })),
     links: world.links.map((link) => ({
       from: link.from,

@@ -111,7 +111,7 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ### `POST /simulation/live` (T32)
 
-Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha elegido. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
+Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semilla, sin pulsar los botones. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
 
 ```json
 { "enabled": true, "seed": 42 }
@@ -125,7 +125,7 @@ Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha ele
 
 `mode` opcional: `open` (por defecto) o `catalog`. En `open`, cuando hay LLM, un **agente mundo** inventa cada incidencia a partir del estado real (lugares, vehículos, puertas, grupos, lo ya ocurrido) y de una pista de la semilla (área, gravedad, entidad); devuelve texto + hasta 3 operaciones (`set_place`, `set_gate`, `redirect_vehicle`, `reroute_shuttle`, `redirect_delivery`, `set_group`) que se aplican con el mismo validador del coordinador; el coordinador la recibe como `kind: incident_open`. Sin LLM, o si el agente mundo falla, cae al catálogo. `SIM_INCIDENTS_MODE` fija el modo al arrancar.
 
-`GET /state` expone `clock.live: boolean`, `clock.liveSeed: number`, `clock.liveMode`, `incidentsApplied[]` con los ids ya lanzados (`gen-<n>` para las generadas) e `incidentTexts[]` con los últimos 20 textos. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo de 18 en `backend/src/domain/incidents.ts`; seis tocan `vehicles[]`, parkings y paddock). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+`GET /state` expone `clock.live: boolean`, `clock.liveSeed: number`, `clock.liveMode`, `incidentsApplied[]` con los ids ya lanzados (`gen-<n>` para las generadas) e `incidentTexts[]` con los últimos 20 textos. Con el modo encendido, el reloj lanza como máximo un evento cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados: en los huecos pares, una incidencia (agente mundo o catálogo de 18); en los impares, el siguiente giro de `TWIST_IDS` que aún no esté aplicado y sea aplicable al estado (p. ej. no lanza `reject_spend` sin decisión pendiente). El giro entra como `source: clock`, `kind: twist`, con el mismo efecto que `POST /simulation/twists`. Los botones del jurado siguen valiendo y son idempotentes. Misma semilla, misma secuencia. Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
 
 ### Afluencia en los accesos (`gates[]`)
 

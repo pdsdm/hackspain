@@ -6,6 +6,7 @@ import { createApp } from "../src/app.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { TWIST_IDS } from "../src/contracts/api.js";
+import { nextAutoTwist, twistSequence } from "../src/domain/auto-twists.js";
 import { SimulationClock } from "../src/domain/clock.js";
 import { ControlService } from "../src/domain/control-service.js";
 import { Engine } from "../src/domain/engine.js";
@@ -93,12 +94,14 @@ test("live mode fires at most one incident per interval, never while replanning,
     clock.tick();
     await settle();
     state = states.ensureActiveRun().state;
-    assert.deepEqual(state.incidentsApplied, incidentSequence(7).slice(0, 2));
+    assert.equal((state.incidentsApplied as string[]).length, 1);
+    assert.equal((state.twistsApplied as string[]).length, 1);
 
     control.setLive(false);
     for (let index = 0; index < ticksPerInterval + 1; index += 1) clock.tick();
     await settle();
-    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 2);
+    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 1);
+    assert.equal((states.ensureActiveRun().state.twistsApplied as string[]).length, 1);
   } finally {
     clock.stop();
     database.close();
@@ -182,6 +185,38 @@ test("with an LLM in catalog mode, or when the world agent fails, the catalogue 
   } finally {
     broken.clock.stop();
     broken.database.close();
+  }
+});
+
+test("live mode fires a jury twist on the second live slot, skipping ineligible ones", async () => {
+  const { database, states, control, clock } = world();
+  try {
+    const first = nextAutoTwist(states.ensureActiveRun().state, 7);
+    assert.ok(first);
+    assert.ok((TWIST_IDS as readonly string[]).includes(first));
+    assert.notEqual(first, "reject_spend");
+    assert.deepEqual(twistSequence(7), twistSequence(7));
+    assert.notDeepEqual(twistSequence(7), twistSequence(8));
+
+    control.setLive(true, 7);
+    clock.tick();
+    await settle();
+    assert.deepEqual(states.ensureActiveRun().state.incidentsApplied, [incidentSequence(7)[0]]);
+    assert.deepEqual(states.ensureActiveRun().state.twistsApplied, []);
+
+    const run = states.ensureActiveRun();
+    const wait = structuredClone(run.state);
+    wait.coordinatorStatus = "estable";
+    wait.clock.liveLastAt = Number(wait.clock.simSeconds) - LIVE_INTERVAL_SECONDS;
+    wait.clock.liveIndex = 1;
+    states.saveState(run.id, wait);
+    clock.tick();
+    await settle();
+    const state = states.ensureActiveRun().state;
+    assert.deepEqual(state.twistsApplied, [first]);
+  } finally {
+    clock.stop();
+    database.close();
   }
 });
 

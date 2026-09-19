@@ -81,6 +81,15 @@ export function normalizeOperation(raw: unknown): unknown {
     const destinationId = pickString(raw.destinationId, raw.toId, raw.destination, raw.placeId);
     if (destinationId !== undefined) next.destinationId = destinationId;
   }
+  if (raw.op === "spawn_vehicle" || raw.op === "add_vehicle" || raw.op === "dispatch_vehicle") {
+    next.op = "spawn_vehicle";
+    const from = pickString(raw.from, raw.fromId, raw.origin, raw.originId, raw.pickup);
+    const destinationId = pickString(raw.destinationId, raw.toId, raw.destination, raw.placeId, raw.dockId);
+    const who = pickString(raw.who, raw.cargo, raw.item, raw.description);
+    if (from !== undefined) next.from = from;
+    if (destinationId !== undefined) next.destinationId = destinationId;
+    if (who !== undefined) next.who = who;
+  }
   return next;
 }
 
@@ -90,6 +99,9 @@ export function operationReady(raw: unknown): boolean {
   if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
   if (raw.op === "redirect_delivery") return typeof raw.id === "string" && typeof raw.dockId === "string";
   if (raw.op === "redirect_vehicle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
+  if (raw.op === "spawn_vehicle") {
+    return typeof raw.from === "string" && typeof raw.destinationId === "string" && typeof raw.who === "string";
+  }
   if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
   if (raw.op === "set_group") return typeof raw.id === "string";
   if (raw.op === "set_gate") return typeof raw.id === "string";
@@ -211,6 +223,7 @@ function checkShape(value: unknown): ValidationIssue[] {
           "reroute_shuttle",
           "redirect_delivery",
           "redirect_vehicle",
+          "spawn_vehicle",
           "set_group",
           "cancel_action",
           "set_agent",
@@ -227,6 +240,9 @@ function checkShape(value: unknown): ValidationIssue[] {
         }
         if (raw.op === "redirect_vehicle" && (typeof raw.id !== "string" || typeof raw.destinationId !== "string")) {
           add(`operations[${index}] redirect_vehicle incompleto`);
+        }
+        if (raw.op === "spawn_vehicle" && (typeof raw.from !== "string" || typeof raw.destinationId !== "string" || typeof raw.who !== "string")) {
+          add(`operations[${index}] spawn_vehicle incompleto`);
         }
         if (raw.op === "cancel_action" && (typeof raw.taskId !== "string" || typeof raw.reason !== "string")) {
           add(`operations[${index}] cancel_action incompleto`);
