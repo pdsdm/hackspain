@@ -1,13 +1,11 @@
 # Estado del proyecto
 
-> Memoria del proyecto: contrastar esta foto con `origin/main` antes de trabajar.
-> Todo lo afirmado aquí sale de comandos ejecutados o se marca como información del equipo.
+> Foto verificada de `origin/main`. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 21:30 CEST |
-| **Base del candidato** | `9e1cef6` (T46 mergeada mediante PR #71) |
-| **Trabajo verificado** | T46 mergeada en `main`; T47/T52 reales siguen abiertas |
+| **Foto tomada** | 19 de septiembre de 2026, 22:05 CEST |
+| **Base** | `6817259` — PR #77, director reproducible de vídeo |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -15,236 +13,92 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` sobre `9e1cef6` | **OK** |
-| Tests de backend | 328: **321 pasan, 0 fallan, 7 live omitidos** |
-| Lint y build | Backend y frontend OK; 2 avisos de baseline en backend |
+| `make check` sobre `6817259` | **OK** |
+| Tests backend | 332: **325 pasan, 0 fallan, 7 live omitidos** |
+| Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node | 22.23.2 |
+| Node verificado | 23.10.0; el repo exige ≥22.13 |
 
-El build del frontend conserva el aviso de chunk mayor de 500 kB.
+Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un test) y el aviso del chunk frontend mayor de 500 kB.
 
 ## Qué funciona
 
-### Mergeado en `main`
+### Base operativa
 
-- Panel API, motor SQLite, cola por `planVersion`, callbacks HappyRobot e idempotencia.
-- JEV opcional con efectos desactivados por defecto (T35).
-- Mundo dinámico: afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
-- Costes informativos (T38): no bloquean acciones ni crean aprobaciones económicas.
-- Decisiones operativas separadas del coste mediante `approve_plan` y `reject_plan`.
-- Helmcode usa `deepseek-v4-flash`, harness JSON y `reasoning_effort=low` por defecto.
-- T17 automatizado: evento → plan → llamada sim → callback → giro → replan, sin aprobación
-  económica ni doble cargo.
-- T18 local: frontend API, SQLite persistente, reset, reinicio y parada.
-- T39: mapa a pantalla completa, paneles flotantes y cronología tipo chat.
-- T42 (PR #64): cada deployment de Railway crea un run `calm` nuevo; reiniciar el mismo
-  deployment lo conserva y mantiene los anteriores inactivos en SQLite.
-- Producción validada: `simSeconds=43200` estable durante tres segundos, reloj pausado,
-  `planVersion=1`, coordinador estable y cero eventos, llamadas, decisiones o acciones.
-- README documenta frontend Vercel, backend Railway, healthcheck y volumen SQLite.
-- T44: piloto HappyRobot Reasoning Agent disponible en shadow por defecto; el E2E con un run
-  real sigue pendiente y el proveedor por defecto no cambia.
+- Estado SQLite, cola serial por `planVersion`, callbacks idempotentes y frontend en modo API.
+- Coordinador Helmcode/DeepSeek; T44 HappyRobot Reasoning Agent sigue en shadow y no cambia el proveedor principal.
+- Cuatro especialistas visibles: Espacios, Catering, Transporte y Asistentes.
+- Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
+- Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
 
-### Correcciones H1/H2/H4
+### Camino de vídeo T46–T51
 
-- Un callback aceptado de Espacios fusiona condiciones nuevas y aplica `capacity`/`readyAt`
-  válidos al ID exacto. Solo un cambio material vigente relanza el coordinador una vez.
-- `resolved` exige plazas confirmadas, condiciones resueltas, aforo y acceso. El panel separa
-  sede asignada de plaza confirmada y muestra un plan condicionado sin declararlo cerrado.
-- El payload saliente a HappyRobot incluye `kind` y `channel` para `call`, `sms` y `email`.
-- Duplicados, callbacks obsoletos, rechazos, `no_answer` y datos inválidos conservan las
-  protecciones de run/versión e idempotencia. `make check` pasa con 316/323 pruebas.
-- La semántica conservadora de cierre requiere revisión funcional del equipo. No se ha probado
-  ningún canal real ni el recorrido humano T17/T18.
+- **T46, PR #71:** `POST /workflow/happyrobot/events` acepta solo `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
+- **T50, PR #73:** el coordinador conoce seis personas de recepción, las coordina mediante Asistentes y permite que Catering dependa de la apertura del muelle.
+- **T51 parcial, PR #74:** Catering y Asistentes actualizan entregas, informados y `lastResult`; las necesidades de accesibilidad/dieta generan una tarea separada.
+- **T49, PR #75:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`.
+- **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
+- **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
 
-### Cambios de `fix/zhi-demo-readiness` ya contenidos en `main`
-
-- `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
-- `POST /simulation/reset` conserva `CLOCK_SPEED`.
-- El último resultado aceptado no pisa otro ciclo; el cierre decide después entre `estable` y `atascado`.
-- Un callback adverso con `planVersion` obsoleta se registra, pero no vuelve a lanzar el
-  coordinador ni multiplica replans de una versión anterior.
-- El prompt no presenta `verificationTarget` como campo genérico.
-- `set_place` sobre un id `gate-*` se normaliza a `set_gate`.
-- Hay regresiones para seed, reset, concurrencia, callbacks obsoletos, targets y puertas.
+Los dos incidentes se probaron localmente contra T46: Principal cerró, Muelle Este cerró y las entregas quedaron bloqueadas. El recorrido HappyRobot completo no se ha ejecutado porque falta crear/publicar el workflow.
 
 ## Qué falta, por riesgo para la demo
 
-### 1. T17 con servicios reales — Zhi (`doing`)
+1. **Crear y publicar `Demo Incident Inputs` (T47).** La API key actual devuelve `403 Cannot create use cases`. Un owner debe ejecutar el instalador o crearlo en la UI.
+2. **Ejecutar una toma HappyRobot completa (T48/T52).** Falta rellenar `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` y correr el director con `--inputs=happyrobot`.
+3. **Completar Transporte (T13/T51).** La parte de Álvaro continúa `todo`; Catering y Asistentes ya están integrados.
+4. **Revisión visual (T49).** Falta validar que el overlay no tapa KPIs, llamada, coordinador o resultado a 1920×1080.
+5. **Ensayo y grabación final (T52).** Falta repetir el recorrido desde `calm`, guardar una toma HappyRobot y otra con `--inputs=api`.
+6. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
 
-El recorrido automatizado pasa. Helmcode real aplicó la política nueva en una instancia
-aislada: cero decisiones económicas y despacho inmediato. Esa prueba detectó callbacks
-adversos de una versión antigua que podían relanzar replans; la rama lo corrige y añade una
-regresión. No se repitió el ensayo externo después del fix.
+## Bloqueos
 
-La corrección H1/H2/H4 cubre la propagación de condiciones/hechos, el cierre permisivo y la
-señal de canal. Está verificada sobre `2196e35`; el criterio conservador de cierre mantiene
-pendiente la revisión funcional de Ventura/Pep.
-
-Para cerrar T17 falta repetir el recorrido completo con actor HappyRobot controlado,
-callback y giro. El usuario informó de una primera llamada real previa, pero no se verificó
-en esta foto el recorrido completo tras el fix.
-
-### 2. T18 ensayo completo — Zhi (`doing`)
-
-Se verificaron `/health` y `/state` públicos por Quick Tunnel, autenticación del callback,
-persistencia SQLite, seed y velocidad tras reinicio. Falta un ensayo completo que incluya
-T17 real y recuperación operativa.
-
-### 3. Integraciones del equipo
-
-- El prompt y extractor desplegados en HappyRobot deben reflejar costes informativos y
-  `result.data.committedCost` (sin verificar).
-- T37 figura `doing` aunque PR #50 está mergeado; corresponde a Pep actualizar su fila.
-- T38 figura `review` aunque PR #51 está mergeado; corresponde a Ventura actualizar su fila.
-- T39 figura `review` aunque PR #53 está mergeado; corresponde a Pep actualizar su fila.
-- T13, T19, T20–T22 siguen `todo`; T1, T9, T12, T14–T16 y T33–T35 siguen `review`.
-
-### Añadido en PR #56 (T39 y T40)
-
-- **T39:** el mapa ocupa toda la vista; KPIs, aforo, coordinador y cronología tipo chat
-  flotan sobre él. La llamada solo aparece mientras está `en_curso`. Velocidad
-  ×1→×2→×5→×10→×20 en modo `sim`.
-- **T40 descartada:** se retira la copia en Supabase; el despliegue va en Railway y SQLite
-  con disco persistente es el único almacén (D18).
-
-### Aviso de integración
-
-El merge `585a5e3` descartó 38 commits de `main` (PR #51, #52, #53 y #54, `world/locate.ts`,
-el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir historia. Si
-`make check` baja de golpe el número de tests, sospechad de un merge resuelto a lo bruto.
-
-## Bloqueos y de quién dependen
-
-| Qué | Depende de | ¿Externo? |
+| Qué | Depende de | Externo |
 |---|---|---|
-| T17 aceptado | actor HappyRobot controlado, callback y giro en el mismo recorrido | Sí |
-| Criterio de cierre H2 | revisión funcional Ventura/Pep antes del ensayo final | No |
-| T18 aceptado | ensayo completo y recuperación con el entorno de demo | Parcial |
-| Prompt/extractor de voz | sincronizar workflow desplegado con T38 | Sí |
-| Simulación LLM estable | decidir si `sim-world` adversarial es ensayo o modo caos | No |
+| Publicar workflow T47 | API key/usuario HappyRobot con permiso owner | Sí |
+| Cerrar T51 | Transporte de Álvaro | No |
+| Cerrar T49 | revisión visual de Carlos/equipo | No |
+| Cerrar T48/T52 | workflow T47 publicado y ensayo en el ordenador de grabación | Parcial |
 
 ## Ramas vivas sin mergear
 
-- `origin/feat/pep-take-call`: serialización, timeout y toma de llamada; toca executor/engine
-  sobre una base anterior y sigue sin mergear en esta foto.
-- `origin/Prueba-de-plataforma-y-llamada-real`: rama de voz antigua con ocho archivos de diff;
-  no incorporar su frontend o servidor Python sobre `main` a ciegas.
-- `origin/docs/estado-1200`: foto antigua basada en `c371546`; no sustituye este estado.
-- `origin/feat/pep-afluencia`: aparece no mergeada por el grafo, pero su diff contra `main` está vacío.
+- `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
+- `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
+- `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
+- `origin/docs/estado-1200`: fotografía antigua.
 
-1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
-   modo caos; el segundo no garantiza convergencia.
-2. Quién hace de responsable de recinto y qué respuestas dará durante el ensayo real.
-3. Cómo termina el relato: plan cerrado o limitación abierta y honesta.
-4. Cuándo sincronizar el prompt y extractor desplegados de HappyRobot con T38.
+Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists`, `feat/ventura-demo-incidents-ui`, `feat/ventura-happyrobot-incident-inputs` y `feat/ventura-demo-director` ya están mergeadas mediante PRs #73–#77.
+
+## Decisiones pendientes
+
+1. Qué owner de HappyRobot ejecuta el instalador T47.
+2. Quién termina Transporte y verifica los cuatro shuttles.
+3. Qué ordenador graba la toma maestra y quién opera el frontend.
+4. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
 
 ## Avisos para el siguiente agente
 
-- T17 ya no usa `approve_spend`: los costes son informativos y las acciones no esperan una
-  aprobación económica. Las decisiones, si existen, son operativas.
-- Helmcode recibe `reasoning_effort=low` por defecto; la variable de entorno puede
-  sobrescribirlo.
-- Una aceptación solo relanza el coordinador si acaba de aplicar una condición o hecho material;
-  `rejected` y `no_answer` solo lo relanzan si el resultado aún pertenece al run/versión vigentes.
-- El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
-  `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
-- Un deployment nuevo en Railway crea un run `calm` pausado; reiniciar el mismo deployment
-  conserva su run. Los callbacks de runs anteriores quedan como evidencia sin aplicarse.
-- Reiniciar conserva SQLite, pero pierde callbacks simulados programados en memoria.
-- Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
-- `COORDINATOR_HARNESS=happyrobot` es el único interruptor del piloto T44; `HAPPYROBOT_API_KEY`
-  sola no lo activa. Sin `HAPPYROBOT_COORDINATOR_APPLY=true` el plan aceptado no se persiste.
-- Haz `git fetch` antes de analizar: `main` se mueve rápido.
+- Ejecutar siempre `git fetch` antes de analizar; `main` se mueve rápido.
+- No presentar la llamada/SMS simulados como telefonía real. Los actores llevan el prefijo `SIMULACIÓN ·`.
+- La key HappyRobot actual puede leer y ejecutar workflows, pero no crearlos.
+- Para crear/publicar el workflow con una key owner:
 
-## Cierre reproducible de la crisis (T43, PR #62 mergeada en `36d9af7`)
+```bash
+node --env-file-if-exists=.env --import tsx scripts/setup-happyrobot-demo-inputs.mts --publish
+```
 
-Verificado sobre `main` actualizado con T42. `make check`: **301 de 308 pasan, 0 fallan,
-7 live omitidos**.
+- Para la toma principal:
 
-- Los compromisos avanzan a `aceptado_condiciones`; el despacho enlaza cada acción con su
-  compromiso cuando hay un ganador claro.
-- `resolved`, `closureSummary` y `coordinatorStatus: atascado` dan al recorrido un final
-  cerrado o una limitación explícita.
-- Las intervenciones humanas se reflejan inmediatamente; la replanificación sigue en cola.
-- Las tareas `pending` del plan anterior se arrastran si siguen vigentes y se cancelan si
-  están supersedidas o dependen de una acción fallida. Esto elimina la tarea zombi que
-  bloqueaba el cierre indefinidamente.
-- Un callback simulado fuera de contexto se descarta con log: antes la excepción escapaba
-  del tick del reloj y terminaba el backend.
-- `DEMO_TUNNEL=lhr` usa localhost.run cuando la wifi de la ETSIT no resuelve
-  `trycloudflare.com`; `/health` público y autenticación del callback verificados.
+```bash
+cd backend
+npm run demo:video -- --inputs=happyrobot
+```
 
-## Piloto de routing con JEV (T41, sin activar)
+- Respaldo reproducible:
 
-Medido el 19/09/2026 con corpus sintético congelado (40 textos: 20 desarrollo, 20 holdout;
-60 consultas en total) y un playbook en memoria, aislado del `Engine`.
+```bash
+cd backend
+npm run demo:video -- --inputs=api
+```
 
-| Split | Falsos positivos | Verdaderos positivos | Mediana | P95 |
-|---|---:|---:|---:|---:|
-| Desarrollo | 0 | 0 | 313 ms | 842 ms |
-| Holdout | 0 | 0 | 292 ms | 838 ms |
-
-El coordinador de referencia acertó 6 de 6 con mediana de 28,3 s. El piloto es mucho más
-rápido y no produjo ningún falso positivo, pero **con el gate inicial su cobertura es cero**:
-no reconoció ningún caso, así que hoy no sustituye a nadie. No se activa en la demo y no
-toca la ruta de eventos reales. Detalle en [`T41`](specs/T41-jev-routing-pilot.md).
-
-## Retoque visual local de Carlos · 19 de septiembre de 2026
-
-En `fix/carlos-demo-ui`, pendiente de revisión humana y sin subir al remoto: se
-conserva solo Vista general; en anchos inferiores a 1024 px se muestra la cronología
-con cabecera compacta y formulario. La cronología comparte el cristal y las cabeceras del dashboard: tarjetas casi
-rectas, tinte tenue y acento semántico por tipo de evento, hora y área, sin máscara
-de difuminado. El formulario usa neutros y el botón circular negro de la marca. El ejemplo del formulario rellena
-el texto y el botón circular lo envía mediante la acción existente. No se han
-modificado backend, contratos ni lógica de escenario.
-
-Verificación: `make check` OK (301 tests correctos, 7 live omitidos, 10 fixtures);
-revisión visual en escritorio y marco móvil de 390 px, y envío desde el formulario.
-Se mantienen los avisos previos de lint del backend y de tamaño del bundle.
-
-## Panel de agentes · revisión local de Carlos
-
-En `feat/carlos-panel-agentes`, creada desde `main` (`a869a7e`): el antiguo bloque
-lateral Coordinador se sustituye por una franja inferior con cinco tarjetas en
-paralelo: Coordinador, Espacios, Catering, Transporte y Asistentes. Cada especialista
-conserva estado, objetivo y último resultado; los detalles largos tienen scroll.
-El coordinador muestra su estado real y la versión del plan. La franja reserva
-espacio bajo el mapa, a la izquierda de la cronología, que llega hasta el borde
-inferior del dashboard; en móvil se conserva solo la cronología.
-
-Solo presentación, sin cambios de backend ni contratos. `make check` OK: 316
-tests pasan, 7 live omitidos y 10 fixtures verificadas. Revisión visual local en
-localhost:5178. Pendiente de revisión humana, sin commit ni push.
-
-## Entrada de incidentes HappyRobot T46 · mergeada en `main`
-
-T46 está en `main` desde el PR #71, merge commit `9e1cef6`. El endpoint autenticado
-`POST /workflow/happyrobot/events` acepta solo los incidentes congelados de voz y SMS,
-los serializa sobre el estado vigente y conserva canal, actor y sesión en la cronología.
-Los duplicados no vuelven a mutar ni coordinar; reutilizar un `eventId` con otro cuerpo
-responde `409`.
-
-Verificación local sobre `9e1cef6`: 5 pruebas focalizadas pasan; `make check` OK con 321
-pruebas pasando, 7 live omitidas y 10 fixtures. Los workflows HappyRobot reales siguen
-pendientes en T47 y el E2E en T52; aún no se ha probado un canal real contra este endpoint.
-
-## T50 · coordinación de staff mediante Asistentes
-
-En `feat/ventura-demo-staff-coordination`, el coordinador recibe la restricción agregada
-de seis personas de recepción, exige una acción de Asistentes en el primer plan y su
-reasignación cuando cambia el muelle. Catering puede depender de que Recepción abra el
-punto de descarga. No se añade `Staff[]` ni un quinto agente. El panel de agentes muestra
-también el motivo de cada especialista. `make check` OK: 316 tests pasan, 7 live omitidos
-y 10 fixtures verificadas; permanecen los dos avisos de lint y el aviso de chunk ya
-presentes en `main`.
-
-## T47 · workflow de inputs simulados
-
-En `feat/ventura-happyrobot-incident-inputs`, un instalador idempotente define `Demo
-Incident Inputs`: trigger API, variable bearer oculta y POST estricto a T46, sin telefonía
-ni LLM. La clave disponible puede leer y ejecutar workflows, pero crear devuelve `403
-Cannot create use cases`; la interfaz de Orca tampoco tiene sesión HappyRobot. T47 queda
-bloqueada hasta que un owner ejecute el instalador o cree/publique el workflow en
-`development`. Prueba focalizada y `make check` pasan: 322 tests, 7 live omitidos.
+- T44 continúa fuera del camino crítico. No activarlo como coordinador principal antes de un E2E separado.
