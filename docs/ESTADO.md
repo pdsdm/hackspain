@@ -124,3 +124,18 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 - Reiniciar conserva SQLite, pero pierde callbacks simulados programados en memoria.
 - Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
 - Haz `git fetch` antes de analizar: `main` se mueve rápido.
+
+## Piloto de routing con JEV (T41, sin activar)
+
+Medido el 19/09/2026 con corpus sintético congelado (40 textos: 20 desarrollo, 20 holdout;
+60 consultas en total) y un playbook en memoria, aislado del `Engine`.
+
+| Split | Falsos positivos | Verdaderos positivos | Mediana | P95 |
+|---|---:|---:|---:|---:|
+| Desarrollo | 0 | 0 | 313 ms | 842 ms |
+| Holdout | 0 | 0 | 292 ms | 838 ms |
+
+El coordinador de referencia acertó 6 de 6 con mediana de 28,3 s. El piloto es mucho más
+rápido y no produjo ningún falso positivo, pero **con el gate inicial su cobertura es cero**:
+no reconoció ningún caso, así que hoy no sustituye a nadie. No se activa en la demo y no
+toca la ruta de eventos reales. Detalle en [`T41`](specs/T41-jev-routing-pilot.md).

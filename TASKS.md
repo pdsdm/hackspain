@@ -49,6 +49,7 @@
 | T38 | Costes informativos: eliminar bloqueos presupuestarios durante la crisis | Ventura + Devin | `feat/ventura-costes-informativos` | [Política y contrato T38](docs/api-contract.md#costes-informativos-t38) | review |
 | T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen`, `feat/pep-chat-anclado` (PR #56) | - | review |
 | T40 | Persistir el estado de la crisis en Supabase (espejo Postgres) | Pep | `feat/pep-supabase` | - | descartada: el despliegue va en Railway |
+| T41 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` (PR #57) | [T41](docs/specs/T41-jev-routing-pilot.md) | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**

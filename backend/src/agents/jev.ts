@@ -58,26 +58,40 @@ function noulAnswer(answers: Record<string, unknown>, key: string): number {
   return value;
 }
 
+export class JevHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`JEV request failed: ${status}`);
+  }
+}
+
+export async function requestJev(
+  config: JevConfig,
+  state: unknown,
+  questions: unknown,
+  fetchFn: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<{ model: string; answers: Record<string, unknown>; usage?: unknown }> {
+  const deadline = AbortSignal.timeout(config.timeoutMs);
+  const response = await fetchFn(JEV_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+    body: JSON.stringify({ model: config.model, state, questions }),
+    signal: signal ? AbortSignal.any([signal, deadline]) : deadline,
+  });
+  if (!response.ok) throw new JevHttpError(response.status);
+  const body: unknown = await response.json();
+  if (!isRecord(body) || body.model !== config.model || !isRecord(body.answers)) {
+    throw new Error("JEV response has invalid model or answers");
+  }
+  return { model: config.model, answers: body.answers, ...(body.usage === undefined ? {} : { usage: body.usage }) };
+}
+
 export function createJevEvaluator(config: JevConfig, fetchFn: typeof fetch = fetch): JevEvaluateFn {
   return async (input) => {
     const started = performance.now();
     let scores: AcceptanceScores | undefined;
     try {
-      const response = await fetchFn(JEV_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
-        body: JSON.stringify({
-          model: config.model,
-          state: input,
-          questions: JEV_QUESTIONS,
-        }),
-        signal: AbortSignal.timeout(config.timeoutMs),
-      });
-      if (!response.ok) throw new Error(`JEV request failed: ${response.status}`);
-      const body: unknown = await response.json();
-      if (!isRecord(body) || body.model !== config.model || !isRecord(body.answers)) {
-        throw new Error("JEV response has invalid model or answers");
-      }
+      const body = await requestJev(config, input, JEV_QUESTIONS, fetchFn);
       scores = {
         acceptsTargetExplicitly: noulAnswer(body.answers, "accepts_target_explicitly"),
         answerMatchesTarget: noulAnswer(body.answers, "answer_matches_target"),

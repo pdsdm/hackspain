@@ -170,3 +170,9 @@ sin plan, con el respaldo determinista solo para giros.
 - **Descartado:** bajar los umbrales (0,95/0,95/0,10) o quitar el filtro de privacidad para
   que confirme más. Sería calibrar contra 36 casos sintéticos para arriesgar una falsa
   confirmación en directo.
+
+### D19: piloto JEV para routing a playbooks (T41, resultado 19/09/2026)
+
+- **Qué:** JEV clasifica texto hacia un playbook cerrado solo en modo aislado. El playbook no se activa en la demo: primero debe pasar un gate conservador y una segunda validación determinista del estado. Fallback al coordinador ante ambigüedad, timeout, error, estado cambiado o incidencia compuesta.
+- **Resultado:** 60 consultas sintéticas, 0 falsos positivos y 0 verdaderos positivos con el gate inicial; mediana 313/292 ms (desarrollo/holdout). El coordinador fue válido en 6/6 y tuvo mediana 28,3 s. La idea reduce latencia potencial, pero **no está lista para activar por cobertura cero**.
+- **Descartado por ahora:** bajar umbrales usando el mismo holdout, conectar JEV al motor y dejar que JEV cree operaciones o mutaciones. Se mantiene el holdout congelado.
