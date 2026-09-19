@@ -51,7 +51,7 @@ Workflow `Orquestador`, versión V3 no publicada. Pasos que faltan:
 6. **Tool Call Result.** Exponer solo: `consult_world` → `ok`, `stale`, `error`, `answer`. `submit_plan` → `accepted`, `retry`, `stale`, `errors`, `plan_version`. Generar el esquema requiere el backend público en marcha.
 7. **Publicar** en `development`. El hook de ejecución solo enruta a versiones publicadas: `hooks/<workflow-slug>` (production) o `hooks/development/<workflow-slug>`.
 
-Estado al 19/09/2026 21:30: fork `mpp8gtbh590v` publicado en `development` con todo lo anterior hecho. Falta la única ejecución live.
+Estado al 19/09/2026 22:50: fork `mpp8gtbh590v` publicado en `development`. Única ejecución live hecha con `HAPPYROBOT_COORDINATOR_HOOK_URL=https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb` y fixture `crisis`: run `3caee838-57ab-47ff-9476-d145016824fc`, latencia 7,6 s, 1 `consult_world`, 1 `submit_plan`, plan aceptado a la primera sin errores de validación, `aplicado: no`. El plan cerró `loungeSur` con una acción de espacios y sin reubicaciones. Una sola muestra: no valida el proveedor.
 
 ## Prueba manual única (shadow)
 

@@ -112,8 +112,9 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 - `feat/astra-happyrobot-coordinator` (T44, `doing`): piloto HappyRobot Reasoning Agent como
-  coordinador. Backend listo con tests unitarios; el E2E con un run real queda pendiente para
-  otro agente. El proveedor por defecto no cambia. Guía en `docs/happyrobot-coordinator.md`.
+  coordinador. Backend con tests unitarios y una única ejecución live en shadow (7,6 s, plan
+  aceptado a la primera). El benchmark repetido queda para otro agente. El proveedor por
+  defecto no cambia. Guía en `docs/happyrobot-coordinator.md`.
 
 1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
    modo caos; el segundo no garantiza convergencia.
