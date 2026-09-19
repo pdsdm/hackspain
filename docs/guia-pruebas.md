@@ -200,6 +200,8 @@ Un resultado `OK` exige:
 - cierre resuelto o limitación explícita;
 - tercer run real con el mismo `eventId`, `duplicate: true` y estado inmutable.
 
+Con `HELMCODE_API_KEY`, el runner congela los snapshots M1 y M3 y pide a Helmcode un plan shadow sobre exactamente el mismo prompt y estado que recibió HappyRobot. Registra por ciclo `inputToEffectMs`, `effectToCoordinatorMs`, latencia interna del coordinador, tiempo hasta asentarse y total. La evidencia resume media, mediana, delta y ratio HappyRobot/Helmcode. Son dos muestras del recorrido, útiles para la demo pero no un benchmark estadístico.
+
 La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
 
 ## 8. Estado y limitaciones conocidas

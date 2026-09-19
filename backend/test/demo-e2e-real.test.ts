@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   assignmentTotals,
   incidentCount,
+  latencySummary,
   literalToken,
   stateFingerprint,
   type CoordinatorReport,
@@ -74,4 +75,11 @@ test("fingerprint ignores clock progress but catches operational mutation", () =
   assert.notEqual(stateFingerprint(first, actions, currentReport), stateFingerprint(second, actions, currentReport));
   assert.equal(incidentCount(first, "event-1"), 1);
   assert.equal(incidentCount(first, "missing"), 0);
+});
+
+test("latency summary reports mean and median without mutating samples", () => {
+  const samples = [20_000, 8_000, 12_000, 10_000];
+  assert.deepEqual(latencySummary(samples), { samples: 4, meanMs: 12_500, medianMs: 11_000 });
+  assert.deepEqual(samples, [20_000, 8_000, 12_000, 10_000]);
+  assert.deepEqual(latencySummary([]), { samples: 0, meanMs: 0, medianMs: 0 });
 });

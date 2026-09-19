@@ -5,6 +5,15 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { complete, loadLlmConfig } from "../backend/src/agents/coordinator/llm.js";
+import { SYSTEM_PROMPT, buildUserPrompt } from "../backend/src/agents/coordinator/prompt.js";
+import { answerQuery } from "../backend/src/agents/coordinator/queries.js";
+import { liveCoordinatorInput } from "../backend/src/agents/coordinator/scenario.js";
+import { parseOutput } from "../backend/src/agents/coordinator/validate.js";
+import type { CrisisStateDocument } from "../backend/src/domain/crisis-state.js";
+import { applyOperations } from "../backend/src/domain/apply-coordinator.js";
+import { loadWorld, worldSummary } from "../backend/src/world/world.js";
+
 export interface PublicState {
   planVersion: number;
   coordinatorStatus: string;
@@ -52,9 +61,29 @@ interface RunAudit {
   nodes: Array<{ name: string; status: string; error?: string; duplicate?: boolean }>;
 }
 
+interface ProviderBenchmark {
+  provider: string;
+  model: string;
+  latencyMs: number;
+  status: "accepted" | "invalid" | "failed" | "skipped";
+  actions: number;
+  attempts: number;
+  validationErrors: string[];
+  error?: string;
+}
+
+interface CycleTiming {
+  inputToEffectMs: number;
+  effectToCoordinatorMs: number;
+  coordinatorLatencyMs: number;
+  coordinatorToSettledMs: number;
+  totalMs: number;
+}
+
 class FatalE2EError extends Error {}
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const WORLD = loadWorld();
 const sleep = (ms: number) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 const requiredNames = ["HAPPYROBOT_API_KEY", "HAPPYROBOT_WEBHOOK_TOKEN"] as const;
 
@@ -315,6 +344,131 @@ export function stateFingerprint(state: PublicState, actions: ActionsResponse, r
   });
 }
 
+async function benchmarkHelmcode(
+  state: PublicState,
+  actions: ActionsResponse,
+  eventInput: { source: string; kind: string; text?: string },
+): Promise<ProviderBenchmark> {
+  if (!process.env.HELMCODE_API_KEY?.trim()) {
+    return { provider: "helmcode", model: "sin configurar", latencyMs: 0, status: "skipped", actions: 0, attempts: 0, validationErrors: [] };
+  }
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    COORDINATOR_HARNESS: "json",
+    COORDINATOR_MODEL: process.env.E2E_HELMCODE_MODEL?.trim() || "deepseek-v4-flash",
+    COGNITION_API_KEY: "",
+    DEVIN_API_KEY: "",
+    OPENAI_API_KEY: "",
+    ANTHROPIC_API_KEY: "",
+  };
+  let config;
+  try {
+    config = loadLlmConfig(env);
+  } catch (error) {
+    return {
+      provider: "helmcode",
+      model: process.env.E2E_HELMCODE_MODEL?.trim() || "deepseek-v4-flash",
+      latencyMs: 0,
+      status: "failed",
+      actions: 0,
+      attempts: 0,
+      validationErrors: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+  const pendingActions = rows(actions.tasks).map((task) => ({
+    taskId: String(task.taskId ?? task.id ?? ""),
+    area: String(task.area ?? ""),
+    objective: String(task.objective ?? ""),
+    counterpart: String(task.counterpart ?? ""),
+  }));
+  const crisisState = state as unknown as CrisisStateDocument;
+  const world = worldSummary(WORLD, crisisState);
+  const openTaskIds = new Set(pendingActions.map((task) => task.taskId));
+  const started = Date.now();
+  const previousVerbose = process.env.COORDINATOR_VERBOSE;
+  process.env.COORDINATOR_VERBOSE = "0";
+  let attempts = 0;
+  let lastActions = 0;
+  let queryAnswers: unknown[] = [];
+  let previousErrors: string[] = [];
+  const validationErrors: string[] = [];
+  try {
+    for (let round = 0; round < 3; round += 1) {
+      attempts = round + 1;
+      const input = liveCoordinatorInput(crisisState, { pendingActions, world, event: eventInput, queryAnswers, previousErrors });
+      const text = await complete(config, SYSTEM_PROMPT, buildUserPrompt(input), {
+        signal: AbortSignal.timeout(120_000),
+      });
+      const parsed = parseOutput(text, input);
+      if (!parsed.output) {
+        previousErrors = parsed.issues.map((issue) => `${issue.code}: ${issue.detail}`);
+        validationErrors.push(...previousErrors);
+        continue;
+      }
+      lastActions = parsed.output.actions.length;
+      queryAnswers = [];
+      for (const query of parsed.output.queries ?? []) {
+        queryAnswers.push(await answerQuery(query, crisisState, WORLD));
+      }
+      const dryErrors = applyOperations(structuredClone(crisisState), WORLD, parsed.output.operations ?? [], openTaskIds).errors;
+      if (dryErrors.length > 0) {
+        previousErrors = dryErrors;
+        validationErrors.push(...dryErrors);
+        continue;
+      }
+      if (parsed.output.done === false) {
+        previousErrors = [];
+        continue;
+      }
+      return {
+        provider: config.provider,
+        model: config.model,
+        latencyMs: Date.now() - started,
+        status: "accepted",
+        actions: lastActions,
+        attempts,
+        validationErrors,
+      };
+    }
+    return {
+      provider: config.provider,
+      model: config.model,
+      latencyMs: Date.now() - started,
+      status: "invalid",
+      actions: lastActions,
+      attempts,
+      validationErrors,
+    };
+  } catch (error) {
+    return {
+      provider: config.provider,
+      model: config.model,
+      latencyMs: Date.now() - started,
+      status: "failed",
+      actions: lastActions,
+      attempts,
+      validationErrors,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    if (previousVerbose === undefined) delete process.env.COORDINATOR_VERBOSE;
+    else process.env.COORDINATOR_VERBOSE = previousVerbose;
+  }
+}
+
+export function latencySummary(values: number[]): { samples: number; meanMs: number; medianMs: number } {
+  if (values.length === 0) return { samples: 0, meanMs: 0, medianMs: 0 };
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  const medianMs = sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]!;
+  return {
+    samples: values.length,
+    meanMs: Math.round(values.reduce((sum, value) => sum + value, 0) / values.length),
+    medianMs: Math.round(medianMs),
+  };
+}
+
 async function main(): Promise<void> {
   if (process.argv.includes("--help")) {
     console.log("Uso: npm run demo:e2e-real -- --confirm-real-happyrobot");
@@ -474,7 +628,9 @@ async function main(): Promise<void> {
     check(initial.planVersion === 1, `M0: planVersion esperado 1, recibido ${initial.planVersion}`);
     check(initial.spaces.find((space) => space.id === "principal")?.status === "confirmado", "M0: Principal no está confirmado");
 
+    const journeyStartedAt = Date.now();
     const callEvent = event(tag, "principal_pipe_burst");
+    const firstStartedAt = Date.now();
     const callRunId = await triggerInput(callEvent);
     console.log(`[E2E] Input 1 HappyRobot run ${callRunId}`);
     const callAuditPromise = auditHappyRobotRun(inputApiBase, apiKey, callRunId, timeoutMs);
@@ -484,7 +640,15 @@ async function main(): Promise<void> {
       readState,
       (state) => state.spaces.find((space) => space.id === "principal")?.status === "cerrado",
     );
+    const firstEffectAt = Date.now();
+    const firstSnapshotActions = await readActions();
+    const firstHelmcodePromise = benchmarkHelmcode(afterCallEffect, firstSnapshotActions, {
+      source: "happyrobot",
+      kind: callEvent.incidentId,
+      text: callEvent.summary,
+    });
     const firstReport = await waitReport(undefined, e2eRunId);
+    const firstReportAt = Date.now();
     const callAudit = await callAuditPromise;
     const firstCoordinatorAudit = firstReport.happyrobotRunId
       ? await auditHappyRobotRun(inputApiBase, apiKey, firstReport.happyrobotRunId, timeoutMs)
@@ -495,11 +659,22 @@ async function main(): Promise<void> {
       async () => ({ state: await readState(), actions: await readActions() }),
       ({ state, actions }) => state.coordinatorStatus !== "replanificando" && actions.tasks.length === 0 && !state.calls.some((call) => call.status === "en_curso"),
     );
+    const firstSettledAt = Date.now();
     const firstState = firstSettled.state;
+    const firstHelmcode = await firstHelmcodePromise;
+    const firstTiming: CycleTiming = {
+      inputToEffectMs: firstEffectAt - firstStartedAt,
+      effectToCoordinatorMs: firstReportAt - firstEffectAt,
+      coordinatorLatencyMs: firstReport.latencyMs,
+      coordinatorToSettledMs: firstSettledAt - firstReportAt,
+      totalMs: firstSettledAt - firstStartedAt,
+    };
     checkpoints.first = {
       inputRunId: callRunId,
       inputAudit: callAudit,
       coordinatorAudit: firstCoordinatorAudit,
+      timing: firstTiming,
+      helmcode: firstHelmcode,
       planVersion: firstState.planVersion,
       report: firstReport,
       principal: afterCallEffect.spaces.find((space) => space.id === "principal"),
@@ -508,6 +683,8 @@ async function main(): Promise<void> {
     check(Boolean(firstCoordinatorAudit), "M2: run del coordinador no auditable");
     if (firstCoordinatorAudit) checkAudit(firstCoordinatorAudit, "M2 coordinador HappyRobot");
     checkReport(firstReport, "M2", e2eRunId);
+    check(firstHelmcode.provider === "helmcode", `M2 benchmark: proveedor ${firstHelmcode.provider}`);
+    check(firstHelmcode.status === "accepted", `M2 benchmark Helmcode: ${firstHelmcode.status}${firstHelmcode.error ? ` (${firstHelmcode.error})` : ""}`);
     const firstDistribution = assignmentTotals(firstReport);
     check(firstDistribution.total === 600, `M2: asignadas ${firstDistribution.total}/600 plazas`);
     check(firstDistribution.pabellonB === 450 && firstDistribution.loungeSur === 150 && firstDistribution.other === 0, `M2: reparto ${JSON.stringify(firstDistribution)}`);
@@ -522,6 +699,7 @@ async function main(): Promise<void> {
 
     const reportBeforeSecond = await readReport();
     const smsEvent = event(tag, "dock_blocked");
+    const secondStartedAt = Date.now();
     const smsRunId = await triggerInput(smsEvent);
     console.log(`[E2E] Input 2 HappyRobot run ${smsRunId}`);
     const smsAuditPromise = auditHappyRobotRun(inputApiBase, apiKey, smsRunId, timeoutMs);
@@ -531,7 +709,15 @@ async function main(): Promise<void> {
       readState,
       (state) => state.spaces.find((space) => space.id === "muelleEste")?.status === "cerrado",
     );
+    const secondEffectAt = Date.now();
+    const secondSnapshotActions = await readActions();
+    const secondHelmcodePromise = benchmarkHelmcode(afterDockEffect, secondSnapshotActions, {
+      source: "happyrobot",
+      kind: smsEvent.incidentId,
+      text: smsEvent.summary,
+    });
     const secondReport = await waitReport(reportBeforeSecond?.correlationId, e2eRunId);
+    const secondReportAt = Date.now();
     const smsAudit = await smsAuditPromise;
     const secondCoordinatorAudit = secondReport.happyrobotRunId
       ? await auditHappyRobotRun(inputApiBase, apiKey, secondReport.happyrobotRunId, timeoutMs)
@@ -542,10 +728,21 @@ async function main(): Promise<void> {
       async () => ({ state: await readState(), actions: await readActions() }),
       ({ state, actions }) => state.coordinatorBusy === undefined && state.coordinatorStatus !== "replanificando" && actions.tasks.length === 0 && !state.calls.some((call) => call.status === "en_curso"),
     );
+    const finalAt = Date.now();
+    const secondHelmcode = await secondHelmcodePromise;
+    const secondTiming: CycleTiming = {
+      inputToEffectMs: secondEffectAt - secondStartedAt,
+      effectToCoordinatorMs: secondReportAt - secondEffectAt,
+      coordinatorLatencyMs: secondReport.latencyMs,
+      coordinatorToSettledMs: finalAt - secondReportAt,
+      totalMs: finalAt - secondStartedAt,
+    };
     checkpoints.final = {
       inputRunId: smsRunId,
       inputAudit: smsAudit,
       coordinatorAudit: secondCoordinatorAudit,
+      timing: secondTiming,
+      helmcode: secondHelmcode,
       planVersion: final.state.planVersion,
       coordinatorStatus: final.state.coordinatorStatus,
       resolved: final.state.resolved,
@@ -556,6 +753,8 @@ async function main(): Promise<void> {
     check(Boolean(secondCoordinatorAudit), "M4: run del coordinador no auditable");
     if (secondCoordinatorAudit) checkAudit(secondCoordinatorAudit, "M4 coordinador HappyRobot");
     checkReport(secondReport, "M4", e2eRunId);
+    check(secondHelmcode.provider === "helmcode", `M4 benchmark: proveedor ${secondHelmcode.provider}`);
+    check(secondHelmcode.status === "accepted", `M4 benchmark Helmcode: ${secondHelmcode.status}${secondHelmcode.error ? ` (${secondHelmcode.error})` : ""}`);
     check(firstReport.correlationId !== secondReport.correlationId, "M4: los dos ciclos comparten correlationId");
     check(firstReport.happyrobotRunId !== secondReport.happyrobotRunId, "M4: los dos ciclos comparten run HappyRobot");
     check(secondReport.planVersion >= firstReport.planVersion, "M4: planVersion retrocedió entre ciclos");
@@ -604,6 +803,23 @@ async function main(): Promise<void> {
     check(incidentCount(duplicateState, callEvent.eventId) === 1, "Idempotencia: el incidente duplicado aparece más de una vez");
     check(duplicateAudit.nodes.some((node) => node.duplicate === true), "Idempotencia: HappyRobot no expuso duplicate=true");
     checkpoints.idempotency = { inputRunId: duplicateRunId, inputAudit: duplicateAudit, stateUnchanged: fingerprintAfterDuplicate === fingerprintBeforeDuplicate };
+
+    const happyrobotLatency = latencySummary([firstReport.latencyMs, secondReport.latencyMs]);
+    const helmcodeLatency = latencySummary([firstHelmcode, secondHelmcode].filter((item) => item.status === "accepted").map((item) => item.latencyMs));
+    const deltaMs = happyrobotLatency.meanMs - helmcodeLatency.meanMs;
+    const ratio = helmcodeLatency.meanMs > 0 ? Number((happyrobotLatency.meanMs / helmcodeLatency.meanMs).toFixed(2)) : null;
+    checkpoints.performance = {
+      note: "Dos snapshots del recorrido grabado; orientativo, no benchmark estadístico",
+      happyrobot: happyrobotLatency,
+      helmcode: helmcodeLatency,
+      deltaMs,
+      ratioHappyRobotOverHelmcode: ratio,
+      fasterProvider: deltaMs === 0 ? "empate" : deltaMs < 0 ? "happyrobot" : "helmcode",
+      coreJourneyMs: finalAt - journeyStartedAt,
+      totalWithIdempotencyMs: Date.now() - journeyStartedAt,
+      cycles: { first: firstTiming, second: secondTiming },
+    };
+    console.log(`[E2E] Latencia coordinador · HappyRobot media ${happyrobotLatency.meanMs} ms · Helmcode media ${helmcodeLatency.meanMs} ms · delta ${deltaMs} ms · ratio ${ratio ?? "n/a"}`);
 
     const evidence = {
       generatedAt: new Date().toISOString(),
