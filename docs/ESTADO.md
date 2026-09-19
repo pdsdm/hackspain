@@ -43,13 +43,13 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
 - **T52, rama actual:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
 
-V4 de `Demo incident inputs` en development atravesó HappyRobot → hook → T46 para los dos inputs: runs `6f1b0605-d1dd-4f62-983d-ea34cf0ff1a6` y `37ebdc95-56cf-4385-89c2-b31387ba0df1`; Principal y Muelle Este cerraron y CAT-01/CAT-02 quedaron bloqueadas. El ensayo API local alcanzó M0, M2 y M3, pero la puerta final falla honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`. No hubo grabación.
+V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. La puerta final falla honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`. No hubo grabación.
 
 ## Qué falta, por riesgo para la demo
 
-1. **Publicar y verificar `Demo incident inputs` en producción (T47/T52).** V4 funciona de extremo a extremo en `development`; falta promover una versión segura y probar el hook de producción.
-2. **Completar la evidencia de especialistas (T51/T52).** El ensayo API local detecta que los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
-3. **Superar tres ensayos HappyRobot (T52).** Falta usar el hook directo por entorno y correr tres recorridos completos.
+1. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
+2. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
+3. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
 4. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
 5. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
 6. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
@@ -59,8 +59,8 @@ V4 de `Demo incident inputs` en development atravesó HappyRobot → hook → T4
 
 | Qué | Depende de | Externo |
 |---|---|---|
-| Verificar producción T47/T52 | HappyRobot bloquea publish: `phoneNumberService is not configured`; API key devuelve 404 al publicar | Sí |
-| Superar la puerta API T52 | `reason` y `lastResult` coherentes en los cuatro especialistas; cerrar Transporte T51 | No |
+| Rotar bearer | owner actualiza backend, development y production con el mismo valor oculto | Parcial |
+| Superar la puerta final T52 | `reason` y `lastResult` coherentes en los cuatro especialistas; cerrar Transporte T51 | No |
 | Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
 
 ## Ramas vivas sin mergear
@@ -76,7 +76,7 @@ Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists
 ## Decisiones pendientes
 
 1. Carlos/equipo aprueban los textos literales y la narración de T45.
-2. Quién del sponsor corrige el publish de producción bloqueado por `phoneNumberService`.
+2. Quién rota el bearer en backend y en ambas versiones live de HappyRobot.
 3. Quién termina Transporte y verifica los cuatro shuttles.
 4. Qué ordenador graba la toma maestra y quién opera el frontend.
 5. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
