@@ -9,6 +9,7 @@ export interface SimReply {
   outcome: SpecialistOutcome;
   summary: string;
   conditions: string[];
+  committedCost?: number;
   transcript: Array<{ who: "agente" | "humano"; text: string; at: number }>;
 }
 
@@ -27,6 +28,7 @@ REGLAS
 - Responde con NÚMEROS y HORAS concretos (plazas, minutos, euros, hora de apertura). Si aceptas con condiciones, las condiciones son concretas y verificables.
 - Puedes rechazar. Puedes no contestar (estás en el andén, sin cobertura, en otra llamada). Puedes aceptar menos de lo que te piden.
 - Respeta el estado que se te da: si un lugar está cerrado o descartado, no lo ofreces. Si el objetivo pide algo imposible, dilo.
+- Si aceptas una reserva firme sin condiciones y has acordado un precio concreto en la conversación, incluye committedCost con ese importe no negativo. No lo incluyas para presupuestos orientativos, rechazos, condiciones pendientes o costes desconocidos. El coste no es un límite ni requiere aprobación económica.
 - La pista de la semilla te da tu humor de hoy (dispuesto, escéptico, saturado, ausente) y una cifra orientativa; úsala, pero manda la coherencia con el estado.
 - Transcripción de 3 a 5 líneas, en español hablado, corta, sin markdown. El agente empieza.
 
@@ -76,7 +78,7 @@ export function buildCounterpartPrompt(task: DispatchTask, state: CrisisStateDoc
   lines.push("", "GRUPOS");
   for (const group of records(state, "guestGroups")) lines.push(`- ${String(group.id)} · ${String(group.count)} personas · en ${String(group.assignedSpaceId ?? "sin ubicación")}${group.needs ? ` · ${String(group.needs)}` : ""}`);
   const budget: Record<string, unknown> = isRecord(state.budget) ? state.budget : {};
-  lines.push("", `PRESUPUESTO: autorizado ${String(budget.authorized ?? 0)} € · comprometido ${String(budget.committed ?? 0)} € · límite autónomo ${String(budget.autonomousLimit ?? 0)} €`);
+  lines.push("", `COSTES INFORMATIVOS: previsto ${String(budget.forecast ?? "sin estimar")} · comprometido ${String(budget.committed ?? 0)} €. No hay límite presupuestario ni aprobación económica; recoge el coste sin bloquear la recuperación del servicio.`);
   lines.push("", `PISTA: hoy estás ${mood}; cifra orientativa ${figure}.`);
   return lines.join("\n");
 }
@@ -103,7 +105,11 @@ function parseReply(text: string, payload: Record<string, unknown>): SimReply | 
     .filter((line) => line.text !== "")
     .slice(0, 6);
   const summary = typeof raw.summary === "string" && raw.summary.trim() !== "" ? raw.summary.trim() : `${String(payload.counterpart ?? "La contraparte")}: ${outcome}`;
-  return { outcome, summary, conditions: outcome === "accepted_with_conditions" && conditions.length === 0 ? ["Confirmar por escrito antes de la apertura"] : conditions, transcript };
+  const committedCost = raw.committedCost;
+  return {
+    outcome, summary, conditions: outcome === "accepted_with_conditions" && conditions.length === 0 ? ["Confirmar por escrito antes de la apertura"] : conditions, transcript,
+    ...(outcome === "accepted" && conditions.length === 0 && typeof committedCost === "number" && Number.isFinite(committedCost) && committedCost >= 0 ? { committedCost } : {}),
+  };
 }
 
 const FALLBACK_CONDITIONS: Record<string, string[]> = {

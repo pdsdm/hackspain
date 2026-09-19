@@ -50,7 +50,7 @@ export interface InputBudget {
   contingency: number;
   autonomousLimit: number;
   authorized: number;
-  forecast: number;
+  forecast: number | null;
   committed: number;
 }
 
@@ -150,9 +150,10 @@ export interface CoordinatorAssignment {
 }
 
 export interface CoordinatorDecision {
+  kind?: "operational";
   title: string;
   summary: string;
-  cost: number;
+  cost: number | null;
   conditions: string[];
   effectApprove: string;
   effectReject: string;
@@ -167,6 +168,7 @@ export interface CoordinatorOutput {
   commitments: CoordinatorCommitment[];
   assignments: CoordinatorAssignment[];
   decision: CoordinatorDecision | null;
+  estimatedCost?: number | null;
   unverified: string[];
   operations?: CoordinatorOperation[];
   queries?: CoordinatorQuery[];

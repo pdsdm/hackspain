@@ -96,7 +96,7 @@ test("human approve invokes the coordinator when a complete function is injected
     const decision = proposal.state.decisions.find((item) => item.status === "pendiente") as { id: string };
     await instance.handle({
       source: "human",
-      kind: "approve_spend",
+      kind: "approve_plan",
       payload: { decisionId: decision.id },
     });
     assert.equal(called, 1);
@@ -137,7 +137,7 @@ test("a rejected event does not poison the queue for the next one", async () => 
   const { database, states, instance } = engine();
   try {
     await assert.rejects(
-      instance.handle({ source: "human", kind: "approve_spend", payload: { decisionId: "nope" } }),
+      instance.handle({ source: "human", kind: "approve_plan", payload: { decisionId: "nope" } }),
       /Decision not found/,
     );
     await instance.handle({ source: "jury", kind: "shuttle_delay", payload: { twist: "shuttle_delay" } });

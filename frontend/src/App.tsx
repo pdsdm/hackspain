@@ -68,7 +68,7 @@ export default function App() {
         </section>
 
         <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto [&>*]:flex-none">
-          <DecisionCard d={decision} authorized={s.budget.authorized} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
+          <DecisionCard d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_plan', payload: { decisionId: decision!.id } })} />
           <CoordinadorPanel s={s} />
           <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
           {ctl.source === 'api' && <AvisarPanel disabled={disabled} />}
@@ -99,7 +99,7 @@ export default function App() {
                   <li key={d.id} className="text-[12px] flex gap-2">
                     <span className="text-muted num">{fmtClock(d.createdAt)}</span>
                     <span className={d.status === 'aprobada' ? 'text-green' : d.status === 'rechazada' ? 'text-red' : 'text-amber'}>{d.status}</span>
-                    <span>{d.title} · {d.cost.toLocaleString('es-ES')} €</span>
+                    <span>{d.title} · {d.cost === null ? 'Sin estimar' : `${d.cost.toLocaleString('es-ES')} €`}</span>
                   </li>
                 ))}
               </ul>

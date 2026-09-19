@@ -48,7 +48,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "guestGroups": [],
   "gates": [],
   "attendanceExpected": 110000,
-  "decisions": [{ "id": "decision-plan-2", "title": "…", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
+  "decisions": [{ "id": "decision-plan-2", "kind": "operational", "title": "Aceptar apertura escalonada", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
   "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "simulated": true, "transcript": [] }],
   "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
@@ -68,18 +68,30 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 
 En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
 
+### Costes informativos (T38)
+
+Durante la crisis se prioriza recuperar el servicio. `budget.forecast` es el coste total previsto del plan vigente, no un incremento; admite `null` si se desconoce. `budget.committed` conserva los costes respaldados por resultados de tareas, también tras replanificar. No se infiere gasto de una estimación ni se devuelven importes al invalidar un espacio. `contingency`, `autonomousLimit` y `authorized` se conservan como campos numéricos legacy sin efecto operativo; no son límites ni se muestran en los prompts o el panel.
+
+El coordinador emite `estimatedCost: number | null`, independiente de `decision`. Las respuestas antiguas con `decision` sin `kind` aportan una estimación compatible, pero no abren aprobaciones económicas ni fabrican una aprobación humana. Las decisiones operativas explícitas llevan `kind: "operational"`.
+
+`proposal.cost` admite `null`. Un coordinador externo puede solicitar una decisión operativa con `proposal.approval = { kind: "operational", title, summary, rationale, conditions, effectApprove, effectReject }`. Un precio por sí solo nunca crea una decisión.
+
 ### `POST /interventions`
 
 ```json
-{ "type": "approve_spend", "payload": { "decisionId": "decision-plan-2" } }
+{ "type": "approve_plan", "payload": { "decisionId": "decision-plan-2" } }
 ```
 
-- `approve_spend`, `reject_spend`, `reject_split`: requieren `payload.decisionId`.
+- `approve_plan`, `reject_plan`: requieren `payload.decisionId` de una decisión operativa vigente y pendiente.
+- `reject_split`: intervención independiente, sin necesidad de decisión ni aprobación económica; es idempotente.
+- `approve_spend` y `reject_spend`: retirados; devuelven `409` sin modificar estado.
 - `pause`, `resume`: sin payload.
 - `set_constraint`: requiere `payload.text`.
 - `take_call`: requiere `payload.callId` de una llamada `en_curso`.
 
-Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Mientras haya una decisión pendiente no se despachan acciones nuevas; las ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+Aceptar una propuesta operativa no modifica importes ni confirma recursos. Mientras haya una decisión operativa pendiente no se despachan acciones nuevas; rechazarla impide despachar tareas de esa versión hasta un nuevo plan. Las acciones ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+
+Para ensayar T38, iniciar una ejecución nueva tras actualizar. Las ejecuciones antiguas conservan su histórico y pueden contener aprobaciones económicas pendientes; no se migran ni aprueban silenciosamente.
 
 **Respuesta 200**: `{ "ok": true }`.
 
@@ -89,7 +101,7 @@ Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `bu
 { "twist": "lounge_unavailable" }
 ```
 
-`twist`: `lounge_unavailable` | `pabellon_b_400` | `shuttle_delay` | `delivery_delay` | `dock_blocked` | `provider_silent` | `reject_spend` | `reject_split` | `guest_need`.
+`twist`: `lounge_unavailable` | `pabellon_b_400` | `shuttle_delay` | `delivery_delay` | `dock_blocked` | `provider_silent` | `reject_split` | `guest_need`. `reject_spend` se ha retirado y devuelve `400`; tampoco aparece en los giros automáticos.
 
 Repetir un giro es idempotente. El backend aplica el efecto inmediato comprobable; el nuevo plan pertenece al coordinador/T16.
 
@@ -125,7 +137,7 @@ Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semil
 
 `mode` opcional: `open` (por defecto) o `catalog`. En `open`, cuando hay LLM, un **agente mundo** inventa cada incidencia a partir del estado real (lugares, vehículos, puertas, grupos, lo ya ocurrido) y de una pista de la semilla (área, gravedad, entidad); devuelve texto + hasta 3 operaciones (`set_place`, `set_gate`, `redirect_vehicle`, `reroute_shuttle`, `redirect_delivery`, `set_group`) que se aplican con el mismo validador del coordinador; el coordinador la recibe como `kind: incident_open`. Sin LLM, o si el agente mundo falla, cae al catálogo. `SIM_INCIDENTS_MODE` fija el modo al arrancar.
 
-`GET /state` expone `clock.live: boolean`, `clock.liveSeed: number`, `clock.liveMode`, `incidentsApplied[]` con los ids ya lanzados (`gen-<n>` para las generadas) e `incidentTexts[]` con los últimos 20 textos. Con el modo encendido, el reloj lanza como máximo un evento cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados: en los huecos pares, una incidencia (agente mundo o catálogo de 18); en los impares, el siguiente giro de `TWIST_IDS` que aún no esté aplicado y sea aplicable al estado (p. ej. no lanza `reject_spend` sin decisión pendiente). El giro entra como `source: clock`, `kind: twist`, con el mismo efecto que `POST /simulation/twists`. Los botones del jurado siguen valiendo y son idempotentes. Misma semilla, misma secuencia. Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+`GET /state` expone `clock.live: boolean`, `clock.liveSeed: number`, `clock.liveMode`, `incidentsApplied[]` con los ids ya lanzados (`gen-<n>` para las generadas) e `incidentTexts[]` con los últimos 20 textos. Con el modo encendido, el reloj lanza como máximo un evento cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados: en los huecos pares, una incidencia (agente mundo o catálogo de 18); en los impares, el siguiente giro de `TWIST_IDS` que aún no esté aplicado y sea aplicable al estado (sin el giro económico `reject_spend`, retirado por T38). El giro entra como `source: clock`, `kind: twist`, con el mismo efecto que `POST /simulation/twists`. Los botones del jurado siguen valiendo y son idempotentes. Misma semilla, misma secuencia. Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
 
 ### Afluencia en los accesos (`gates[]`)
 
@@ -279,7 +291,7 @@ puerta traducida de abajo.
 { "ok": true, "duplicate": false, "applied": true }
 ```
 
-Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
+Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result`. Solo los rechazos, fallos o llamadas sin respuesta relanzan el coordinador; las aceptaciones no. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
 
 #### Verificación opcional JEV (T35)
 
@@ -288,7 +300,7 @@ No cambia el JSON del callback ni su autenticación. El handler evalúa antes de
 - `JEV_ENABLED=false` por defecto. `true` habilita evaluación con `TYPESAFE_API_KEY` y `JEV_MODEL=jev-1.13.0`; **no habilita efectos**. `JEV_APPLY_CONFIRMATIONS=true` es una activación adicional, solo después de validar el modelo con evidencia en español.
 - La primera demo admite únicamente `payload.verificationTarget = { "commitmentId": "c-pabB", "resourceType": "space", "resourceId": "pabellonB" }` en una acción de llamada de Espacios. El compromiso debe titularse `Reserva de Pabellón B · 450 plazas`. El backend valida ese vínculo y guarda una huella interna de términos al encolar; no infiere targets del objetivo ni acepta un efecto devuelto por HappyRobot. Un target en cualquier otra acción, o mal formado, **se descarta sin invalidar el plan**: es una marca opcional, nunca un motivo para rechazar una replanificación.
 - El callback debe corresponder a `taskId`, `runId`, `planVersion` y `callId = call-<taskId>`, con sesión, transcripción con hablantes y resultado `completed/accepted` sin condiciones nuevas.
-- Se revalidan tarea, versión, vínculo, términos, gasto autorizado, decisiones, acceso Sur y dependencias dentro de la transacción. No se reactivan compromisos invalidados. Solo se resuelven las condiciones explícitas `Confirmar reserva` / `Confirmación de reserva` mediante evidencia, y `Autorización de gasto` mediante presupuesto ya autorizado. Cualquier otra condición bloquea.
+- Se revalidan tarea, versión, vínculo, términos, decisiones operativas, acceso Sur y dependencias dentro de la transacción. No se reactivan compromisos invalidados. No se comparan costes con límites. Solo se resuelven las condiciones explícitas `Confirmar reserva` / `Confirmación de reserva` mediante evidencia; la antigua condición `Autorización de gasto` no se exige bajo T38. Cualquier otra condición sigue bloqueando. El prompt semántico congelado de JEV y sus umbrales no se modifican.
 - Se envían términos estructurados, nombre del recurso y turnos, no el objetivo libre, contraparte nominal, teléfono, sesión ni estado completo. Por defecto, el texto fuera del vocabulario revisado queda localmente como `privacidad revision necesaria`. Una transcripción completa revisada y sin datos personales puede aprobarse previamente mediante `JEV_REVIEWED_TRANSCRIPT_HASHES` (SHA-256 separados por comas, solo configuración del servidor). La huella se calcula con `transcriptPrivacyHash`: JSON de todos los turnos `{who,text}` en orden, sin alterar palabras; los tiempos se validan por separado. El callback no puede autorizar su propio envío. No se elimina texto para hacer pasar el filtro, ni se añade una cola de revisión/reaplicación de callbacks ya consumidos. **Es revisión previa, no anonimización automática ni autenticación del hablante.** Los logs solo incluyen modelo, versión de preguntas, latencia, resultado y probabilidades; nunca texto ni errores crudos del proveedor.
 - La cronología existente muestra target, decisión y motivo; distingue evidencia insuficiente, verificación no disponible y solo evaluación. Confirmar la reserva no demuestra preparación física ni incrementa `guestGroups.confirmedCount`, gasto comprometido o permisos Norte.
 
@@ -317,6 +329,7 @@ Reproducir desde `backend/`, con `TYPESAFE_API_KEY` en el entorno: `JEV_LIVE_EVA
 
 Campos de `result.data` que el backend aplica al estado:
 
+- `committedCost` (T38): importe adicional de esta tarea, finito y no negativo, con aceptación firme y evidencia; no es el total del plan ni una cotización. Solo suma una vez si la tarea está despachada o en despacho/resultado incierto, el resultado es `completed/accepted` sin condiciones y hay una intervención humana no vacía vinculada a `call-<taskId>`. No confirma recursos. Duplicados, tareas antiguas, rechazadas o sin evidencia no suman. Un importe ausente no se inventa. El simulador puede devolverlo cuando la contraparte acuerda explícitamente un precio; el fallback sin precio no lo genera.
 - `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
 - `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
 - `deliveries[]` (área `catering`, T12): `{ "id": "CAT-02", "status": "confirmada", "dockId": "muelleEste", "arriveAt": 47700, "services": 240, "note": "pendiente: recepción abre el muelle" }`. Solo con `status: "completed"`. `status` admite `confirmada`, `programada` o `bloqueada`; nunca `entregada` ni `invalidada`. `dockId` solo se aplica si el muelle existe y no está `cerrado`/`descartado`; una `confirmada` sobre un muelle cerrado queda en `programada`. Una entrega ya `entregada` no cambia.

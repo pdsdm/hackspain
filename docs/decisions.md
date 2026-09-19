@@ -109,6 +109,12 @@
 aparecieron dos respuestas de ~100 s y ~120 s: el bucle corta a 120 s y ese evento se queda
 sin plan, con el respaldo determinista solo para giros.
 
+### D17: costes informativos durante la crisis (T38, aprobada por Ventura)
+
+- **Qué:** recuperar el servicio tiene prioridad. Se registran costes previstos y comprometidos, sin topes de contingencia, límites autónomos ni aprobaciones económicas. Sustituye la parte presupuestaria de D10 y de las specs anteriores.
+- **Se conserva:** validación de importes, aforo, accesos, evidencia, condiciones, idempotencia y control humano operativo. Los campos de límites quedan como legado del contrato, sin efecto. Descartados presupuestos artificialmente altos y aprobaciones humanas automáticas.
+- **Integración pendiente:** los cambios locales de ciclo de recursos no deben reintroducir límites por recurso ni reservas de saldo; T20 debe excluir las recomendaciones históricas `ask_budget`. El prompt desplegado en HappyRobot debe sincronizarse con el guion del repo.
+
 ### Propuesta T35: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.
