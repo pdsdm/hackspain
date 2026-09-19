@@ -136,7 +136,7 @@ export class SimulationClock {
     for (const burst of attendance.bursts) {
       addEvent(state, "info", `Pico de llegadas en ${burst.name}: +${burst.perMin} personas/min durante ${burst.minutes} min`, "asistentes");
     }
-    const notify = this.coordinatorFree(state);
+    const notify = state.clock.live === true && this.coordinatorFree(state);
     for (const gate of attendance.saturated) {
       addEvent(state, "incidencia", `${gate.name} saturado: ${gate.waiting} personas en cola`, "asistentes");
     }

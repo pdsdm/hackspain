@@ -223,6 +223,16 @@ export function buildMadringFixtures() {
     commitment.updatedAt = Math.min(commitment.updatedAt, 43200);
   }
   calm.events = [];
+  const calmGates: Record<string, { waiting: number; throughputPerMin: number }> = {
+    'gate-norte': { waiting: 400, throughputPerMin: 760 },
+    'gate-sur': { waiting: 600, throughputPerMin: 960 },
+    'gate-este': { waiting: 150, throughputPerMin: 340 },
+    'gate-oeste': { waiting: 80, throughputPerMin: 230 },
+  };
+  for (const gate of calm.gates) {
+    const quiet = calmGates[gate.id];
+    if (quiet) Object.assign(gate, quiet, { status: 'abierto' });
+  }
   fixtures.calm = {
     state: calm,
     allocations: structuredClone(fixtures.normal!.allocations),
