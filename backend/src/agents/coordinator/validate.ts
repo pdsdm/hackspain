@@ -140,6 +140,17 @@ function checkShape(value: unknown): ValidationIssue[] {
       if (typeof raw.dueAt !== "number") add(`actions[${index}].dueAt no es un número`);
       if (!isStringArray(raw.dependsOn)) add(`actions[${index}].dependsOn no es una lista`);
       if (typeof raw.reason !== "string") add(`actions[${index}].reason no es un texto`);
+      if (raw.verificationTarget !== undefined) {
+        const target = raw.verificationTarget;
+        if (
+          !isRecord(target) ||
+          typeof target.commitmentId !== "string" ||
+          target.resourceType !== "space" ||
+          typeof target.resourceId !== "string"
+        ) {
+          add(`actions[${index}].verificationTarget inválido`);
+        }
+      }
     }
   }
 
@@ -261,6 +272,22 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
     for (const dependency of action.dependsOn) {
       if (!actionIds.has(dependency)) {
         add("dependencia_inexistente", `acción ${action.id} depende de ${dependency}`);
+      }
+    }
+    if (action.verificationTarget) {
+      const target = action.verificationTarget;
+      const commitment = output.commitments.find((item) => item.id === target.commitmentId);
+      const resource = input.spaces.find((item) => item.id === target.resourceId);
+      if (action.area !== "espacios" || action.channel !== "llamada") {
+        add("target_no_confirmable", `acción ${action.id} no es una llamada de espacios`);
+      }
+      if (commitment?.area !== "espacios") {
+        add("target_compromiso_inexistente", target.commitmentId);
+      }
+      if (!resource) add("target_espacio_inexistente", target.resourceId);
+      if (target.resourceId !== "pabellonB" || target.commitmentId !== "c-pabB" || resource?.zone !== "sur" ||
+        commitment?.title !== "Reserva de Pabellón B · 450 plazas") {
+        add("target_fuera_demo", "Solo c-pabB: Reserva de Pabellón B · 450 plazas (Sur)");
       }
     }
   }

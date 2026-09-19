@@ -7,6 +7,8 @@ import {
   type SpecialistResultEnvelope,
 } from "../contracts/api.js";
 import { PlanService } from "./plan-service.js";
+import { confirmationBlocker, decideAcceptance, readVerificationTarget, resolvedConditions, verificationSnapshot, type VerificationTarget } from "./acceptance-policy.js";
+import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { TaskRepository } from "../state/task-repository.js";
@@ -23,6 +25,18 @@ export interface CoordinatorResponse extends Record<string, unknown> {
 function records(state: CrisisStateDocument, field: string): Array<Record<string, unknown>> {
   const value = state[field];
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function verificationTargetFor(
+  action: CoordinatorProposalEnvelope["actions"][number],
+  state: CrisisStateDocument,
+): VerificationTarget | undefined {
+  const target = readVerificationTarget(action.payload);
+  if (!target || action.area !== "espacios" || action.kind !== "call") return undefined;
+  const commitment = state.commitments.find((item) => item.id === target.commitmentId);
+  const resource = state.spaces.find((item) => item.id === target.resourceId);
+  return commitment?.area === "espacios" && commitment.planVersion === state.planVersion && resource?.zone === "sur"
+    ? target : undefined;
 }
 
 function applyCoordinatorState(
@@ -67,6 +81,7 @@ function applySpecialistState(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
   area: string,
+  verification?: CallAcceptanceVerification,
 ): CrisisStateDocument {
   const next = structuredClone(state);
   const agents = records(next, "agents");
@@ -100,17 +115,33 @@ function applySpecialistState(
     next.calls = calls;
   }
 
-  const commitmentId = envelope.result.data.commitmentId;
+  const commitmentId = verification?.target?.commitmentId ?? envelope.result.data.commitmentId;
   if (typeof commitmentId === "string") {
     const commitment = next.commitments.find((item) => item.id === commitmentId);
-    if (commitment) {
-      if (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions") {
+    if (commitment && commitment.planVersion === next.planVersion &&
+      ["propuesto", "en_consulta", "aceptado_condiciones"].includes(commitment.status)) {
+      const resource = next.spaces.find((item) => item.id === verification?.target?.resourceId);
+      if (verification?.decision === "confirm_target" && resource) {
+        commitment.status = "confirmado";
+        commitment.conditions = resolvedConditions(commitment.conditions);
+        resource.status = "confirmado";
+      } else if (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions") {
         commitment.status = "aceptado_condiciones";
       } else if (envelope.result.outcome === "rejected") {
         commitment.status = "invalidado";
       }
       commitment.updatedAt = next.clock.simSeconds;
     }
+  }
+  if (verification) {
+    events.push({
+      id: `verification-${randomUUID()}`,
+      time: next.clock.simSeconds,
+      kind: verification.decision === "confirm_target" ? "acuerdo" : "accion",
+      text: `JEV · ${verification.target ? "Pabellón B (Sur) / c-pabB" : "Sin target confirmable"}: ${verification.decision === "confirm_target" ? "reserva confirmada" : "sin confirmación automática"}. Motivo: ${verification.reason.replaceAll("_", " ")}. No acredita preparación física ni invitados ubicados.`,
+      area,
+    });
+    next.events = events.slice(-80);
   }
   return next;
 }
@@ -149,6 +180,7 @@ export class WorkflowService {
       this.states.saveState(envelope.runId, state);
 
       const queued = envelope.actions.map((action) => {
+        const verificationTarget = verificationTargetFor(action, state);
         const task = this.tasks.enqueue({
           runId: envelope.runId,
           planVersion: state.planVersion,
@@ -162,6 +194,7 @@ export class WorkflowService {
             dependsOnKeys: action.dependsOn.map(
               (dependency) => `${envelope.eventId}:${dependency}`,
             ),
+            ...(verificationTarget ? { verificationTarget, verificationSnapshot: verificationSnapshot(state) } : {}),
             data: action.payload,
           },
           idempotencyKey: `${envelope.eventId}:${action.actionId}`,
@@ -184,7 +217,10 @@ export class WorkflowService {
     }
   }
 
-  recordSpecialistResult(envelope: SpecialistResultEnvelope) {
+  recordSpecialistResult(
+    envelope: SpecialistResultEnvelope,
+    verification?: CallAcceptanceVerification,
+  ) {
     const task = this.tasks.get(envelope.taskId);
     if (!task) throw new ContractError(`Task not found: ${envelope.taskId}`, 404);
     if (task.runId !== envelope.runId || task.planVersion !== envelope.planVersion) {
@@ -198,7 +234,25 @@ export class WorkflowService {
       task.id,
       envelope.eventId,
       envelope,
-      (state) => applySpecialistState(state, envelope, task.area),
+      (state) => {
+        const currentTask = this.tasks.get(task.id)!;
+        const target = readVerificationTarget(currentTask.payload);
+        let checked = verification;
+        if (verification?.decision === "confirm_target") {
+          const blocker = confirmationBlocker(state, currentTask) ??
+            (!this.tasks.dependenciesSatisfied(task.id) ? "dependencias_pendientes" : undefined) ??
+            (verification.snapshot !== verificationSnapshot(state) ? "terminos_modificados" : undefined) ??
+            (!target || verification.target?.commitmentId !== target.commitmentId ||
+              verification.target?.resourceId !== target.resourceId || !verification.scores ||
+              decideAcceptance(verification.scores) !== "confirm_target" || envelope.status !== "completed" ||
+              envelope.result.outcome !== "accepted" || envelope.result.conditions.length > 0 ||
+              envelope.result.evidence.callId !== `call-${task.id}` ? "evidencia_insuficiente" : undefined);
+          if (blocker) checked = { ...verification, decision: "keep_conditional", reason: blocker };
+        }
+        if (checked && target) checked = { ...checked, target };
+        else if (checked) checked = { decision: "keep_conditional", reason: "target_no_admitido" };
+        return applySpecialistState(state, envelope, currentTask.area, checked);
+      },
       envelope.status === "completed" ? "completed" : "failed",
     );
     return { ok: true as const, ...recorded };

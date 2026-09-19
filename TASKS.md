@@ -38,6 +38,7 @@
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
 | T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` | - | todo |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | - | - | todo |
+| T29 | JEV evidence-v2 y privacidad por revisión local: 30 casos nuevos ×2, 20/20 positivos y 0/40 falsas confirmaciones; dos timeouts en regresión adicional. make check: 158 pasan. Pendiente comparar HappyRobot real y sincronizar main; efectos desactivados | Ventura | `feat/ventura-jev-confirmacion` | [Contrato T29](docs/api-contract.md#verificación-opcional-jev-t29); spec privada de Zhi | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 Prioridad hoy, por riesgo: **T6 → T27 → T16**. Lo demás se recorta antes que esos tres.

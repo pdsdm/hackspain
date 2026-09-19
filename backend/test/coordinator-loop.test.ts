@@ -72,6 +72,70 @@ test("the coordinator loop answers queries, feeds errors back and finishes", asy
   }
 });
 
+test("the in-process coordinator keeps a validated verification target on its task", async () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(
+      states,
+      tasks,
+      new WorkflowEventRepository(database.connection),
+    );
+    const output = baseOutput({
+      actions: [{
+        id: "call-pabellon-b",
+        area: "espacios",
+        channel: "llamada",
+        counterpart: "Responsable de recinto",
+        objective: "Confirmar reserva del Pabellón B",
+        dueAt: 45_000,
+        dependsOn: [],
+        reason: "Sin la reserva no hay cobertura confirmada.",
+        verificationTarget: {
+          commitmentId: "c-pabB",
+          resourceType: "space",
+          resourceId: "pabellonB",
+        },
+      }],
+      commitments: [{
+        id: "c-pabB",
+        title: "Reserva de Pabellón B · 450 plazas",
+        area: "espacios",
+        status: "en_consulta",
+        counterpart: "Recinto",
+        conditions: ["Confirmar reserva"],
+      }],
+    });
+
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "Confirma el Pabellón B" },
+      {
+        world: loadWorld(),
+        states,
+        tasks,
+        workflows,
+        config: undefined,
+        completeFn: async () => JSON.stringify(output),
+      },
+    );
+
+    assert.equal(result, "ok");
+    const task = tasks.listOpen(states.ensureActiveRun().id)[0];
+    assert.ok(task);
+    assert.deepEqual(
+      (task.payload as Record<string, unknown>).verificationTarget,
+      {
+        commitmentId: "c-pabB",
+        resourceType: "space",
+        resourceId: "pabellonB",
+      },
+    );
+  } finally {
+    database.close();
+  }
+});
+
 test("the Cognition tool harness consults the world and submits a plan", async () => {
   const database = openDatabase(":memory:");
   try {

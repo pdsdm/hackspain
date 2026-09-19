@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { DatabaseSync } from "node:sqlite";
 
+import { ContractError } from "../contracts/api.js";
 import { parseCrisisState, type CrisisStateDocument } from "../domain/crisis-state.js";
 
 export type TaskStatus =
@@ -41,6 +42,7 @@ interface ResultContextRow {
   run_id: string;
   plan_version: number;
   active: number;
+  status: TaskStatus;
   current_plan_version: number;
   state_json: string;
 }
@@ -170,6 +172,26 @@ export class TaskRepository {
     }
   }
 
+  dependenciesSatisfied(taskId: string): boolean {
+    const row = this.database.prepare(`
+      SELECT task.id FROM dispatch_tasks AS task
+      WHERE task.id = ? AND NOT EXISTS (
+        SELECT 1 FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
+        LEFT JOIN dispatch_tasks AS required ON required.run_id = task.run_id
+          AND required.idempotency_key = dependency.value
+          AND required.plan_version = task.plan_version
+        WHERE required.id IS NULL OR required.status != 'completed' OR NOT EXISTS (
+          SELECT 1 FROM task_results AS result
+          WHERE result.task_id = required.id AND result.applied = 1
+            AND json_extract(result.payload_json, '$.status') = 'completed'
+            AND json_extract(result.payload_json, '$.result.outcome') = 'accepted'
+            AND json_array_length(result.payload_json, '$.result.conditions') = 0
+        )
+      )
+    `).get(taskId);
+    return row !== undefined;
+  }
+
   recordResult(
     taskId: string,
     externalEventId: string,
@@ -183,9 +205,10 @@ export class TaskRepository {
     this.database.exec("BEGIN IMMEDIATE");
     try {
       const duplicate = this.database
-        .prepare("SELECT applied FROM task_results WHERE external_event_id = ?")
-        .get(externalEventId) as { applied: number } | undefined;
+        .prepare("SELECT applied, task_id FROM task_results WHERE external_event_id = ?")
+        .get(externalEventId) as { applied: number; task_id: string } | undefined;
       if (duplicate) {
+        if (duplicate.task_id !== taskId) throw new ContractError("Result eventId belongs to another task", 409);
         this.database.exec("COMMIT");
         return { applied: duplicate.applied === 1, duplicate: true };
       }
@@ -195,6 +218,7 @@ export class TaskRepository {
           SELECT
             run.id AS run_id,
             task.plan_version,
+            task.status,
             run.active,
             json_extract(run.state_json, '$.planVersion') AS current_plan_version,
             run.state_json
@@ -208,7 +232,8 @@ export class TaskRepository {
       }
 
       const current =
-        context.active === 1 && context.plan_version === context.current_plan_version;
+        context.active === 1 && context.plan_version === context.current_plan_version &&
+        !["completed", "failed", "cancelled"].includes(context.status);
       const applied = current && applyToState !== undefined;
       if (applied) {
         const nextState = parseCrisisState(
@@ -235,7 +260,7 @@ export class TaskRepository {
         .prepare(`
           UPDATE dispatch_tasks
           SET status = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
+          WHERE id = ? AND status NOT IN ('completed', 'failed', 'cancelled')
         `)
         .run(terminalStatus, taskId);
       this.database.exec("COMMIT");

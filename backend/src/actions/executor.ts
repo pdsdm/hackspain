@@ -150,7 +150,7 @@ export class ActionExecutor {
 
   private deliver(envelope: SpecialistResultEnvelope): void {
     const recorded = this.workflows.recordSpecialistResult(envelope);
-    if (recorded.applied) {
+    if (recorded.applied && !recorded.duplicate) {
       void this.engine?.handle({
         source: "happyrobot",
         kind: "call_result",

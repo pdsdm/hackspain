@@ -73,3 +73,15 @@
 - **Qué:** con `COGNITION_API_KEY` o `DEVIN_API_KEY` el coordinador usa SWE (`swe-1.7`) por `/v1/chat/completions` (compatible con OpenAI, sin SDK). El harness por defecto (`COORDINATOR_HARNESS=tools`) es function calling local: `consult_world` y `submit_plan`, validadas igual que D11. `COORDINATOR_HARNESS=json` conserva el bucle D11. `COORDINATOR_HARNESS=devin` crea una sesión en `api.devin.ai` (`DEVIN_ORG_ID`, `devin_mode=fast`) y lee structured output. HappyRobot sigue siendo solo voz/SMS/email.
 - **Por qué:** SWE está entrenado en el harness de Devin; las sesiones cloud tardan de más para un replan de <60 s. El tool loop local da el mismo estilo de agente a tiempo de demo.
 - **Descartado:** LiteLLM u otro proxy, y usar Devin cloud como camino por defecto.
+
+### Propuesta T29: JEV verifica evidencia; el backend conserva los efectos
+
+- **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.
+- **Por qué:** un «sí» no resuelve gasto, acceso, dependencias o condiciones. Se revalidan dentro de SQLite; no se incrementan invitados ubicados. El texto fuera del vocabulario revisado no sale a JEV.
+- **Pendiente de revisión humana antes de mergear:** corpus real, latencia aceptable de HappyRobot, política de privacidad y activación. Descartados Norte, confirmación física, borrado indiscriminado de condiciones y cambios automáticos por defecto.
+
+### Actualización T29: candidato `evidence-v2` y revisión local
+
+- **Qué:** preguntas sobre evidencia verbal y términos estructurados, con los mismos umbrales; amplía la propuesta T29 con huellas de transcripciones completas revisadas previamente por privacidad, configuradas solo en servidor. No añade anonimización automática ni reaplicación de callbacks.
+- **Por qué:** el primer prompt descartaba todas las aceptaciones; el candidato congelado acertó 30 casos sintéticos nuevos, repetidos dos veces. Hubo dos timeouts en una regresión adicional; el fallback y los efectos desactivados se conservan.
+- **Pendiente:** comparación con callbacks reales de HappyRobot anonimizados y etiquetados, revisión humana y sincronización con main. No activar confirmaciones ni interpretar el corpus sintético como garantía de seguridad.

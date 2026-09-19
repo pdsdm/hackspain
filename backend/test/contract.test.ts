@@ -67,7 +67,7 @@ function coordinatorBody(runId: string, planVersion: number) {
       confirmedExternalTransferSeats: 0,
     },
     commitments: [{
-      id: "c-pabellon-b-v2",
+      id: "c-pabB",
       title: "Consultar Pabellón B",
       area: "espacios",
       status: "en_consulta",
@@ -84,7 +84,14 @@ function coordinatorBody(runId: string, planVersion: number) {
         dueAt: 44400,
         reason: "Sin aforo no se puede cerrar el plan.",
         dependsOn: [],
-        payload: { candidateIds: ["pabellonB"] },
+        payload: {
+          candidateIds: ["pabellonB"],
+          verificationTarget: {
+            commitmentId: "c-pabB",
+            resourceType: "space",
+            resourceId: "pabellonB",
+          },
+        },
       },
       {
         actionId: "email-catering",
@@ -190,10 +197,16 @@ test("coordinator proposals are versioned, idempotent and enqueue dependencies",
     assert.equal(first.duplicate, false);
     assert.equal(first.planVersion, 2);
     assert.equal(first.tasks.length, 2);
+    const firstPayload = tasks.get(first.tasks[0]!.taskId)?.payload as Record<string, unknown>;
+    assert.deepEqual(firstPayload.verificationTarget, {
+      commitmentId: "c-pabB",
+      resourceType: "space",
+      resourceId: "pabellonB",
+    });
 
     const state = states.getPublicState();
     assert.equal(state.planVersion, 2);
-    assert(state.commitments.some((commitment) => commitment.id === "c-pabellon-b-v2"));
+    assert(state.commitments.some((commitment) => commitment.id === "c-pabB"));
     const spacesAgent = (state.agents as Array<Record<string, unknown>>).find(
       (agent) => agent.id === "espacios",
     );
