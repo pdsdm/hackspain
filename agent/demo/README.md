@@ -109,13 +109,47 @@ curl -X POST https://TU-HOST/incoming-call -d "CallSid=CAtest&From=%2B3460000000
 Estado verificado el 2026-09-19: llamada entrante real al DID → `/incoming-call`
 200 → `/media-stream` 101 → la IA saluda. Coste de esa prueba: $0,022.
 
-## Modo conferencia (sin terminar)
+## Sala con varias personas
 
-`CALL_MODE=conference` mete a quien llama en una sala y `/add-human-to-conference`
-añade al humano. **El agente IA no entra en la conferencia**: `<Connect><Stream>`
-y `<Dial><Conference>` no pueden convivir en el mismo call leg, así que meter la
-IA exige un segundo leg (por ejemplo, un segundo número o un endpoint SIP que
-entre en la sala). Sin eso, la conferencia es solo cliente + humano.
+Puedes abrir una sala y meter a varias personas de golpe, sin esperar a que nadie
+llame al número:
+
+```bash
+# Llama a todos los de CONFERENCE_PARTICIPANTS y los mete en la misma sala
+curl -X POST http://localhost:8000/conference/start -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Solo a estos, ignorando el entorno
+curl -X POST "http://localhost:8000/conference/start?to=%2B34600000000,%2B34600000001" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Añadir a alguien más a la sala abierta (la última, si no pasas conference_name)
+curl -X POST "http://localhost:8000/conference/add?to=%2B34600000002" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Quién hay dentro, según Twilio
+curl http://localhost:8000/conference/status
+```
+
+Detalles que importan:
+
+- Los teléfonos van en **E.164** (`+34600000000`). Lo que no cumpla se descarta con un
+  aviso en consola en vez de llegar a Twilio.
+- Un número que falla **no impide** que la sala se monte con el resto: salen en `failed`.
+- La sala **sobrevive a que alguien cuelgue** (`endConferenceOnExit=false`).
+- El nombre de la sala se recuerda en memoria, así que `/conference/add` no necesita que
+  lo copies del log. Se pierde al reiniciar el proceso.
+- Los endpoints que crean llamadas exigen `X-Demo-Token` si `DEMO_API_TOKEN` está puesto.
+  Con el túnel abierto, sin eso cualquiera puede llamar a tu costa.
+
+### Lo que sigue sin resolverse: la IA dentro de la sala
+
+**El agente IA no entra en la conferencia.** `<Connect><Stream>` y `<Dial><Conference>`
+no pueden convivir en el mismo call leg, así que meter la IA exige un segundo leg. Las
+opciones reales son un segundo número, un endpoint SIP, o un media server; `<Start><Stream>`
+serviría para que la IA **escuche** la sala, pero no para que hable.
+
+Hasta que eso se resuelva, la sala es de humanos. Para hablar con la IA está
+`CALL_MODE=direct`, que sí funciona.
 
 ## Limitaciones conocidas (demo)
 

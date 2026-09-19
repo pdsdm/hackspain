@@ -16,6 +16,7 @@ agente IA no puede auto-añadirse a la conferencia sin un segundo call leg.
 """
 
 import os
+import re
 import sys
 import json
 import asyncio
@@ -29,7 +30,7 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
 from twilio.twiml.voice_response import VoiceResponse, Dial, Conference, Connect, Stream
@@ -57,6 +58,29 @@ TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PUBLIC_HOST = _clean_host(os.getenv("PUBLIC_HOST"))
 HUMAN_PHONE_NUMBER = os.getenv("HUMAN_PHONE_NUMBER")
+# Token de los endpoints que gastan dinero (crean llamadas). Sin él, cualquiera que
+# conozca la URL del túnel puede llamar a tu costa.
+DEMO_API_TOKEN = os.getenv("DEMO_API_TOKEN")
+
+
+def _parse_participants(raw: Optional[str]) -> list[str]:
+    """Lista de teléfonos en E.164 separados por coma. Lo que no cumpla, fuera y avisado."""
+    numbers: list[str] = []
+    for chunk in (raw or "").replace(";", ",").split(","):
+        number = chunk.strip().replace(" ", "")
+        if not number:
+            continue
+        if not re.fullmatch(r"\+[1-9]\d{6,14}", number):
+            print(f"⚠️  Teléfono descartado, no está en E.164: {number!r}")
+            continue
+        numbers.append(number)
+    return numbers
+
+
+# Participantes que se meten en la sala con /conference/start.
+CONFERENCE_PARTICIPANTS = _parse_participants(
+    os.getenv("CONFERENCE_PARTICIPANTS") or HUMAN_PHONE_NUMBER
+)
 CALL_MODE = os.getenv("CALL_MODE", "direct").strip().lower()
 REALTIME_MODEL = os.getenv("REALTIME_MODEL", "gpt-realtime-mini")
 REALTIME_VOICE = os.getenv("REALTIME_VOICE", "marin")
@@ -104,10 +128,16 @@ def generate_conference_name() -> str:
     return f"call-{int(time.time())}"
 
 
-def create_conference_twiml(conference_name: str) -> str:
-    """TwiML que hace entrar al primer participante en la conferencia."""
+def create_conference_twiml(conference_name: str, greeting: Optional[str] = None) -> str:
+    """
+    TwiML que mete un leg en la conferencia.
+
+    `end_conference_on_exit=False` en todos: la sala sobrevive a que uno cuelgue, que es
+    lo que quieres cuando hay tres personas y una se cae.
+    """
     resp = VoiceResponse()
-    resp.say("Te paso con la sala de la demo.", language="es-ES")
+    if greeting:
+        resp.say(greeting, language="es-ES")
     dial = Dial()
     conference = Conference(
         conference_name,
@@ -119,6 +149,42 @@ def create_conference_twiml(conference_name: str) -> str:
     dial.append(conference)
     resp.append(dial)
     return str(resp)
+
+
+# Salas vivas: nombre → teléfonos que hemos metido. Sin esto, el nombre de la conferencia
+# solo existía en un print y no había forma de añadir a nadie después.
+ACTIVE_CONFERENCES: dict[str, list[str]] = {}
+LATEST_CONFERENCE: Optional[str] = None
+
+
+def _register_conference(name: str) -> None:
+    global LATEST_CONFERENCE
+    ACTIVE_CONFERENCES.setdefault(name, [])
+    LATEST_CONFERENCE = name
+
+
+def _resolve_conference(name: Optional[str]) -> Optional[str]:
+    return name or LATEST_CONFERENCE
+
+
+def _authorized(token: Optional[str]) -> bool:
+    """Los endpoints que crean llamadas cuestan dinero: sin token, no se abren."""
+    return not DEMO_API_TOKEN or token == DEMO_API_TOKEN
+
+
+def _dial_into_conference(conference_name: str, number: str) -> str:
+    """Llama a un número y lo deja dentro de la sala. Devuelve el CallSid."""
+    call = twilio_client.calls.create(
+        to=number,
+        from_=TWILIO_PHONE_NUMBER,
+        twiml=create_conference_twiml(
+            conference_name,
+            greeting="Te unimos a la sala del centro de operaciones.",
+        ),
+    )
+    ACTIVE_CONFERENCES.setdefault(conference_name, []).append(number)
+    print(f"☎️  {number} → sala {conference_name} (CallSid {call.sid})")
+    return call.sid
 
 
 def create_ai_leg_twiml() -> str:
@@ -160,8 +226,9 @@ async def incoming_call(request: Request):
 
     if CALL_MODE == "conference":
         conference_name = generate_conference_name()
+        _register_conference(conference_name)
         print(f"📞 Llamada {call_sid} de {from_number} → conferencia {conference_name}")
-        twiml = create_conference_twiml(conference_name)
+        twiml = create_conference_twiml(conference_name, greeting="Te paso con la sala de la demo.")
     else:
         print(f"📞 Llamada {call_sid} de {from_number} → agente IA (stream)")
         twiml = create_ai_leg_twiml()
@@ -317,6 +384,102 @@ async def add_human_to_conference(conference_name: str, to: Optional[str] = None
         return {"status": "ok", "participant_sid": participant.sid}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
+
+
+# ------------------------------------------------------------------
+# Sala con varias personas
+# ------------------------------------------------------------------
+@app.post("/conference/start")
+async def conference_start(
+    to: Optional[str] = None,
+    x_demo_token: Optional[str] = Header(default=None),
+):
+    """
+    Abre una sala y llama a todos los participantes para meterlos dentro.
+
+    Sin `to`, usa CONFERENCE_PARTICIPANTS del entorno. Con `to`, acepta una lista
+    separada por comas y solo llama a esos.
+    """
+    if not _authorized(x_demo_token):
+        raise HTTPException(status_code=401, detail="Falta o no coincide X-Demo-Token")
+
+    numbers = _parse_participants(to) if to else list(CONFERENCE_PARTICIPANTS)
+    if not numbers:
+        return {
+            "status": "error",
+            "detail": "No hay participantes. Rellena CONFERENCE_PARTICIPANTS o pasa ?to=+34…,+34…",
+        }
+
+    conference_name = generate_conference_name()
+    _register_conference(conference_name)
+
+    dialed, failed = [], []
+    for number in numbers:
+        try:
+            dialed.append({"to": number, "call_sid": _dial_into_conference(conference_name, number)})
+        except Exception as error:
+            # Un número que falla no debe impedir que la sala se monte con el resto.
+            print(f"⚠️  No se pudo llamar a {number}: {error}")
+            failed.append({"to": number, "detail": str(error)})
+
+    return {
+        "status": "ok" if dialed else "error",
+        "conference_name": conference_name,
+        "dialed": dialed,
+        "failed": failed,
+    }
+
+
+@app.post("/conference/add")
+async def conference_add(
+    to: str,
+    conference_name: Optional[str] = None,
+    x_demo_token: Optional[str] = Header(default=None),
+):
+    """Mete a una o varias personas más en una sala ya abierta (la última, por defecto)."""
+    if not _authorized(x_demo_token):
+        raise HTTPException(status_code=401, detail="Falta o no coincide X-Demo-Token")
+
+    room = _resolve_conference(conference_name)
+    if not room:
+        return {"status": "error", "detail": "No hay ninguna sala abierta; usa /conference/start"}
+
+    numbers = _parse_participants(to)
+    if not numbers:
+        return {"status": "error", "detail": "Ningún teléfono válido en 'to' (E.164: +34600000000)"}
+
+    dialed, failed = [], []
+    for number in numbers:
+        try:
+            dialed.append({"to": number, "call_sid": _dial_into_conference(room, number)})
+        except Exception as error:
+            print(f"⚠️  No se pudo llamar a {number}: {error}")
+            failed.append({"to": number, "detail": str(error)})
+
+    return {"status": "ok" if dialed else "error", "conference_name": room, "dialed": dialed, "failed": failed}
+
+
+@app.get("/conference/status")
+async def conference_status(conference_name: Optional[str] = None):
+    """Quién hay en la sala, según Twilio, no según lo que creemos nosotros."""
+    room = _resolve_conference(conference_name)
+    if not room:
+        return {"status": "error", "detail": "No hay ninguna sala abierta"}
+    try:
+        live = twilio_client.conferences.list(friendly_name=room, status="in-progress", limit=1)
+        if not live:
+            return {"status": "ok", "conference_name": room, "live": False, "participants": []}
+        participants = twilio_client.conferences(live[0].sid).participants.list()
+        return {
+            "status": "ok",
+            "conference_name": room,
+            "live": True,
+            "participants": [
+                {"call_sid": p.call_sid, "muted": p.muted, "hold": p.hold} for p in participants
+            ],
+        }
+    except Exception as error:
+        return {"status": "error", "detail": str(error)}
 
 
 if __name__ == "__main__":

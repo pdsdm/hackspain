@@ -43,6 +43,7 @@
 | T31 | Actores móviles: taxis, VIP y repartidores de última hora | Zhi + Pep + Ventura | `feat/zhi-actores` | [T31](docs/specs/T31-actores-moviles.md) | todo |
 | T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | todo |
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
+| T34 | Sala de conferencia con varios participantes en el agente demo de voz | Álvaro | `feat/alvaro-integracion` | - | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**
