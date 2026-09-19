@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:05 |
-| **Commit de `main`** | `863ecf3` (PR #22) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 11:18 |
+| **Commit de `main`** | `2c95d63` (PR #23) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Claude (Opus 5), sesión de coordinación de Carlos |
+| **Generado por** | Devin, prueba de integración T17 |
 
 ## Salud
 
@@ -22,7 +22,7 @@
 | `make check` | ✅ OK |
 | Tests de backend | ✅ **99 de 99** |
 
-Ambos verificados sobre `863ecf3` con Node 22.23.2.
+Ambos verificados en `feat/zhi-integracion-final`, basada en `2c95d63`, con Node 22.23.2.
 
 ## Qué funciona
 
@@ -56,12 +56,13 @@ se resuelve con horas de código, porque depende del equipo de HappyRobot, que e
 evento.
 
 Hay más avance del que dice el tablero. La rama **`Prueba-de-plataforma-y-llamada-real`**
-(sin mergear) tiene un workflow desplegado en
-`platform.eu.happyrobot.ai/deployments/my5asz8ibzd3` que funciona como **Web call** (micro
-del navegador), con un panel «Avisar a…» y lista de contactos.
+(sin mergear) tiene un workflow desplegado que funciona como **Web call** (micro del
+navegador), un panel «Avisar a…» y el envío del botón a `POST /events`; el frontend ya no
+maneja secretos de HappyRobot.
 
-**Lo que falta exactamente:** la URL de un trigger **Webhook** del workflow. POSTear al
-deployment devuelve HTML. Esa URL la tiene HappyRobot.
+**Lo que falta exactamente:** la URL de un trigger **Webhook**, un número de prueba que
+llegue al adaptador y la prueba contra una llamada saliente real. POSTear al deployment
+del Web call devuelve HTML.
 
 **Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
 llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →
@@ -86,12 +87,11 @@ es el sistema.**
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
 
-### 🟠 4. Dos caminos para lanzar la llamada · T28 (`todo`)
+### 🟠 4. Camino de llamada aún sin mergear · T28 (`todo`)
 
-El trabajo de Álvaro llama a HappyRobot desde el **servidor de Vite**
-(`frontend/vite.config.ts`), y el backend ya tiene un adaptador `happyrobot` en
-`backend/src/actions/adapters/`. Hay que elegir uno. Recomendación: el backend, para que
-el panel en modo `api` vea las llamadas y haya una sola verdad.
+La última rama de voz ya manda el botón «Avisar» a `POST /events` y deja HappyRobot en el
+backend. T17 registra la decisión y añade logs, pero ambos cambios siguen fuera de `main`.
+Falta mergear una sola implementación y probarla con el trigger real.
 
 ### 🟡 5. Resto
 
@@ -99,7 +99,8 @@ el panel en modo `api` vea las llamadas y haya una sola verdad.
 - Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
   comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
   coordinador después.
-- Integración, entorno de demo, pitch y vídeo (T17, T18, T19, T21): nada.
+- Integración (T17): la rama prueba Vite → backend → giro → acciones → callback y añade
+  logs/runbook; sigue sin llamada real. Entorno, pitch y vídeo (T18, T19, T21): nada.
 - Aprendizaje entre ejecuciones (T20, bonus): nada.
 
 ## Bloqueos y de quién dependen
@@ -115,8 +116,9 @@ el panel en modo `api` vea las llamadas y haya una sola verdad.
 
 | Rama | Qué tiene |
 |---|---|
-| `Prueba-de-plataforma-y-llamada-real` | T6: workflow de HappyRobot, web call, panel «Avisar a…», proxy en Vite. **No está en `TASKS.md` con este nombre.** |
-| `feat/ventura-specs-cerebro` | Obsoleta: su contenido ya está en `main`. Se puede borrar. |
+| `Prueba-de-plataforma-y-llamada-real` | T6/T28: Web call, sala de voz y panel «Avisar a…» que ya envía `POST /events`; sin mergear ni llamada saliente verificada. |
+| `feat/alvaro-integracion` | Apunta a `863ecf3`; no contiene cambios propios y está por detrás de `main`. |
+| `feat/zhi-integracion-final` | T17: logs, prueba del payload HappyRobot y guía sobre `2c95d63`; pendiente de merge. |
 
 ## Decisiones pendientes que bloquean a otros
 

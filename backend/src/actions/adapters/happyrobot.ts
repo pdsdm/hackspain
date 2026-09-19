@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 import type { CrisisStateDocument } from "../../domain/crisis-state.js";
+import { logAction, logActionError } from "../../log.js";
 import type { DispatchTask } from "../../state/task-repository.js";
 
 const SEED_URL = new URL("../../../fixtures/madring/seed.json", import.meta.url);
@@ -69,8 +70,26 @@ export async function dispatchHappyRobot(input: {
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    return response.ok ? "dispatched" : "unknown";
-  } catch {
+    if (!response.ok) {
+      logActionError("happyrobot rejected", {
+        taskId: input.task.id,
+        area: input.task.area,
+        status: response.status,
+      });
+      return "unknown";
+    }
+    logAction("happyrobot accepted", {
+      taskId: input.task.id,
+      area: input.task.area,
+      status: response.status,
+    });
+    return "dispatched";
+  } catch (error) {
+    logActionError("happyrobot request failed", {
+      taskId: input.task.id,
+      area: input.task.area,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return "unknown";
   }
 }

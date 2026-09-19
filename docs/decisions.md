@@ -79,3 +79,13 @@
 - **Qué:** el efecto determinista de un giro se limita al daño y a sus consecuencias mecánicas. Dos de los nueve (`lounge_unavailable`, `reject_split`) activan además el plan de contingencia del recinto (Norte C `propuesto`), que el coordinador puede adoptar o descartar. Todo estado que active una contingencia lleva nota de origen para que se distinga de una propuesta del coordinador. Detalle en [`giros-y-contingencias.md`](giros-y-contingencias.md).
 - **Por qué:** un recinto de GP tiene contingencias escritas; modelarlo así es más realista y prueba mejor el criterio del agente, que es elegir o rechazar la alternativa obvia con un motivo. Además abre la cadena `lounge_unavailable` → `provider_silent`, donde la propia contingencia se queda sin transporte.
 - **Descartado:** quitar la contingencia y que el agente invente Norte C desde cero (menos realista y no prueba criterio); y dejarla sin nota de origen, que impide distinguir la contingencia de una decisión del coordinador y disimula una caída del LLM.
+
+### D14: HappyRobot se lanza solo desde el backend (resuelve T28)
+
+- **Qué:** el panel envía eventos e intervenciones al backend; `ActionExecutor` llama al trigger de HappyRobot y `/workflow/results` recibe el resultado. El panel solo lee el estado resultante.
+- **Por qué:** deja un único camino auditable y evita que Vite maneje credenciales o cree una segunda verdad. Descartado: `/api/happyrobot/call` en el servidor de Vite.
+
+### D15: Helmcode con DeepSeek V4 Flash para el coordinador de la demo
+
+- **Qué:** mientras se valida Cognition, el backend usa Helmcode con `deepseek-v4-flash` y harness JSON. Es independiente del modelo de voz, que se elige dentro de HappyRobot.
+- **Por qué:** prioriza latencia de replanificación y mantiene `rules` como respaldo. Descartado: confundir `COORDINATOR_MODEL` con el LLM de la llamada en tiempo real.

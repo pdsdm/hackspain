@@ -102,6 +102,8 @@ cp .env.example .env   # rellenar API keys
 make check             # verifica lint + tests + build
 ```
 
+Simulación, modo API, endpoints y recorrido HappyRobot: [`docs/guia-pruebas.md`](docs/guia-pruebas.md).
+
 ## Estructura del repo
 
 ```
