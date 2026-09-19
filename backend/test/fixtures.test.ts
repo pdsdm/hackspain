@@ -102,7 +102,8 @@ for (const [name, expected] of Object.entries(expectedCoverage)) {
     loaded.spaces[0]!.capacity = 1;
     loaded.shuttles[0]!.route[0]![0] = 0;
     assert.deepEqual(createFixtureState(name as FixtureName), json);
-    assert.equal(state.clock.paused, name === 'calm' ? false : true);
+    assert.equal(state.clock.paused, true);
+    if (name === 'calm') assert.deepEqual(state.events, []);
     assert.equal(state.nextScriptAt, null);
     assert.equal(state.simulated, true);
     assert.ok(state.events.every((e) => e.time <= state.clock.simSeconds));

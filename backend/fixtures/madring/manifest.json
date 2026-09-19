@@ -4324,7 +4324,7 @@
     },
     "calm": {
       "file": "states/calm.json",
-      "description": "12:00: hospitalidad original confirmada; reloj en marcha, sin incidente.",
+      "description": "12:00: mapa operativo inicial pausado, sin historial de la ejecución.",
       "planVersion": 1,
       "allocations": [
         {

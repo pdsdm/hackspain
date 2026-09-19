@@ -216,17 +216,17 @@ export function buildMadringFixtures() {
   }
 
   const calm = structuredClone(fixtures.normal!.state);
-  calm.clock = { ...calm.clock, simSeconds: 43200, speed: 1, paused: false };
+  calm.clock = { ...calm.clock, simSeconds: 43200, speed: 1, paused: true };
   calm.coordinatorStatus = 'estable';
   calm.planVersion = 1;
   for (const commitment of calm.commitments) {
     commitment.updatedAt = Math.min(commitment.updatedAt, 43200);
   }
-  calm.events = [{ id: 'calm-ready', time: 43200, kind: 'info', text: 'Operación estable una hora antes de la apertura · datos sintéticos' }];
+  calm.events = [];
   fixtures.calm = {
     state: calm,
     allocations: structuredClone(fixtures.normal!.allocations),
-    description: '12:00: hospitalidad original confirmada; reloj en marcha, sin incidente.',
+    description: '12:00: mapa operativo inicial pausado, sin historial de la ejecución.',
   };
 
   for (const fixture of Object.values(fixtures)) applyAllocations(fixture.state, guests, fixture.allocations);
