@@ -22,4 +22,5 @@ export const api = {
   getState: () => req<CrisisState>('/state'),
   intervene: (intervention: Intervention) => req<{ ok: boolean }>('/interventions', { method: 'POST', body: JSON.stringify(intervention) }),
   twist: (twist: TwistId) => req<{ ok: boolean }>('/simulation/twists', { method: 'POST', body: JSON.stringify({ twist }) }),
+  reset: () => req<{ ok: boolean; runId: string; planVersion: number }>('/simulation/reset', { method: 'POST' }),
 }
