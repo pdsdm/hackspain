@@ -16,7 +16,7 @@ POST /workflows/{id}/runs  ───────────▶ Incoming hook (t
 GET /runs/{run_id}  (sondeo cada 5 s)  ◀── estado del run
 ```
 
-El backend es la autoridad. Guarda una sesión en memoria por ejecución (`correlation_id`) y solo responde a esa sesión. `submit_plan` pasa por `parseOutput` y el dry-run de `applyOperations`. Un plan se persiste solo con `HAPPYROBOT_COORDINATOR_APPLY=true`.
+El backend es la autoridad. Guarda una sesión en memoria por ejecución (`correlation_id`) y solo responde a esa sesión. `submit_plan` pasa por `parseOutput` y el dry-run de `applyOperations`. Un plan HappyRobot se persiste solo con `HAPPYROBOT_COORDINATOR_APPLY=true`; con `false`, el piloto queda en shadow y el proveedor textual configurado continúa el ciclo y aplica el plan principal.
 
 Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones), `llm.ts` (proveedor `happyrobot`), `loop.ts` (harness), `app.ts` (endpoints), `run-happyrobot.ts` (prueba manual).
 
@@ -30,7 +30,7 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | UUID o slug del workflow Orquestador. |
 | `HAPPYROBOT_COORDINATOR_HOOK_URL` | Opcional. Hook directo, p. ej. `https://workflows.platform.eu.happyrobot.ai/hooks/development/<slug>`. Si está, el trigger va ahí en vez de `/workflows/{id}/runs`; el hook no devuelve `run_id`, así que no se sondea el estado del run. En EU el endpoint del API devolvía `Workflow not found`. |
 | `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development`. |
-| `HAPPYROBOT_COORDINATOR_APPLY` | Vacío o `false`. `true` solo cuando se decida aplicar planes. |
+| `HAPPYROBOT_COORDINATOR_APPLY` | Vacío o `false`: HappyRobot queda en shadow y el proveedor textual aplica el plan principal. `true` solo cuando se decida aplicar directamente el plan HappyRobot. |
 | `HAPPYROBOT_COORDINATOR_TIMEOUT_MS` | Opcional. Por defecto 180000. |
 | `HAPPYROBOT_COORDINATOR_API_BASE` | Opcional. Por defecto `https://platform.eu.happyrobot.ai/api/v2`. |
 | `PUBLIC_BASE_URL` | URL pública del backend (túnel). Los webhooks la usan. |

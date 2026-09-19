@@ -303,6 +303,24 @@ export function createApp(
     }
   });
 
+  app.post("/simulation/e2e/reset", authorizeWorkflow, (_request, response, next) => {
+    void engine
+      .reset("calm")
+      .then((result) => {
+        const run = stateRepository.ensureActiveRun();
+        const state = structuredClone(run.state);
+        state.forceSimActions = true;
+        state.e2eMode = "production-isolated";
+        state.agentsPaused = false;
+        state.clock.paused = false;
+        state.clock.live = false;
+        state.clock.speed = 120;
+        stateRepository.saveState(run.id, state);
+        response.status(200).json({ ok: true, ...result, externalActions: "sim" });
+      })
+      .catch(next);
+  });
+
   app.post("/events", (request, response, next) => {
     try {
       const event = parseEvent(request.body);
@@ -392,6 +410,15 @@ export function createApp(
     } catch (error) {
       next(error);
     }
+  });
+
+  app.get("/coordinator/happyrobot/report", authorizeWorkflow, (_request, response) => {
+    const report = happyrobotRegistry.getLastReport();
+    if (!report) {
+      response.status(404).json({ error: "No hay informe HappyRobot" });
+      return;
+    }
+    response.status(200).json(report);
   });
 
   app.post("/coordinator/happyrobot/shadow", authorizeWorkflow, (request, response, next) => {

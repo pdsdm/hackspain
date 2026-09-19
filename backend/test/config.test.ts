@@ -14,13 +14,14 @@ test("HappyRobot test destination must use E.164", () => {
   );
 });
 
-test("HappyRobot hooks can start without a test destination", () => {
-  const config = loadConfig({
-    HAPPYROBOT_API_KEY: "key",
-    HAPPYROBOT_HOOK_ESPACIOS: "https://hook.test/espacios",
-  });
-  assert.equal(config.happyrobotTestPhone, undefined);
-  assert.equal(config.hooks.espacios, "https://hook.test/espacios");
+test("a real HappyRobot hook requires a test destination", () => {
+  assert.throws(
+    () => loadConfig({
+      HAPPYROBOT_API_KEY: "key",
+      HAPPYROBOT_HOOK_ESPACIOS: "https://hook.test/espacios",
+    }),
+    /HAPPYROBOT_TEST_PHONE/,
+  );
 });
 
 test("Railway deployment id is optional and trimmed", () => {

@@ -150,6 +150,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (asistentes) hooks.asistentes = asistentes;
   const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
   const happyrobotTestPhone = readPhone(env.HAPPYROBOT_TEST_PHONE);
+  if (happyrobotApiKey && Object.keys(hooks).length > 0 && !happyrobotTestPhone) {
+    throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
+  }
 
   const seed = readSeed(env.SIM_SEED);
   return {

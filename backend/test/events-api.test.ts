@@ -53,6 +53,33 @@ test("POST /events accepts a chat event and rejects a bad body", async () => {
   });
 });
 
+test("the authenticated E2E reset creates an isolated sim-only run", async () => {
+  const database = openDatabase(":memory:");
+  const server = createApp(database, { workflowToken: "e2e-token" }).listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const address = server.address();
+    assert(address && typeof address !== "string");
+    const base = `http://127.0.0.1:${address.port}`;
+    assert.equal((await fetch(`${base}/simulation/e2e/reset`, { method: "POST" })).status, 401);
+    const reset = await fetch(`${base}/simulation/e2e/reset`, {
+      method: "POST",
+      headers: { Authorization: "Bearer e2e-token" },
+    });
+    assert.equal(reset.status, 200);
+    const result = await reset.json() as { externalActions: string };
+    assert.equal(result.externalActions, "sim");
+    const state = await (await fetch(`${base}/state`)).json() as Record<string, unknown>;
+    assert.equal(state.forceSimActions, true);
+    assert.equal(state.e2eMode, "production-isolated");
+    assert.equal((state.clock as Record<string, unknown>).paused, false);
+    assert.equal((state.clock as Record<string, unknown>).speed, 120);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    database.close();
+  }
+});
+
 test("GET /actions lists the open queue and reset accepts a fixture", async () => {
   await withServer(async (base) => {
     const actions = await fetch(`${base}/actions`);
