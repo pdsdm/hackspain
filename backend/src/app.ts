@@ -76,7 +76,7 @@ export function createApp(
   const stateRepository = new StateRepository(database.connection, config.initialFixture);
   const taskRepository = new TaskRepository(database.connection);
   const eventRepository = new EventRepository(database.connection);
-  const controlService = new ControlService(stateRepository);
+  const controlService = new ControlService(stateRepository, config.simSeed, config.clockSpeed);
   const workflowService = new WorkflowService(
     stateRepository,
     taskRepository,

@@ -66,8 +66,9 @@ test("GET /actions lists the open queue and reset accepts a fixture", async () =
       body: JSON.stringify({ fixture: "calm" }),
     });
     assert.equal(reset.status, 200);
-    const state = await (await fetch(`${base}/state`)).json() as { clock: { simSeconds: number }; coordinatorStatus: string };
+    const state = await (await fetch(`${base}/state`)).json() as { clock: { simSeconds: number; seed: number }; coordinatorStatus: string };
     assert.equal(state.clock.simSeconds, 43200);
+    assert.ok(Number.isInteger(state.clock.seed) && state.clock.seed > 0);
     assert.equal(state.coordinatorStatus, "estable");
   });
 });

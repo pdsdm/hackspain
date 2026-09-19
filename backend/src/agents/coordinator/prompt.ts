@@ -50,12 +50,7 @@ Responde únicamente con un objeto JSON válido, sin texto ni markdown alrededor
       "objective": "qué tiene que conseguir, concreto",
       "dueAt": <segundos desde medianoche, siempre posterior a la hora actual>,
       "dependsOn": ["ids de otras acciones de esta misma lista que deben cumplirse antes"],
-      "reason": "una frase: por qué esta acción ahora",
-      "verificationTarget": {
-        "commitmentId": "id de un compromiso de espacios incluido abajo",
-        "resourceType": "space",
-        "resourceId": "id exacto del espacio que la llamada puede confirmar"
-      }
+      "reason": "una frase: por qué esta acción ahora"
     }
   ],
   "commitments": [
