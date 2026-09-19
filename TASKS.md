@@ -55,7 +55,7 @@
 | T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
 | T45 | Congelar escenario y storyboard técnico de la demo | Carlos + Ventura | `docs/carlos-demo-scenario` | [T45](docs/specs/T45-video-scenario.md) | todo |
 | T46 | Entrada autenticada de incidentes reales desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
-| T47 | Workflows HappyRobot reales de llamada y SMS entrantes | Álvaro | `feat/alvaro-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | todo |
+| T47 | Workflow HappyRobot determinista para inputs simulados de llamada y SMS | Ventura | `feat/ventura-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | bloqueada |
 | T48 | Director reproducible del recorrido de vídeo | Carlos (revisión: Zhi) | `feat/carlos-demo-director` | [T48](docs/specs/T48-demo-director.md) | todo |
 | T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | doing |
 | T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |

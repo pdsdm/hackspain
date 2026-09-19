@@ -239,3 +239,12 @@ punto de descarga. No se añade `Staff[]` ni un quinto agente. El panel de agent
 también el motivo de cada especialista. `make check` OK: 316 tests pasan, 7 live omitidos
 y 10 fixtures verificadas; permanecen los dos avisos de lint y el aviso de chunk ya
 presentes en `main`.
+
+## T47 · workflow de inputs simulados
+
+En `feat/ventura-happyrobot-incident-inputs`, un instalador idempotente define `Demo
+Incident Inputs`: trigger API, variable bearer oculta y POST estricto a T46, sin telefonía
+ni LLM. La clave disponible puede leer y ejecutar workflows, pero crear devuelve `403
+Cannot create use cases`; la interfaz de Orca tampoco tiene sesión HappyRobot. T47 queda
+bloqueada hasta que un owner ejecute el instalador o cree/publique el workflow en
+`development`. Prueba focalizada y `make check` pasan: 322 tests, 7 live omitidos.

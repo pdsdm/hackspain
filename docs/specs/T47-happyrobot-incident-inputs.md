@@ -1,19 +1,19 @@
-# T47: llamada y SMS reales de entrada
+# T47: workflow HappyRobot de inputs simulados
 
 ## Qué y para qué
 
-Dos workflows HappyRobot en `development` comunican los incidentes congelados de T45 al endpoint T46: voz para el cierre del Principal y SMS para el bloqueo del muelle.
+Un workflow determinista en `development` recibe por API los mensajes congelados de T45 y los reenvía al endpoint T46 como llamada y SMS simulados, sin usar telefonía ni LLM.
 
 ## Criterios de aceptación
 
-- [ ] Llamada entrante o Web Call real ejecuta `report_incident(principal_pipe_burst)`.
-- [ ] SMS real sobre número HappyRobot, Twilio o Telnyx ejecuta `report_incident(dock_blocked)`.
-- [ ] `channel`, `actor`, URL, token y session ID son variables/fijos del workflow, no valores inventados.
-- [ ] La herramienta solo expone incidentes del allowlist y recibe respuesta estructurada.
-- [ ] Cada canal crea un único evento con evidencia revisable en Runs.
-- [ ] Ambos inputs pueden lanzarse con pocos segundos de diferencia.
-- [ ] Credenciales solo en variables de entorno de HappyRobot.
-- [ ] URLs, versión publicada y procedimiento de ensayo quedan documentados sin secretos.
+- [x] El instalador define un trigger API con los campos estrictos requeridos por T46.
+- [x] El POST bearer reenvía `principal_pipe_burst` y `dock_blocked` sin operaciones ni parches.
+- [x] `channel`, `actor`, URL y session ID vienen del trigger; los actores indican `SIMULACIÓN`.
+- [x] El bearer vive en una variable oculta de HappyRobot, no en código ni documentación.
+- [x] El instalador no modifica workflows existentes y es idempotente por nombre.
+- [ ] Un owner crea y publica `Demo Incident Inputs` en `development`.
+- [ ] Dos runs reales del workflow crean un único evento cada uno en T46.
+- [x] Instalación, variables y procedimiento de ensayo quedan documentados sin secretos.
 
 ## Fuera de alcance
 
