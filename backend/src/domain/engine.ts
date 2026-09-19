@@ -140,6 +140,9 @@ export class Engine {
       } else if (event.source === "clock" && event.kind === "incident") {
         this.control.applyIncident(String(event.payload?.incident ?? ""));
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
+      } else if (event.source === "clock" && event.kind === "gate_saturated") {
+        this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
+        if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
         if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
       } else {
