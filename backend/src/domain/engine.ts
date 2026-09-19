@@ -133,11 +133,12 @@ export class Engine {
       simSeconds: Number(run.state.clock.simSeconds),
       mode: "none",
     });
-    if (event.source !== "clock") {
-      this.appendTimeline(
-        event.source === "jury" ? "incidencia" : "accion",
-        event.text ?? `${event.source}:${event.kind}`,
-      );
+    // Solo si hay texto propio. Sin esto, take_call y call_result pintan
+    // "human:take_call" / "happyrobot:call_result" aunque el control o el
+    // workflow ya hayan escrito el evento útil — y también cuando la
+    // intervención acaba en 409.
+    if (event.source !== "clock" && event.text) {
+      this.appendTimeline(event.source === "jury" ? "incidencia" : "accion", event.text);
     }
 
     let mode: CoordinatorRunMode = "none";
@@ -151,6 +152,9 @@ export class Engine {
             payload: event.payload,
           });
           this.control.applyIntervention(intervention);
+          if (intervention.type === "take_call") {
+            this.executor?.holdDispatchTimeout(String(intervention.payload?.callId ?? ""));
+          }
           if (shouldCoordinateIntervention(intervention.type)) {
             mode = await this.runCoordinator(event);
           }
@@ -195,7 +199,10 @@ export class Engine {
         this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
+        this.executor?.clearRinging();
+        if (callResultChangesPlan(event.payload)) {
+          mode = await this.runCoordinator({ ...event, text: this.describeCallResult(event.payload) });
+        }
       } else {
         mode = await this.runCoordinator(event);
       }
@@ -205,6 +212,22 @@ export class Engine {
       this.markCoordinatorDown();
     }
     this.events.setMode(event.id, mode);
+  }
+
+  private describeCallResult(payload: Record<string, unknown> | undefined): string {
+    const taskId = typeof payload?.taskId === "string" ? payload.taskId : "";
+    const task = taskId ? this.tasks.get(taskId) : undefined;
+    const taskPayload = isRecord(task?.payload) ? task.payload : {};
+    const result = isRecord(payload?.result) ? payload.result : {};
+    const conditions = Array.isArray(result.conditions) ? result.conditions.filter((c): c is string => typeof c === "string") : [];
+    const parts = [
+      `resultado de ${task?.kind ?? "llamada"} (${task?.area ?? "?"}) con ${String(taskPayload.counterpart ?? "interlocutor")}`,
+      `objetivo: ${String(taskPayload.objective ?? "sin objetivo")}`,
+      `estado: ${String(payload?.status ?? "?")} / ${String(result.outcome ?? "?")}`,
+      `resumen: ${String(result.summary ?? "sin resumen")}`,
+    ];
+    if (conditions.length > 0) parts.push(`condiciones: ${conditions.join("; ")}`);
+    return parts.join(" · ");
   }
 
   private enqueueCallRequest(event: IncomingEvent & { id: string }): void {

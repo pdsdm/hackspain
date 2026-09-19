@@ -173,7 +173,7 @@ export class ControlService {
         transcript.push({ who: "humano", text: `[Responsable de operaciones toma la conversación con ${String(call.counterpart ?? "el interlocutor")}]`, at: Math.max(0, state.clock.simSeconds - Number(call.startedAt ?? state.clock.simSeconds)) });
         call.transcript = transcript;
         call.endsAfter = Number(call.endsAfter ?? 0) + 30;
-        addEvent(state, "intervencion", `El responsable toma la llamada ${callId}`);
+        addEvent(state, "intervencion", `El responsable toma la llamada con ${String(call.counterpart ?? "el interlocutor")}`);
         break;
       }
       case "approve_spend":

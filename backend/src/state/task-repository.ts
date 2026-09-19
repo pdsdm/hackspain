@@ -176,6 +176,17 @@ export class TaskRepository {
     }
   }
 
+  releaseClaim(taskId: string): void {
+    const result = this.database
+      .prepare(`
+        UPDATE dispatch_tasks
+        SET status = 'pending', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'dispatching'
+      `)
+      .run(taskId);
+    if (result.changes === 1) notifyRemote(this.database);
+  }
+
   markDispatchOutcome(taskId: string, status: "dispatched" | "unknown" | "failed"): void {
     const result = this.database
       .prepare(`
