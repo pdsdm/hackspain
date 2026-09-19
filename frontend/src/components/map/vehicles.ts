@@ -24,7 +24,8 @@ function spaceName(s: CrisisState, id: string) {
   return s.spaces.find((x) => x.id === id)?.name ?? id
 }
 
-function viaPoints(s: CrisisState, route: LatLng[]): LatLng[] {
+function viaPoints(s: CrisisState, route: LatLng[] | undefined): LatLng[] {
+  if (!route || route.length < 2) return [[40.4732, -3.6195], [40.4732, -3.6195]]
   const inner = route.slice(1, -1)
   const vias = inner.filter((p) => s.spaces.some((sp) => Math.abs(sp.pos[0] - p[0]) < 1e-6 && Math.abs(sp.pos[1] - p[1]) < 1e-6))
   return [route[0], ...vias, route[route.length - 1]]

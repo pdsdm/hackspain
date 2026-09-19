@@ -3,7 +3,7 @@ import type { CrisisState } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { Panel } from '../ui/Panel'
 import { Pill } from '../ui/Pill'
-import { SPACE } from '../ui/status'
+import { spaceLook } from '../ui/status'
 
 const AREA_TEXT: Record<string, { title: string; body: string }> = {
   'area-espacios': { title: 'Espacios', body: 'Pabellón Principal cerrado. Alternativas en Sur: Pabellón B (450) + Lounge Sur (150). Norte C (600) requiere traslado exterior.' },
@@ -22,7 +22,7 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
 
   let body: React.ReactNode
   if (sp) {
-    const st = SPACE[sp.status]
+    const st = spaceLook(sp.status)
     body = (
       <>
         <div className="flex items-start gap-2">
