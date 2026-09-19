@@ -60,6 +60,45 @@ export interface CoordinatorInput {
   commitments: InputCommitment[];
   budget: InputBudget;
   constraints: string[];
+  shuttles?: InputShuttle[];
+  deliveries?: InputDelivery[];
+  gates?: InputGate[];
+  pendingActions?: InputPendingAction[];
+  world?: { places: Array<Record<string, unknown>>; links: Array<Record<string, unknown>> };
+  event?: { source: string; kind: string; text?: string };
+  queryAnswers?: unknown[];
+}
+
+export interface InputShuttle {
+  id: string;
+  passengers: number;
+  origin: string;
+  destinationId: string;
+  arriveAt: number;
+  delayMin: number;
+  status: string;
+}
+
+export interface InputDelivery {
+  id: string;
+  dockId: string;
+  arriveAt: number;
+  status: string;
+}
+
+export interface InputGate {
+  id: string;
+  status: string;
+  arrivalsPerMin: number;
+  throughputPerMin: number;
+  waiting: number;
+}
+
+export interface InputPendingAction {
+  taskId: string;
+  area: string;
+  objective: string;
+  counterpart: string;
 }
 
 export interface CoordinatorAction {
@@ -109,4 +148,23 @@ export interface CoordinatorOutput {
   assignments: CoordinatorAssignment[];
   decision: CoordinatorDecision | null;
   unverified: string[];
+  operations?: CoordinatorOperation[];
+  queries?: CoordinatorQuery[];
+  done?: boolean;
 }
+
+export type CoordinatorQuery =
+  | { type: "affected_by"; placeId: string }
+  | { type: "alternatives_for"; placeId: string; minCapacity?: number }
+  | { type: "route"; vehicleId: string; destinationId: string };
+
+export type CoordinatorOperation =
+  | { op: "set_place"; id: string; status: string; note?: string; capacity?: number; readyAt?: number }
+  | { op: "set_gate"; id: string; status?: string; arrivalsPerMin?: number; throughputPerMin?: number; waiting?: number }
+  | { op: "reroute_shuttle"; id: string; destinationId: string; delayMin?: number; status?: string; note?: string }
+  | { op: "redirect_delivery"; id: string; dockId: string; delayMin?: number; status?: string; note?: string }
+  | { op: "set_group"; id: string; where?: string; assignedSpaceId?: string; needs?: string }
+  | { op: "cancel_action"; taskId: string; reason: string }
+  | { op: "set_agent"; area: Area; objective: string; reason: string; status: string }
+  | { op: "log_event"; kind: string; text: string; area?: string }
+  | { op: "add_constraint"; text: string };

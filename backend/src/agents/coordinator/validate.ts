@@ -127,6 +127,59 @@ function checkShape(value: unknown): ValidationIssue[] {
     }
   }
 
+  if (value.operations !== undefined) {
+    if (!Array.isArray(value.operations)) {
+      add("operations no es una lista");
+    } else {
+      for (const [index, raw] of value.operations.entries()) {
+        if (!isRecord(raw) || typeof raw.op !== "string") {
+          add(`operations[${index}] no es una operación`);
+          continue;
+        }
+        const known = [
+          "set_place",
+          "set_gate",
+          "reroute_shuttle",
+          "redirect_delivery",
+          "set_group",
+          "cancel_action",
+          "set_agent",
+          "log_event",
+          "add_constraint",
+        ];
+        if (!known.includes(raw.op)) add(`operations[${index}].op desconocido: ${raw.op}`);
+        if (raw.op === "set_place" && typeof raw.id !== "string") add(`operations[${index}].id vacío`);
+        if (raw.op === "reroute_shuttle" && (typeof raw.id !== "string" || typeof raw.destinationId !== "string")) {
+          add(`operations[${index}] reroute_shuttle incompleto`);
+        }
+        if (raw.op === "redirect_delivery" && (typeof raw.id !== "string" || typeof raw.dockId !== "string")) {
+          add(`operations[${index}] redirect_delivery incompleto`);
+        }
+        if (raw.op === "cancel_action" && (typeof raw.taskId !== "string" || typeof raw.reason !== "string")) {
+          add(`operations[${index}] cancel_action incompleto`);
+        }
+      }
+    }
+  }
+
+  if (value.queries !== undefined) {
+    if (!Array.isArray(value.queries)) {
+      add("queries no es una lista");
+    } else {
+      for (const [index, raw] of value.queries.entries()) {
+        if (!isRecord(raw) || typeof raw.type !== "string") {
+          add(`queries[${index}] inválida`);
+          continue;
+        }
+        if (!["affected_by", "alternatives_for", "route"].includes(raw.type)) {
+          add(`queries[${index}].type desconocido`);
+        }
+      }
+    }
+  }
+
+  if (value.done !== undefined && typeof value.done !== "boolean") add("done no es un booleano");
+
   return issues;
 }
 
@@ -224,6 +277,9 @@ export function validateOutput(
   }
 
   const output = value as CoordinatorOutput;
+  output.operations = Array.isArray(output.operations) ? output.operations : [];
+  output.queries = Array.isArray(output.queries) ? output.queries : [];
+  output.done = output.done !== false;
   const issues = checkInvariants(output, input);
   return { output: issues.length === 0 ? output : null, issues };
 }

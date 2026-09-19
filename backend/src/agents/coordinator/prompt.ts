@@ -80,7 +80,17 @@ REGLAS DEL FORMATO
 - Rellena "decision" (en lugar de null) solo cuando el plan necesite gasto por encima del autorizado, con los siete campos de arriba y ninguno vacío; entonces "coordinatorStatus" debe ser "esperando_decision".
 - Si el coste cabe en lo autorizado, "decision" es null y "coordinatorStatus" no puede ser "esperando_decision".
 - Un compromiso "confirmado" no puede llevar condiciones abiertas: si queda alguna, su estado es "aceptado_condiciones" o "en_consulta".
-- Cada "reason" y cada "rationale" se muestran al responsable humano en pantalla. Escríbelos para que los lea una persona con prisa.`;
+- Cada "reason" y cada "rationale" se muestran al responsable humano en pantalla. Escríbelos para que los lea una persona con prisa.
+
+MAPA Y OPERACIONES
+Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada. Si te falta un dato del mundo, emite queries y done: false.
+
+Amplía el JSON con:
+
+"operations": [ { "op": "set_place"|"set_gate"|"reroute_shuttle"|"redirect_delivery"|"set_group"|"cancel_action"|"set_agent"|"log_event"|"add_constraint", ...campos } ],
+"queries": [ { "type": "affected_by", "placeId": "..." } | { "type": "alternatives_for", "placeId": "...", "minCapacity": 90 } | { "type": "route", "vehicleId": "BUS-01", "destinationId": "esperaSur" } ],
+"done": true
+`;
 
 function hhmm(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -135,6 +145,56 @@ export function buildUserPrompt(input: CoordinatorInput): string {
   lines.push("", "RESTRICCIONES");
   for (const constraint of input.constraints) {
     lines.push(`- ${constraint}`);
+  }
+
+  if (input.event) {
+    lines.push("", "EVENTO");
+    lines.push(`- ${input.event.source} · ${input.event.kind}${input.event.text ? ` · ${input.event.text}` : ""}`);
+  }
+
+  if (input.shuttles && input.shuttles.length > 0) {
+    lines.push("", "VEHÍCULOS");
+    for (const shuttle of input.shuttles) {
+      lines.push(
+        `- ${shuttle.id} · ${shuttle.origin} → ${shuttle.destinationId} · llega ${shuttle.arriveAt} · ${shuttle.status} · ${shuttle.passengers} pax · retraso ${shuttle.delayMin} min`,
+      );
+    }
+    for (const delivery of input.deliveries ?? []) {
+      lines.push(`- ${delivery.id} · muelle ${delivery.dockId} · llega ${delivery.arriveAt} · ${delivery.status}`);
+    }
+  }
+
+  if (input.gates && input.gates.length > 0) {
+    lines.push("", "PUERTAS");
+    for (const gate of input.gates) {
+      lines.push(
+        `- ${gate.id} · ${gate.status} · cola ${gate.waiting} · ${gate.arrivalsPerMin}/min entra ${gate.throughputPerMin}/min`,
+      );
+    }
+  }
+
+  if (input.pendingActions && input.pendingActions.length > 0) {
+    lines.push("", "ACCIONES PENDIENTES");
+    for (const action of input.pendingActions) {
+      lines.push(`- ${action.taskId} · ${action.area} · ${action.objective} · ${action.counterpart}`);
+    }
+  }
+
+  if (input.world) {
+    lines.push("", "MUNDO");
+    for (const place of input.world.places) {
+      lines.push(
+        `- ${String(place.id)} · ${String(place.kind)} · zona ${String(place.zone)} · estado ${String(place.status)} · cap ${String(place.capacity ?? "—")}`,
+      );
+    }
+    for (const link of input.world.links) {
+      lines.push(`- ${String(link.from)} → ${String(link.to)} · ${String(link.minutes)} min · ${String(link.kind)}`);
+    }
+  }
+
+  if (input.queryAnswers && input.queryAnswers.length > 0) {
+    lines.push("", "RESPUESTAS A CONSULTAS");
+    lines.push(JSON.stringify(input.queryAnswers, null, 2));
   }
 
   lines.push("", "Decide qué hacer ahora y responde solo con el JSON.");
