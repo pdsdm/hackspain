@@ -338,6 +338,7 @@ export function createApp(
         const state = structuredClone(run.state);
         state.forceSimActions = true;
         state.e2eCoordinatorApply = true;
+        state.e2eSuppressResultReplan = true;
         state.e2eMode = "production-isolated";
         if (typeof inputTokenHash === "string") state.e2eInputTokenHash = inputTokenHash;
         state.agentsPaused = false;

@@ -22,6 +22,7 @@ export interface PublicState {
   e2eMode?: string;
   forceSimActions?: boolean;
   e2eCoordinatorApply?: boolean;
+  e2eSuppressResultReplan?: boolean;
   resolved: boolean;
   closureSummary?: string;
   spaces: Array<Record<string, unknown>>;
@@ -557,7 +558,7 @@ async function main(): Promise<void> {
     let activeE2ERunId: string | undefined;
     const readState = async () => {
       const state = await json<PublicState>(`${localUrl}/state`);
-      if (activeE2ERunId && (state.e2eMode !== "production-isolated" || state.forceSimActions !== true || state.e2eCoordinatorApply !== true)) {
+      if (activeE2ERunId && (state.e2eMode !== "production-isolated" || state.forceSimActions !== true || state.e2eCoordinatorApply !== true || state.e2eSuppressResultReplan !== true)) {
         throw new FatalE2EError(`El run E2E ${activeE2ERunId} fue reemplazado o Railway se redesplegó`);
       }
       return state;
@@ -624,7 +625,7 @@ async function main(): Promise<void> {
     activeE2ERunId = e2eRunId;
     const initial = await readState();
     checkpoints.initial = { runId: e2eRunId, planVersion: initial.planVersion, coordinatorStatus: initial.coordinatorStatus };
-    check(initial.e2eMode === "production-isolated" && initial.forceSimActions === true && initial.e2eCoordinatorApply === true, "M0: el run activo no conserva el aislamiento E2E");
+    check(initial.e2eMode === "production-isolated" && initial.forceSimActions === true && initial.e2eCoordinatorApply === true && initial.e2eSuppressResultReplan === true, "M0: el run activo no conserva el aislamiento E2E");
     check(initial.planVersion === 1, `M0: planVersion esperado 1, recibido ${initial.planVersion}`);
     check(initial.spaces.find((space) => space.id === "principal")?.status === "confirmado", "M0: Principal no está confirmado");
 
@@ -766,7 +767,7 @@ async function main(): Promise<void> {
     check(incidentCount(afterDockEffect, smsEvent.eventId) === 1, "M3: el SMS no aparece exactamente una vez");
     const smsIncident = afterDockEffect.events.find((item) => item.channel === "sms" && item.actor === "SIMULACIÓN · Logística MADRING");
     check(Boolean(smsIncident), "M3: falta procedencia de SMS simulado");
-    check(final.state.e2eMode === "production-isolated" && final.state.forceSimActions === true && final.state.e2eCoordinatorApply === true, "Final: se perdió el aislamiento E2E");
+    check(final.state.e2eMode === "production-isolated" && final.state.forceSimActions === true && final.state.e2eCoordinatorApply === true && final.state.e2eSuppressResultReplan === true, "Final: se perdió el aislamiento E2E");
     check(final.state.spaces.find((item) => item.id === "principal")?.status === "cerrado", "Final: Principal dejó de estar cerrado");
     check(final.state.spaces.find((item) => item.id === "muelleEste")?.status === "cerrado", "Final: Muelle Este dejó de estar cerrado");
     for (const id of ["espacios", "catering", "transporte", "asistentes"]) {

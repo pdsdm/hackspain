@@ -219,6 +219,33 @@ test("an accepted call_result only calls the coordinator for a material state ch
   }
 });
 
+test("an isolated E2E run records specialist results without cascading replans", async () => {
+  let calls = 0;
+  const { database, states, instance } = engine(undefined, async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 1, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  });
+  try {
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.e2eSuppressResultReplan = true;
+    states.saveState(run.id, state);
+    const payload = {
+      taskId: "t1",
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "completed",
+      materialChange: true,
+      materialSummary: "Pabellón B reduce capacidad",
+      result: { outcome: "accepted_with_conditions", summary: "aceptado", conditions: ["confirmar"], evidence: {}, data: {} },
+    };
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload });
+    assert.equal(calls, 0);
+  } finally {
+    database.close();
+  }
+});
+
 test("the coordinator status shows replanificando while the LLM works and the busy flag stays private", async () => {
   let statusDuringCall = "";
   let publicDuringCall: Record<string, unknown> = {};

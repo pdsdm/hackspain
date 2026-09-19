@@ -134,7 +134,7 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ### `POST /simulation/e2e/reset`
 
-Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run; aunque Railway esté en shadow o tenga hooks de especialistas, el plan se aplica y llamadas, SMS y email usan el adaptador `sim`. Un reset normal elimina la marca. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
+Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run; aunque Railway esté en shadow o tenga hooks de especialistas, el plan se aplica y llamadas, SMS y email usan el adaptador `sim`. Los resultados de especialistas actualizan estado y cierre sin lanzar ciclos extra: los dos únicos replans son los dos incidentes del storyboard. Un reset normal elimina la marca. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
 
 ```json
 { "inputTokenHash": "<sha256-hex>" }
