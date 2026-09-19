@@ -47,7 +47,7 @@ Escenario: son las 12:15 (`simSeconds: 44100`) y se cae el Pabellón Principal.
             └─ El coordinador vuelve a correr con el dato nuevo → vuelta al principio
 ```
 
-El panel ve todo esto haciendo polling de `GET /state` **cada 2 segundos**.
+El panel ve todo esto haciendo polling de `GET /state` **cada segundo**.
 
 ## 2. Entidades que puedes montar
 

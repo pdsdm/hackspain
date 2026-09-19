@@ -54,8 +54,9 @@ export function pendingDecision(s: CrisisState) {
 }
 
 export function displayCall(s: CrisisState) {
-  return s.calls.find((c) => c.status === 'en_curso')
-    ?? [...s.calls].reverse().find((c) => c.transcript.length > 0)
+  const newestFirst = [...s.calls].reverse()
+  return newestFirst.find((c) => c.status === 'en_curso')
+    ?? newestFirst.find((c) => c.transcript.length > 0)
     ?? null
 }
 

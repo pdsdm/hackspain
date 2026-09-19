@@ -82,7 +82,7 @@ export function useCrisisState(): CrisisController {
     }
     const refresh = () => { if (document.visibilityState === 'visible') void poll() }
     void poll()
-    const polling = setInterval(() => void poll(), 2000)
+    const polling = setInterval(() => void poll(), 1000)
     const clock = setInterval(() => setNow(Date.now()), 1000)
     document.addEventListener('visibilitychange', refresh)
     window.addEventListener('focus', refresh)

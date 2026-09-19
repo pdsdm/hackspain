@@ -158,7 +158,8 @@ export class Engine {
       mode: "none",
     });
     // La intervención ya se anotó a sí misma en la cronología con su texto de verdad.
-    if (event.source !== "clock" && !event.alreadyApplied && !isHappyRobotIncident(event)) {
+    const isSpecialistResult = event.source === "happyrobot" && event.kind === "call_result";
+    if (event.source !== "clock" && !event.alreadyApplied && !isHappyRobotIncident(event) && !isSpecialistResult) {
       this.appendTimeline(
         event.source === "jury" ? "incidencia" : "accion",
         event.text ?? `${event.source}:${event.kind}`,

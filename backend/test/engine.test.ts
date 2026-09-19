@@ -214,6 +214,8 @@ test("an accepted call_result only calls the coordinator for a material state ch
     assert.equal(calls, 2);
     await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, planVersion: next.planVersion, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
     assert.equal(calls, 3);
+    const timeline = states.ensureActiveRun().state.events as Array<{ text?: string }>;
+    assert.equal(timeline.some((event) => event.text === "happyrobot:call_result"), false);
   } finally {
     database.close();
   }

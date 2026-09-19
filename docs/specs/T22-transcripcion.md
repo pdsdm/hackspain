@@ -13,7 +13,7 @@ El backend actual dispara un webhook `HAPPYROBOT_HOOK_*`. Ese endpoint no docume
 - [x] Cada snapshot admite los formatos de transcript ya tolerados por T9, ordena por `at` y fusiona las líneas sin duplicarlas.
 - [x] Cada actualización se guarda en el `state_json` de SQLite; sobrevive al reinicio y aparece en `GET /state` durante la llamada.
 - [x] El callback final fusiona el transcript completo con lo recibido en vivo, cierra la llamada y no duplica líneas.
-- [x] El dashboard, que consulta `GET /state` cada dos segundos, muestra las últimas intervenciones durante la llamada y el transcript completo de la última llamada al terminar.
+- [x] El dashboard, que consulta `GET /state` cada segundo, muestra las últimas intervenciones durante la llamada y el transcript completo de la última llamada al terminar.
 - [x] Hay pruebas focalizadas de autenticación, orden, reenvío idempotente, fusión final y persistencia.
 - [ ] Validación con una llamada real después de configurar el workflow desplegado.
 
