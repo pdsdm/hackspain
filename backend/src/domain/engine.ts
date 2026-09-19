@@ -3,9 +3,13 @@ import { randomUUID } from "node:crypto";
 import { logCoord, logCoordError, logEvent } from "../log.js";
 
 import { runCoordinatorLoop, type CompleteFn, type CoordinatorLoopDeps } from "../agents/coordinator/loop.js";
+import { buildReplan } from "../agents/coordinator/replan.js";
+import { liveCoordinatorInput } from "../agents/coordinator/scenario.js";
+import { validateOutput } from "../agents/coordinator/validate.js";
 import type { LlmConfig } from "../agents/coordinator/llm.js";
 import type { CoordinatorMode, InitialFixture } from "../config.js";
-import { ContractError, parseIntervention, parseTwist, type Intervention } from "../contracts/api.js";
+import { ContractError, parseIntervention, parseTwist, type Intervention, type TwistId } from "../contracts/api.js";
+import { persistReplan } from "./apply-coordinator.js";
 import { ControlService } from "./control-service.js";
 import type { ActionExecutor } from "../actions/executor.js";
 import { EventRepository, type CoordinatorRunMode, type EventSource } from "../state/event-repository.js";
@@ -151,9 +155,49 @@ export class Engine {
     this.states.saveState(after.id, after.state);
   }
 
+  private twistOf(event: IncomingEvent): TwistId | undefined {
+    const candidate = event.payload?.twist ?? event.kind;
+    if (typeof candidate !== "string") return undefined;
+    try {
+      return parseTwist({ twist: candidate });
+    } catch {
+      return undefined;
+    }
+  }
+
+  private applyRulesReplan(event: IncomingEvent): boolean {
+    const twist = this.twistOf(event);
+    if (!twist) return false;
+    const run = this.states.ensureActiveRun();
+    const output = buildReplan(run.state, twist, this.tasks.listOpen(run.id));
+    if (!output) return false;
+    const { issues } = validateOutput(structuredClone(output), liveCoordinatorInput(run.state));
+    // El replan determinista reparte plazas, no propone gasto: la escalada por presupuesto
+    // la lleva el flujo de aprobaciones y no debe bloquear la adaptación al giro.
+    const blocking = issues.filter((issue) => issue.code !== "falta_escalado");
+    if (blocking.length > 0) {
+      logCoordError("replan rules", blocking.map((issue) => `${issue.code}: ${issue.detail}`).join("; "));
+      return false;
+    }
+    const errors = persistReplan({
+      runId: run.id,
+      output,
+      world: this.options.world,
+      tasks: this.tasks,
+      states: this.states,
+    });
+    if (errors.length > 0) {
+      logCoordError("replan rules", errors.join("; "));
+      return false;
+    }
+    this.executor?.pump();
+    return true;
+  }
+
   private async runCoordinator(event: IncomingEvent): Promise<"llm" | "rules" | "none"> {
     if (this.options.mode === "rules" && !this.options.completeFn) {
       logCoord("modo rules, sin LLM");
+      this.applyRulesReplan(event);
       return "rules";
     }
     logCoord("llamando al coordinador", event.kind, event.text ?? "");
@@ -168,6 +212,7 @@ export class Engine {
     );
     logCoord("resultado", result);
     if (result === "unavailable") {
+      if (this.applyRulesReplan(event)) return "rules";
       this.markCoordinatorDown();
       return "none";
     }

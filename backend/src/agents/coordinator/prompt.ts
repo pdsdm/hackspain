@@ -14,6 +14,7 @@ RESTRICCIONES DURAS
 - No puedes comprometer gasto por encima de lo ya autorizado. Si el plan cuesta más, lo escalas al responsable humano con una decisión.
 - Un espacio con readyAt no está disponible antes de esa hora.
 - No asignes a nadie a un espacio cuyo estado sea "cerrado" o "descartado".
+- Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
 PRIORIDADES, EN ESTE ORDEN
 1. Respetar aforo, zona de acceso, seguridad y accesibilidad.
@@ -132,6 +133,7 @@ export function buildUserPrompt(input: CoordinatorInput): string {
   for (const group of input.guestGroups) {
     const parts = [`${group.id} · ${group.name}`, `${group.count} personas`, group.where];
     if (group.assignedSpaceId !== undefined) parts.push(`asignado a ${group.assignedSpaceId}`);
+    if (group.informedCount !== undefined) parts.push(`${group.informedCount} informados`);
     if (group.needs !== undefined) parts.push(`necesidades: ${group.needs}`);
     lines.push(`- ${parts.join(" · ")}`);
   }

@@ -32,6 +32,7 @@ export interface InputGuestGroup {
   count: number;
   where: string;
   assignedSpaceId?: string;
+  informedCount?: number;
   needs?: string;
 }
 
