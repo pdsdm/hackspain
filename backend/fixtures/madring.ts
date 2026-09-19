@@ -218,6 +218,7 @@ export function buildMadringFixtures() {
   const calm = structuredClone(fixtures.normal!.state);
   calm.clock = { ...calm.clock, simSeconds: 43200, speed: 1, paused: false };
   calm.coordinatorStatus = 'estable';
+  calm.planVersion = 1;
   for (const commitment of calm.commitments) {
     commitment.updatedAt = Math.min(commitment.updatedAt, 43200);
   }
