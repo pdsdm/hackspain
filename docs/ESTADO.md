@@ -229,3 +229,13 @@ responde `409`.
 Verificación local sobre `9e1cef6`: 5 pruebas focalizadas pasan; `make check` OK con 321
 pruebas pasando, 7 live omitidas y 10 fixtures. Los workflows HappyRobot reales siguen
 pendientes en T47 y el E2E en T52; aún no se ha probado un canal real contra este endpoint.
+
+## T50 · coordinación de staff mediante Asistentes
+
+En `feat/ventura-demo-staff-coordination`, el coordinador recibe la restricción agregada
+de seis personas de recepción, exige una acción de Asistentes en el primer plan y su
+reasignación cuando cambia el muelle. Catering puede depender de que Recepción abra el
+punto de descarga. No se añade `Staff[]` ni un quinto agente. El panel de agentes muestra
+también el motivo de cada especialista. `make check` OK: 316 tests pasan, 7 live omitidos
+y 10 fixtures verificadas; permanecen los dos avisos de lint y el aviso de chunk ya
+presentes en `main`.
