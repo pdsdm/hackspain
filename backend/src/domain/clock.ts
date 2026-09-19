@@ -93,7 +93,7 @@ export class SimulationClock {
     state.deliveries = records(state, "deliveries");
 
     for (const call of records(state, "calls")) {
-      if (call.status !== "en_curso") continue;
+      if (call.status !== "en_curso" || call.simulated === false) continue;
       const ended = Number(call.startedAt ?? now) + Number(call.endsAfter ?? 0);
       if (ended <= now) {
         call.status = "terminada";
