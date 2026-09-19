@@ -15,7 +15,7 @@
 | T3 | Cerrar contrato backend, frontend y workflows | Zhi | `zhi-t3-contrato` (PR #13, mergeada) | [T3](docs/specs/T3-contrato.md) | done |
 | T4 | Panel de supervisión (frontend) con simulación local | Pepe | `feat/pepe-frontend-panel` (PR #11, mergeada) | [T4](docs/specs/T4-frontend-panel.md) | done |
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` (PR #7, mergeada) | [T5](docs/specs/T5-seed.md) | done |
-| T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `feat/alvaro-prueba-voz` | [T6](docs/specs/T6-prueba-voz.md) | todo |
+| T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `Prueba-de-plataforma-y-llamada-real` (sin mergear) | [T6](docs/specs/T6-prueba-voz.md) | doing |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/t7-estado` (PR #8, mergeada) | [T7](docs/specs/T7-estado.md) | done |
 | T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada) | [T8](docs/specs/T8-dashboard.md) | done |
 | T9 | Adaptador HappyRobot y callbacks | Álvaro | `feat/alvaro-integracion` | [T9](docs/specs/T9-integracion.md) | todo |
@@ -36,5 +36,10 @@
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` (PR #15, mergeada) | [T24](docs/specs/T24-motor-eventos.md) | done |
 | T25 | Robustez del motor: cola que no se envenena, reloj vivo tras reset, timeout de callbacks | Zhi | `fix/zhi-engine-robustez` (PR #16, mergeada) | - | done |
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
+| T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` | - | todo |
+| T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | - | - | todo |
+
+**Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
+Prioridad hoy, por riesgo: **T6 → T27 → T16**. Lo demás se recorta antes que esos tres.
 
 T1 sigue en `review`: el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.
