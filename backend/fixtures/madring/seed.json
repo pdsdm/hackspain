@@ -7907,6 +7907,12 @@
       "role": "courier",
       "phone": null,
       "email": null
+    },
+    {
+      "id": "test-dhl",
+      "role": "dhl",
+      "phone": null,
+      "email": null
     }
   ]
 }

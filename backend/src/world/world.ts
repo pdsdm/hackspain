@@ -139,7 +139,7 @@ export function originStopId(origin: string | undefined, fallbackId: string): st
   if (!origin) return fallbackId;
   if (ORIGIN_STOPS[origin]) return ORIGIN_STOPS[origin];
   const key = Object.keys(ORIGIN_STOPS).find((name) => name.toLowerCase() === origin.toLowerCase());
-  if (key) return ORIGIN_STOPS[key];
+  if (key) return ORIGIN_STOPS[key] ?? origin;
   return origin;
 }
 

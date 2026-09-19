@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { useAcceptingSeed } from "./sim-support.js";
 
 import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "../src/actions/executor.js";
@@ -32,9 +33,11 @@ test("sim adapter opens a call and applies a canned result", async () => {
       payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
       idempotencyKey: "sim-call",
     });
+    useAcceptingSeed(states, task);
     executor.pump();
     const opened = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
     assert.equal(opened[0]?.status, "en_curso");
+    await new Promise((resolve) => setImmediate(resolve));
     executor.fireDue(Number(run.state.clock.simSeconds) + 60);
     const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
     assert.equal(calls[0]?.status, "terminada");

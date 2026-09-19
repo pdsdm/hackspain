@@ -9,7 +9,6 @@ export const TWIST_LABELS: Record<TwistId, string> = {
   delivery_delay: "CAT-02 se retrasa 25 minutos",
   dock_blocked: "Muelle Este Sur bloqueado",
   provider_silent: "El transportista no responde",
-  reject_spend: "El responsable rechaza el gasto adicional",
   reject_split: "Se rechaza dividir la hospitalidad; se evalúa Norte C",
   guest_need: "Una invitada comunica una necesidad de accesibilidad no registrada",
 };
@@ -64,8 +63,6 @@ export function twistEligible(state: CrisisStateDocument, twist: TwistId): boole
       return findById(spaces, "muelleEste")?.status !== "cerrado";
     case "provider_silent":
       return findById(records(state, "agents"), "transporte")?.status !== "incidencia";
-    case "reject_spend":
-      return records(state, "decisions").some((decision) => decision.status === "pendiente");
     case "reject_split":
       return findById(spaces, "pabellonB")?.status !== "descartado";
     case "guest_need": {

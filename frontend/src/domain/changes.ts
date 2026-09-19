@@ -32,8 +32,8 @@ export function compareStates(before: CrisisState, after: CrisisState): StateCha
   collection('Acuerdos', before.commitments, after.commitments, (c) => `${words(c.status)}${c.conditions.length ? ` · ${c.conditions.join('; ')}` : ''}`, (c) => c.title)
   collection('Asistentes', before.guestGroups, after.guestGroups, (g, state) => `${g.confirmedCount}/${g.count} ubicados · ${g.informedCount} informados · ${g.acceptedCount} aceptan · ${place(state, g.assignedSpaceId)}${g.needs ? ` · ${g.needs}` : ''}`, (g) => g.name)
   collection('Decisiones', before.decisions, after.decisions, (d) => `${words(d.status)} · ${fmtEur(d.cost)}`, (d) => d.title)
-  const money = (s: CrisisState) => `Previsto ${fmtEur(s.budget.forecast)} · comprometido ${fmtEur(s.budget.committed)} · autorizado ${fmtEur(s.budget.authorized)} · límite autónomo ${fmtEur(s.budget.autonomousLimit)} · fondo ${fmtEur(s.budget.contingency)}`
-  if (money(before) !== money(after)) changes.push({ id: 'budget', resourceId: null, category: 'Presupuesto', title: 'Presupuesto de contingencia', before: money(before), after: money(after) })
+  const money = (s: CrisisState) => `Previsto ${fmtEur(s.budget.forecast)} · comprometido ${fmtEur(s.budget.committed)}`
+  if (money(before) !== money(after)) changes.push({ id: 'budget', resourceId: null, category: 'Costes', title: 'Coste de recuperación', before: money(before), after: money(after) })
   if (before.constraints.join('|') !== after.constraints.join('|')) changes.push({ id: 'constraints', resourceId: null, category: 'Restricciones', title: 'Instrucciones del responsable', before: before.constraints.join(' · ') || 'Sin restricciones', after: after.constraints.join(' · ') || 'Sin restricciones' })
   if (before.agentsPaused !== after.agentsPaused) changes.push({ id: 'agent-control', resourceId: null, category: 'Control', title: 'Acciones de los agentes', before: before.agentsPaused ? 'Nuevas acciones pausadas' : 'Acciones habilitadas', after: after.agentsPaused ? 'Nuevas acciones pausadas' : 'Acciones habilitadas' })
   return changes

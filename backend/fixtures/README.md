@@ -14,8 +14,8 @@ Datos **sintéticos y deterministas**, sin teléfonos, emails ni llamadas reales
 | `calm.json` | 12:00 | 600 | Operación original estable; reloj en marcha para el motor T24 |
 | `normal.json` | 12:14:50 | 600 | Reserva original en Principal, antes del cierre |
 | `crisis.json` | 12:15 | 0 | Principal y Muelle Sur cerrados; acuerdos invalidados |
-| `proposal.json` | 12:18 | 0 | B 450 + Lounge 150 pendientes de autorización y condiciones |
-| `recovered.json` | 12:25 | 600 | Reservas confirmadas y 3.200 € autorizados; quedan 120 avisos pendientes |
+| `proposal.json` | 12:18 | 0 | B 450 + Lounge 150 pendientes de aceptación de apertura escalonada y condiciones |
+| `recovered.json` | 12:25 | 600 | Reservas confirmadas y 3.200 € comprometidos; quedan 120 avisos pendientes |
 | `lounge_unavailable.json` | 12:26 | 450 | Lounge retirado, 150 invitados sin ubicación; Norte solo propuesto |
 | `pabellon_b_400.json` | 12:26 | 550 | B baja a 400; 50 invitados sin ubicación |
 
@@ -39,7 +39,7 @@ El cargador no cambia el estado inicial de la demo ni añade un selector visual.
 - B está disponible desde las 12:50; Lounge desde las 13:15, con espera autorizada para 150 y apertura escalonada aprobada. La espera no cuenta como espacio de hospitalidad.
 - La accesibilidad inicial está en `seed.resources[].initialAccessibilityConfirmed`; las verificaciones por snapshot están en `manifest.fixtures[].accessibilityVerifiedSpaceIds`. La propuesta debe confirmar el acceso adaptado de B antes de alojar allí a los 12 invitados.
 - `confirmedCount` cuenta reservas; `informedCount` avisos recibidos; `acceptedCount` aceptaciones del destinatario. No son equivalentes. Un grupo repartido entre espacios no tiene un `assignedSpaceId` único: consultar el manifest.
-- Dinero en **euros** y tiempo en **segundos desde medianoche**, según el contrato vigente. Contingencia: 5.000 €; límite autónomo: 1.500 €; plan Sur: 1.500 + 900 + 400 + 400 = 3.200 €. Los giros conservan lo comprometido, sin inventar reembolsos.
+- Dinero en **euros** y tiempo en **segundos desde medianoche**, según el contrato vigente. T37: costes informativos sin límites ni aprobación económica; plan Sur: 1.500 + 900 + 400 + 400 = 3.200 €. Los antiguos campos de límite se mantienen solo por compatibilidad. Los giros conservan lo comprometido, sin inventar reembolsos.
 - `contactRef: test-*` identifica dobles de prueba; no es un destino para comunicaciones. Los datos no configuran números de HappyRobot.
 
 ## Regenerar y verificar

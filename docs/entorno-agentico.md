@@ -72,10 +72,10 @@ Viven dentro del documento de estado de la ejecución activa:
 | `commitments` | Acuerdos con contrapartes y sus condiciones | Coordinador. **Una llamada nunca confirma** |
 | `agents` | Los cuatro especialistas y su estado | Motor y resultados |
 | `calls` | Cada llamada, SMS o email, con su transcripción | Ejecutor y callbacks |
-| `decisions` | Lo que necesita un humano (gasto > 1.500 €) | Reglas e intervenciones |
+| `decisions` | Elecciones operativas explícitas; nunca aprobaciones económicas (T37) | Coordinador e intervenciones |
 | `guestGroups` | Los tres grupos de invitados, con informados y aceptados | Agente de Asistentes |
 | `shuttles`, `deliveries`, `gates` | Transporte, catering y accesos | Reloj y resultados |
-| `budget` | Contingencia, límite autónomo, autorizado, previsto | Aprobaciones |
+| `budget` | Previsión (o sin estimar) y costes comprometidos; límites legacy sin efecto | Propuestas y resultados con coste explícito |
 | `events` | Cronología. **Solo se guardan las últimas 80** | Todo |
 | `twistsApplied` | Giros ya aplicados, para que repetirlos sea idempotente | Jurado |
 
@@ -161,7 +161,7 @@ https://workflows.platform.eu.happyrobot.ai/hooks/<id>
 
 | Quieres | Haz |
 |---|---|
-| Meter un giro | `POST /simulation/twists` con uno de los 9 (lista cerrada) |
+| Meter un giro | `POST /simulation/twists` con uno de los 8 (lista cerrada) |
 | Contar algo en lenguaje natural | `POST /events` con `source: chat`, `kind: free_text`. **Necesita LLM** |
 | Forzar una llamada | `POST /events` con `kind: call_request`. Funciona también en `rules` |
 | Intervenir como humano | `POST /interventions`: aprobar, pausar, restringir, coger la llamada |

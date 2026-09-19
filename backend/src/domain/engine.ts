@@ -379,5 +379,5 @@ function callResultChangesPlan(payload: Record<string, unknown> | undefined): bo
 }
 
 function shouldCoordinateIntervention(type: Intervention["type"]): boolean {
-  return type === "approve_spend" || type === "reject_spend" || type === "reject_split" || type === "set_constraint";
+  return type === "approve_plan" || type === "reject_plan" || type === "reject_split" || type === "set_constraint";
 }

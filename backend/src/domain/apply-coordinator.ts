@@ -307,7 +307,8 @@ export function persistCoordinatorOutput(input: {
         title: input.output.decision?.title ?? "Replan del coordinador",
         summary: input.output.decision?.summary ?? input.output.reading,
         rationale: input.output.decision?.rationale ?? input.output.reading,
-        cost: input.output.decision?.cost ?? 0,
+        cost: input.output.estimatedCost === undefined ? input.output.decision?.cost ?? null : input.output.estimatedCost,
+        ...(input.output.decision?.kind === "operational" ? { approval: { ...input.output.decision, kind: "operational" as const } } : {}),
         conditions: input.output.decision?.conditions ?? input.output.unverified,
         allocations,
         confirmedNorthGuestIds: [],
@@ -347,6 +348,9 @@ export function persistCoordinatorOutput(input: {
   const next = structuredClone(run.state);
   applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
+  if (!hasPlan && input.output.estimatedCost !== undefined && input.output.estimatedCost !== null) {
+    next.budget.forecast = input.output.estimatedCost;
+  }
   if (!next.waitingForDecision) next.coordinatorStatus = input.output.coordinatorStatus;
   input.states.saveState(run.id, next);
   return [];

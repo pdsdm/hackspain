@@ -77,7 +77,7 @@ export async function verifyCallAcceptance(
         objective: "Confirmar la reserva de Pabellón B (Sur) para 450 plazas, sin cambios en los términos acordados.",
         expectedRole: "Responsable de recinto (rol esperado, no identidad autenticada)",
         target,
-        terms: { spaceName: "Pabellón B", capacity: 450, readyAt: typeof space.readyAt === "number" ? space.readyAt : null, planCost: Number(state.budget.forecast) },
+        terms: { spaceName: "Pabellón B", capacity: 450, readyAt: typeof space.readyAt === "number" ? space.readyAt : null, planCost: typeof state.budget.forecast === "number" ? state.budget.forecast : null },
         transcript: transcript.map(({ who, text, at }) => ({ who, text, at })),
       }),
       new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), 1_500); }),
