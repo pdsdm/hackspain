@@ -6,19 +6,25 @@ Un «Modo vivo» que, con semilla, lanza microincidencias que nadie ha elegido s
 
 ## Criterios de aceptación
 
-- [ ] Catálogo de 10 a 12 incidencias en `backend/src/domain/incidents.ts`, cada una con texto, efecto determinista sobre el estado y área. Ninguna repite un giro de `TWIST_IDS`.
-- [ ] `POST /simulation/live { enabled: boolean, seed?: number }` y `SIM_INCIDENTS=on|off`. Por defecto apagado. `GET /state` expone `clock.live: boolean`.
-- [ ] Con el modo encendido, el tick lanza como máximo una incidencia cada 3 minutos simulados y nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision`.
-- [ ] Cada incidencia aplica su efecto, añade `incidencia` a la cronología y crea el evento del coordinador. En `rules` solo se aplica y se registra.
-- [ ] Misma semilla, misma secuencia de incidencias. Test con semilla fija.
-- [ ] Interruptor «Modo vivo» junto al panel de giros en el frontend, con la semilla visible.
+- [x] Catálogo de 10 a 12 incidencias en `backend/src/domain/incidents.ts`, cada una con texto, efecto determinista sobre el estado y área. Ninguna repite un giro de `TWIST_IDS`.
+- [x] `POST /simulation/live { enabled: boolean, seed?: number }` y `SIM_INCIDENTS=on|off`. Por defecto apagado. `GET /state` expone `clock.live: boolean`.
+- [x] Con el modo encendido, el tick lanza como máximo una incidencia cada 3 minutos simulados y nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision`.
+- [x] Cada incidencia aplica su efecto, añade `incidencia` a la cronología y crea el evento del coordinador. En `rules` solo se aplica y se registra.
+- [x] Misma semilla, misma secuencia de incidencias. Test con semilla fija.
+- [x] Interruptor «Modo vivo» junto al panel de giros en el frontend, con la semilla visible.
 - [ ] A `CLOCK_SPEED=30` desde `calm` con LLM, en 10 minutos reales caen al menos 3 incidencias distintas y el coordinador responde a cada una sin acumular llamadas `en_curso`.
-- [ ] `make check` pasa.
+- [x] `make check` pasa.
 
 ## Fuera de alcance
 
 - Incidencias que exijan una llamada real.
 - Aprendizaje entre ejecuciones (T20).
+
+## Estado (sábado 19, Pep)
+
+- Hecho sobre el mundo actual (shuttles BUS-01..04, accesos, muelles, CAT-01/02, grupos), porque T29–T31 no están. Cuando lleguen, añadir entradas al catálogo con taxis, VIP y repartidores.
+- Sin verificar: el criterio de `CLOCK_SPEED=30` con LLM durante 10 minutos reales. Necesita una clave de proveedor.
+- Cada incidencia entra al coordinador como evento `source: clock`, `kind: incident`.
 
 ## Notas
 

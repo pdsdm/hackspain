@@ -11,6 +11,7 @@ import {
   parseCoordinatorProposal,
   parseEvent,
   parseIntervention,
+  parseLive,
   parseReset,
   parseSpecialistResult,
   parseTwist,
@@ -177,6 +178,15 @@ export function createApp(
         .handle({ source: "jury", kind: twist, payload: { twist } })
         .catch((error) => console.error("[twists] handle", error));
       response.status(200).json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/simulation/live", (request, response, next) => {
+    try {
+      const body = parseLive(request.body ?? {});
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
     } catch (error) {
       next(error);
     }

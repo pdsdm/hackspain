@@ -179,6 +179,8 @@ export interface Clock {
   openingAt: number
   lunchAt: number
   raceAt: number
+  live?: boolean
+  liveSeed?: number
 }
 
 export interface CrisisState {

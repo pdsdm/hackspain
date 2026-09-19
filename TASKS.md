@@ -41,7 +41,7 @@
 | T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Carlos (seed) + Pep (mapa) | `feat/carlos-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | todo |
 | T30 | Afluencia con picos y saturación de accesos en el backend | Zhi (tick) + Ventura (regla) | `feat/zhi-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | todo |
 | T31 | Actores móviles: taxis, VIP y repartidores de última hora | Zhi + Pep + Ventura | `feat/zhi-actores` | [T31](docs/specs/T31-actores-moviles.md) | todo |
-| T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | todo |
+| T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | review |
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

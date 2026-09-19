@@ -109,10 +109,12 @@ export class Engine {
       simSeconds: Number(run.state.clock.simSeconds),
       mode: "none",
     });
-    this.appendTimeline(
-      event.source === "jury" ? "incidencia" : "accion",
-      event.text ?? `${event.source}:${event.kind}`,
-    );
+    if (event.source !== "clock") {
+      this.appendTimeline(
+        event.source === "jury" ? "incidencia" : "accion",
+        event.text ?? `${event.source}:${event.kind}`,
+      );
+    }
 
     let mode: CoordinatorRunMode = "none";
     try {
@@ -135,6 +137,9 @@ export class Engine {
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
         this.control.applyTwist(twist);
         if (!already) mode = await this.runCoordinator(event);
+      } else if (event.source === "clock" && event.kind === "incident") {
+        this.control.applyIncident(String(event.payload?.incident ?? ""));
+        if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
         if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
       } else {
