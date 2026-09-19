@@ -79,3 +79,20 @@ test("cancel_action requires an open task id", () => {
   );
   assert.equal(ok.ok, true);
 });
+
+test("redirect_vehicle moves a courier to an open dock and rejects a closed one", () => {
+  const world = loadWorld();
+  const draft = crisis();
+  const courier = (draft.vehicles as Array<Record<string, unknown>>).find((item) => item.id === "REP-01")!;
+  assert.equal(courier.destinationId, "muelleSur");
+  const denied = applyOperation(draft, world, { op: "redirect_vehicle", id: "REP-01", destinationId: "muelleSur" }, new Set());
+  assert.equal(denied.ok, false);
+  const ok = applyOperation(draft, world, { op: "redirect_vehicle", id: "REP-01", destinationId: "muelleEste", note: "Muelle Sur cerrado" }, new Set());
+  assert.equal(ok.ok, true);
+  assert.equal(courier.destinationId, "muelleEste");
+  assert.equal(courier.status, "desviado");
+  assert.equal(courier.note, "Muelle Sur cerrado");
+  assert.ok(Number(courier.arriveAt) > Number(draft.clock.simSeconds));
+  const unknown = applyOperation(draft, world, { op: "redirect_vehicle", id: "TX-99", destinationId: "muelleEste" }, new Set());
+  assert.equal(unknown.ok, false);
+});

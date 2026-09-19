@@ -102,6 +102,17 @@ export class SimulationClock {
     }
     state.deliveries = records(state, "deliveries");
 
+    for (const vehicle of records(state, "vehicles")) {
+      const status = String(vehicle.status ?? "");
+      if (status !== "en_ruta" && status !== "desviado") continue;
+      if (Number(vehicle.arriveAt ?? Infinity) > now) continue;
+      vehicle.status = "llegado";
+      const place = records(state, "spaces").find((item) => item.id === vehicle.destinationId);
+      addEvent(state, "info", `${String(vehicle.name ?? vehicle.id)} (${String(vehicle.who ?? "")}) llega a ${String(place?.name ?? vehicle.destinationId)}`, "transporte");
+      changed = true;
+    }
+    state.vehicles = records(state, "vehicles");
+
     for (const call of records(state, "calls")) {
       if (call.status !== "en_curso" || call.simulated === false) continue;
       const ended = Number(call.startedAt ?? now) + Number(call.endsAfter ?? 0);

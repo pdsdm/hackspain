@@ -134,6 +134,24 @@ export function applyOperation(
       draft.deliveries = records(draft, "deliveries");
       return { ok: true };
     }
+    case "redirect_vehicle": {
+      const vehicle = findById(records(draft, "vehicles"), operation.id);
+      if (!vehicle) return { ok: false, error: `redirect_vehicle: vehículo desconocido ${operation.id}` };
+      const destination = findById(records(draft, "spaces"), operation.destinationId);
+      if (!destination) return { ok: false, error: `redirect_vehicle: destino desconocido ${operation.destinationId}` };
+      if (destination.status === "cerrado" || destination.status === "descartado") {
+        return { ok: false, error: `redirect_vehicle ${operation.id}: destino ${operation.destinationId} ${String(destination.status)}` };
+      }
+      if (operation.delayMin !== undefined) vehicle.delayMin = operation.delayMin;
+      const estimate = routeTo(world, String(vehicle.from ?? ""), operation.destinationId);
+      vehicle.destinationId = operation.destinationId;
+      vehicle.route = estimate.route;
+      vehicle.arriveAt = Math.max(now, Number(vehicle.departAt ?? now)) + estimate.minutes * 60 + Number(vehicle.delayMin ?? 0) * 60;
+      vehicle.status = operation.status ?? "desviado";
+      if (operation.note !== undefined) vehicle.note = operation.note;
+      draft.vehicles = records(draft, "vehicles");
+      return { ok: true };
+    }
     case "set_group": {
       const group = findById(records(draft, "guestGroups"), operation.id);
       if (!group) return { ok: false, error: `set_group: grupo desconocido ${operation.id}` };
