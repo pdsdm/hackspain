@@ -31,6 +31,17 @@ function tick(s: CrisisState, delta: number) {
     }
   }
 
+  const mins = (delta * s.clock.speed) / 60
+  for (const g of s.gates) {
+    if (g.status === 'cerrado') continue
+    const room = Math.max(0, g.capacity - g.entered)
+    const arrivals = g.arrivalsPerMin * mins
+    const served = Math.min(g.throughputPerMin * mins, g.waiting + arrivals, room)
+    g.waiting = Math.max(0, g.waiting + arrivals - served)
+    g.entered = Math.min(g.capacity, g.entered + served)
+    g.status = g.waiting > 2500 ? 'saturado' : 'abierto'
+  }
+
   if (s.agentsPaused || s.waitingForDecision) return
   const script = SCRIPTS[s.scriptId]
   while (s.nextScriptAt !== null && now >= s.nextScriptAt && s.scriptCursor < script.length && !s.waitingForDecision) {

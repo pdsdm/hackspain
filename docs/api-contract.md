@@ -46,6 +46,8 @@ Estado completo de la crisis. El frontend hace polling cada 2 s.
   "shuttles": [{ "id": "BUS-01", "name": "BUS-01", "passengers": 45, "origin": "Chamartín", "destinationId": "accesoSur", "route": [[40.47, -3.68]], "departAt": 43200, "arriveAt": 45600, "delayMin": 0, "accepted": false, "status": "en_ruta" }],
   "deliveries": [{ "id": "CAT-01", "name": "…", "services": 360, "dockId": "muelleEste", "route": [[40.44, -3.58]], "departAt": 43500, "arriveAt": 45600, "status": "confirmada" }],
   "guestGroups": [{ "id": "g-acceso", "name": "…", "count": 90, "where": "Acceso Sur", "confirmedCount": 0, "informedCount": 0, "acceptedCount": 0 }],
+  "attendanceExpected": 110000,
+  "gates": [{ "id": "gate-sur", "name": "Puerta Sur · Feria de Madrid", "zone": "sur", "pos": [40.4631, -3.6158], "capacity": 42000, "entered": 19600, "waiting": 4300, "arrivalsPerMin": 640, "throughputPerMin": 480, "status": "saturado" }],
   "decisions": [{ "id": "d-plan-sur", "title": "…", "summary": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
   "calls": [{ "id": "call-1", "agent": "espacios", "counterpart": "…", "channel": "llamada", "startedAt": 44120, "endsAfter": 42, "status": "en_curso", "transcript": [{ "who": "agente", "text": "…", "at": 3 }] }],
   "events": [{ "id": "e0", "time": 44100, "kind": "incidencia", "text": "…", "area": "espacios" }],

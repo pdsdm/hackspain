@@ -78,6 +78,21 @@ export interface Delivery {
   note?: string
 }
 
+export type GateStatus = 'abierto' | 'saturado' | 'cerrado'
+
+export interface Gate {
+  id: string
+  name: string
+  zone: Zone
+  pos: LatLng
+  capacity: number
+  entered: number
+  waiting: number
+  arrivalsPerMin: number
+  throughputPerMin: number
+  status: GateStatus
+}
+
 export interface GuestGroup {
   id: string
   name: string
@@ -174,6 +189,8 @@ export interface CrisisState {
   shuttles: Shuttle[]
   deliveries: Delivery[]
   guestGroups: GuestGroup[]
+  gates: Gate[]
+  attendanceExpected: number
   decisions: Decision[]
   calls: Call[]
   events: TimelineEvent[]

@@ -38,3 +38,9 @@ export function pendingDecision(s: CrisisState) {
 export function activeCall(s: CrisisState) {
   return s.calls.find((c) => c.status === 'en_curso') ?? [...s.calls].reverse()[0] ?? null
 }
+
+export function attendance(s: CrisisState) {
+  const entered = s.gates.reduce((a, g) => a + g.entered, 0)
+  const waiting = s.gates.reduce((a, g) => a + g.waiting, 0)
+  return { entered, waiting, expected: s.attendanceExpected, saturated: s.gates.filter((g) => g.status === 'saturado').length }
+}

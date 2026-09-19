@@ -492,6 +492,69 @@
       "note": "Nueva entrega sujeta a muelle y recepción"
     }
   ],
+  "attendanceExpected": 110000,
+  "gates": [
+    {
+      "id": "gate-norte",
+      "name": "Puerta Norte · Valdebebas",
+      "zone": "norte",
+      "pos": [
+        40.4829,
+        -3.616
+      ],
+      "capacity": 38000,
+      "entered": 16800,
+      "waiting": 1900,
+      "arrivalsPerMin": 520,
+      "throughputPerMin": 560,
+      "status": "abierto"
+    },
+    {
+      "id": "gate-sur",
+      "name": "Puerta Sur · Feria de Madrid",
+      "zone": "sur",
+      "pos": [
+        40.4631,
+        -3.6158
+      ],
+      "capacity": 42000,
+      "entered": 19600,
+      "waiting": 4300,
+      "arrivalsPerMin": 640,
+      "throughputPerMin": 480,
+      "status": "saturado"
+    },
+    {
+      "id": "gate-este",
+      "name": "Puerta Este · Campo de las Naciones",
+      "zone": "sur",
+      "pos": [
+        40.4625,
+        -3.6112
+      ],
+      "capacity": 18000,
+      "entered": 7200,
+      "waiting": 650,
+      "arrivalsPerMin": 230,
+      "throughputPerMin": 260,
+      "status": "abierto"
+    },
+    {
+      "id": "gate-oeste",
+      "name": "Puerta Oeste · Ribera del Sena",
+      "zone": "sur",
+      "pos": [
+        40.469,
+        -3.6262
+      ],
+      "capacity": 12000,
+      "entered": 4100,
+      "waiting": 300,
+      "arrivalsPerMin": 150,
+      "throughputPerMin": 180,
+      "status": "abierto"
+    }
+  ],
   "guestGroups": [
     {
       "id": "g-acceso",
