@@ -232,7 +232,7 @@ export class Engine {
         );
         if (applied) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
+        if (run.state.e2eSuppressResultReplan !== true && callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
           const materialSummary = typeof event.payload?.materialSummary === "string" ? event.payload.materialSummary : undefined;
           mode = await this.runCoordinator(materialSummary ? { ...event, text: materialSummary } : event);
         }

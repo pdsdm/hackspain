@@ -76,6 +76,7 @@ test("the authenticated E2E reset creates an isolated sim-only run", async () =>
     const state = await (await fetch(`${base}/state`)).json() as Record<string, unknown>;
     assert.equal(state.forceSimActions, true);
     assert.equal(state.e2eCoordinatorApply, true);
+    assert.equal(state.e2eSuppressResultReplan, true);
     assert.equal(state.e2eMode, "production-isolated");
     assert.equal(state.e2eInputTokenHash, inputTokenHash);
     assert.equal((state.clock as Record<string, unknown>).paused, false);
