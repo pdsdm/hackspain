@@ -6,6 +6,8 @@ const COMMITMENT_STATUSES = ["propuesto", "en_consulta", "aceptado_condiciones"]
 const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "approve_plan", "reject_plan", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
 export const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_split", "guest_need"] as const;
 const EVENT_SOURCES = ["chat", "happyrobot", "jury", "human"] as const;
+const HAPPYROBOT_INCIDENT_CHANNELS = ["call", "sms"] as const;
+const HAPPYROBOT_INCIDENT_IDS = ["principal_pipe_burst", "dock_blocked"] as const;
 const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
 
@@ -14,6 +16,8 @@ export type ActionKind = (typeof ACTION_KINDS)[number];
 export type CommitmentStatus = (typeof COMMITMENT_STATUSES)[number];
 export type InterventionType = (typeof INTERVENTION_TYPES)[number];
 export type TwistId = (typeof TWIST_IDS)[number];
+export type HappyRobotIncidentChannel = (typeof HAPPYROBOT_INCIDENT_CHANNELS)[number];
+export type HappyRobotIncidentId = (typeof HAPPYROBOT_INCIDENT_IDS)[number];
 export type ResultStatus = (typeof RESULT_STATUSES)[number];
 export type SpecialistOutcome = (typeof OUTCOMES)[number];
 
@@ -58,6 +62,15 @@ export interface TranscriptLine {
   who: "agente" | "humano";
   text: string;
   at: number;
+}
+
+export interface HappyRobotIncidentEnvelope {
+  eventId: string;
+  channel: HappyRobotIncidentChannel;
+  actor: string;
+  incidentId: HappyRobotIncidentId;
+  summary: string;
+  evidence: { sessionId: string };
 }
 
 export interface SpecialistResultEnvelope {
@@ -137,6 +150,26 @@ function unique(values: string[], field: string): void {
   if (new Set(values).size !== values.length) {
     throw new ContractError(`${field} must not contain duplicate IDs`);
   }
+}
+
+function exactFields(value: Record<string, unknown>, field: string, allowed: readonly string[]): void {
+  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unexpected.length > 0) throw new ContractError(`${field} contains unknown fields: ${unexpected.join(", ")}`);
+}
+
+export function parseHappyRobotIncident(value: unknown): HappyRobotIncidentEnvelope {
+  const input = record(value, "body");
+  exactFields(input, "body", ["eventId", "channel", "actor", "incidentId", "summary", "evidence"]);
+  const evidence = record(input.evidence, "evidence");
+  exactFields(evidence, "evidence", ["sessionId"]);
+  return {
+    eventId: string(input.eventId, "eventId"),
+    channel: enumValue(input.channel, "channel", HAPPYROBOT_INCIDENT_CHANNELS),
+    actor: string(input.actor, "actor"),
+    incidentId: enumValue(input.incidentId, "incidentId", HAPPYROBOT_INCIDENT_IDS),
+    summary: string(input.summary, "summary"),
+    evidence: { sessionId: string(evidence.sessionId, "evidence.sessionId") },
+  };
 }
 
 export function parseIntervention(value: unknown): Intervention {

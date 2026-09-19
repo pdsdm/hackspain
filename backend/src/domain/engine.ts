@@ -12,7 +12,7 @@ import { incidentAt } from "./incidents.js";
 import { validateOutput } from "../agents/coordinator/validate.js";
 import type { LlmConfig } from "../agents/coordinator/llm.js";
 import type { CoordinatorMode, InitialFixture } from "../config.js";
-import { ContractError, parseCallRequest, parseIntervention, parseTwist, type Intervention, type TwistId } from "../contracts/api.js";
+import { ContractError, parseCallRequest, parseIntervention, parseTwist, type HappyRobotIncidentId, type Intervention, type TwistId } from "../contracts/api.js";
 import { persistReplan } from "./apply-coordinator.js";
 import { ControlService } from "./control-service.js";
 import type { ActionExecutor } from "../actions/executor.js";
@@ -158,7 +158,7 @@ export class Engine {
       mode: "none",
     });
     // La intervención ya se anotó a sí misma en la cronología con su texto de verdad.
-    if (event.source !== "clock" && !event.alreadyApplied) {
+    if (event.source !== "clock" && !event.alreadyApplied && !isHappyRobotIncident(event)) {
       this.appendTimeline(
         event.source === "jury" ? "incidencia" : "accion",
         event.text ?? `${event.source}:${event.kind}`,
@@ -219,6 +219,18 @@ export class Engine {
       } else if (event.source === "clock" && event.kind === "gate_saturated") {
         this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
+      } else if (isHappyRobotIncident(event)) {
+        const applied = this.control.applyHappyRobotIncident(
+          event.kind as HappyRobotIncidentId,
+          event.text ?? event.kind,
+          {
+            channel: event.payload!.channel as "call" | "sms",
+            actor: event.actorId!,
+            eventId: event.id,
+            sessionId: event.payload!.sessionId as string,
+          },
+        );
+        if (applied) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
         if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
           const materialSummary = typeof event.payload?.materialSummary === "string" ? event.payload.materialSummary : undefined;
@@ -401,6 +413,10 @@ export class Engine {
     state.coordinatorStatus = "replanificando";
     this.states.saveState(run.id, state);
   }
+}
+
+function isHappyRobotIncident(event: IncomingEvent): boolean {
+  return event.source === "happyrobot" && (event.kind === "principal_pipe_burst" || event.kind === "dock_blocked");
 }
 
 function callResultMatchesPlan(
