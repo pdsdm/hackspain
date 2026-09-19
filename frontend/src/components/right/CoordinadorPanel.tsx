@@ -1,30 +1,41 @@
-import type { CrisisState } from '../../domain/types'
+import { Building2, Bus, Network, Users, Utensils } from 'lucide-react'
+import type { Area, CrisisState } from '../../domain/types'
 import { Pill } from '../ui/Pill'
 import { AGENT, COORD } from '../ui/status'
 
-const DOT: Record<string, string> = { ink: 'bg-ink', amber: 'bg-amber', red: 'bg-red', green: 'bg-green', muted: 'bg-line-2' }
+const ICONS = { espacios: Building2, catering: Utensils, transporte: Bus, asistentes: Users }
+const ORDER: Area[] = ['espacios', 'catering', 'transporte', 'asistentes']
 
-export function CoordinadorPanel({ s, className = 'bg-panel border border-line' }: { s: CrisisState; className?: string }) {
+export function CoordinadorPanel({ s, className = '' }: { s: CrisisState; className?: string }) {
   const c = COORD[s.coordinatorStatus] ?? COORD.replanificando
   return (
-    <section className={`flex flex-col ${className}`}>
-      <header className="flex items-center gap-2.5 px-4 py-2.5 border-b border-line">
-        <h2 className="label">Coordinador</h2>
-        <span className="ml-auto" />
-        <Pill tone={c.tone} pulse={s.coordinatorStatus !== 'estable'}>{c.label}</Pill>
+    <section className={`agents-panel ${className}`} aria-label="Panel de agentes">
+      <header className="agents-panel-heading">
+        <h2 className="label">Panel de agentes</h2>
+        <span>Coordinación y especialistas · Plan v{s.planVersion}</span>
       </header>
-      <ul>
-        {s.agents.map((a) => {
+      <ul className="agents-grid">
+        <li className="agent-tile agent-tile--coordinator">
+          <div className="agent-tile-heading"><Network size={16} /><h3>Coordinador</h3></div>
+          <Pill tone={c.tone} pulse={s.coordinatorStatus === 'replanificando'}>{c.label}</Pill>
+          <div className="agent-tile-detail" tabIndex={0} aria-label="Función del coordinador">
+            <p>Coordina a los especialistas y adapta el plan de la operación.</p>
+            <p className="agent-role">Coordinación global · Plan v{s.planVersion}</p>
+          </div>
+        </li>
+        {ORDER.map((area) => {
+          const a = s.agents.find((agent) => agent.id === area)
+          if (!a) return null
           const st = AGENT[a.status] ?? AGENT.activo
+          const Icon = ICONS[area]
           return (
-            <li key={a.id} className="flex items-center gap-3 px-4 py-2 border-b border-line last:border-0">
-              <span className={`w-2 h-2 flex-none ${DOT[st.tone]} ${a.status === 'llamada' ? 'animate-pulse' : ''}`} />
-              <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                <div className="display font-bold text-[13px] leading-tight">{a.name}</div>
-                <div className="text-[11px] text-muted leading-relaxed">{a.objective}</div>
-                {a.lastResult && <div className="text-[11px] text-text/70 leading-relaxed">↳ {a.lastResult}</div>}
+            <li key={a.id} className="agent-tile">
+              <div className="agent-tile-heading"><Icon size={16} /><h3>{a.name}</h3></div>
+              <Pill tone={st.tone} pulse={a.status === 'llamada'}>{st.label}</Pill>
+              <div className="agent-tile-detail" tabIndex={0} aria-label={`Actividad de ${a.name}`}>
+                <p>{a.objective}</p>
+                {a.lastResult && <p className="agent-result"><span>Último resultado</span>{a.lastResult}</p>}
               </div>
-              <Pill tone={st.tone} dot={false}>{st.label}</Pill>
             </li>
           )
         })}

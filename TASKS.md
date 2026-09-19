@@ -17,7 +17,7 @@
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` (PR #7, mergeada) | [T5](docs/specs/T5-seed.md) | done |
 | T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro (apoyo: Zhi) | `Prueba-de-plataforma-y-llamada-real` (sin mergear), `fix/zhi-real-call-robustez` (PR #40) | [T6](docs/specs/T6-prueba-voz.md) | doing |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/t7-estado` (PR #8, mergeada) | [T7](docs/specs/T7-estado.md) | done |
-| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada); retoque visual local en `fix/carlos-demo-ui` | [T8](docs/specs/T8-dashboard.md) | done |
+| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada); retoque visual local en `fix/carlos-demo-ui`; panel de agentes en `feat/carlos-panel-agentes` (revisión local) | [T8](docs/specs/T8-dashboard.md) | done |
 | T9 | Adaptador HappyRobot y callbacks | Álvaro (apoyo: Zhi) | `feat/alvaro-integracion` (PR #26, mergeada), `fix/zhi-real-call-robustez` (PR #40) | [T9](docs/specs/T9-integracion.md) | review |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` (PR #14, mergeada) | [T10](docs/specs/T10-coordinador.md) | done |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
