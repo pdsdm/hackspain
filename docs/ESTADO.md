@@ -45,6 +45,8 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 - `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
 - `POST /simulation/reset` conserva `CLOCK_SPEED`.
 - El coordinador vuelve a `estable` tras el último resultado aceptado sin pisar otro ciclo.
+- Un callback adverso cuya `planVersion` ya quedó obsoleta se registra, pero no vuelve a
+  lanzar el coordinador ni multiplica replans de una versión anterior.
 - El prompt no presenta `verificationTarget` como campo genérico; sigue disponible solo para
   la llamada confirmable de `c-pabB`.
 - Una operación `set_place` sobre un id `gate-*` se normaliza a `set_gate`.
@@ -55,13 +57,13 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 ### 1. T17 con servicios reales — Zhi (`doing`)
 
 El recorrido automatizado pasa. En una prueba aislada, Helmcode real aplicó la política
-nueva: cero decisiones económicas y despacho inmediato. No convergió porque el simulador
-de contrapartes produjo `no_answer` y `rejected`; cada resultado adverso lanzó otro replan
-y acumuló versiones y acciones. La instancia se detuvo sin llamadas reales.
+nueva: cero decisiones económicas y despacho inmediato. La prueba descubrió que varios
+callbacks adversos de una versión podían quedar en cola y relanzar replans ya obsoletos; la
+rama lo corrige y tiene una regresión. No se repitió el ensayo externo después del fix.
 
 Para cerrar T17 falta repetir el recorrido con el actor HappyRobot real/controlado, callback
-y giro. El usuario informó de una primera llamada real previa, pero no se repitió ni se
-verificó en esta foto el recorrido completo de T17.
+y giro. El usuario informó de una primera llamada real previa, pero no se verificó en esta
+foto el recorrido completo de T17 tras el fix.
 
 ### 2. T18 ensayo completo — Zhi (`doing`)
 
