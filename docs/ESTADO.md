@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 17:10 CEST |
-| **Base de `main` integrada** | `c2c0482` (incluye PR #52 Helmcode, #51 T38, #50 rutas, #48 JEV) |
-| **Trabajo verificado** | `feat/pep-mapa-fullscreen`, T39, con esa base mergeada |
+| **Foto tomada** | 19 de septiembre de 2026, 17:15 CEST |
+| **Base de `main` integrada** | `origin/main` al crear `feat/pep-supabase` |
+| **Trabajo verificado** | T40 persistencia Supabase; `make check` OK |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Cursor |
 
@@ -31,12 +31,17 @@ Navegador de esta sesión: no se reabrió el panel (sin verificar).
   coordinador y cronología (chat, lo nuevo abajo) flotan sobre él con estilo cristal.
   La llamada solo aparece mientras está `en_curso`. Sin tarjeta de coste ni panel de
   operaciones. Velocidad ×1→×2→×5→×10→×20 en modo `sim`. Lo secundario va en un cajón lateral.
+- **T40, rama `feat/pep-supabase`:** el estado operativo (runs, tareas, eventos) se
+  copia a Postgres del proyecto `vdekfueryshivtdkbbti` cuando hay service role.
+  SQLite sigue siendo el motor. El panel no habla con Supabase directo.
 - T38 ya está en `main`: costes informativos, sin límites ni aprobaciones económicas.
 - T6 tiene código integrado en `main`. No se han repetido llamadas reales en esta sesión.
 
 ## Qué falta, por riesgo para la demo
 
-1. Revisar y mergear T39 (este PR).
+1. Pegar `SUPABASE_SERVICE_ROLE_KEY` en `.env` y comprobar que el backend loguea
+   `Supabase persistence enabled`; revisar tablas en el dashboard.
+2. Revisar y mergear T39 (`feat/pep-mapa-fullscreen`).
 2. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
    comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
 3. Ensayar el recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por
@@ -54,6 +59,7 @@ Navegador de esta sesión: no se reabrió el panel (sin verificar).
 
 ## Ramas vivas sin mergear
 
+- `feat/pep-supabase`: T40 espejo Postgres; falta la clave de servicio en el `.env` local.
 - `feat/pep-mapa-fullscreen`: T39 lista para revisión, con `origin/main` integrado.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
