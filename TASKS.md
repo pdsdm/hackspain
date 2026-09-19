@@ -38,10 +38,10 @@
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
 | T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` (PR #28, mergeada) | - | done |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | `feat/alvaro-integracion` (PR #26, mergeada) | - | done |
-| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Pep | `feat/pep-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | review |
-| T30 | Afluencia con picos y saturación de accesos en el backend | Pep | `feat/pep-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | review |
-| T31 | Actores móviles: taxis, VIP y repartidores de última hora | Pep | `feat/pep-actores` | [T31](docs/specs/T31-actores-moviles.md) | review |
-| T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | review |
+| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Pep | `feat/pep-mundo` (PR #38, mergeada) | [T29](docs/specs/T29-mundo-ampliado.md) | done |
+| T30 | Afluencia con picos y saturación de accesos en el backend | Pep | `feat/pep-afluencia` (PR #39, mergeada) | [T30](docs/specs/T30-afluencia-picos.md) | done |
+| T31 | Actores móviles: taxis, VIP y repartidores de última hora | Pep | `feat/pep-actores` (PR #43, mergeada) | [T31](docs/specs/T31-actores-moviles.md) | done |
+| T32 | Incidencias en vivo: agente mundo con LLM + catálogo de respaldo («Modo vivo») | Pep | PRs #30, #42, #45 (mergeadas) | [T32](docs/specs/T32-incidencias-vivo.md) | done |
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
 | T34 | Sala de conferencia con varios participantes en el agente demo de voz | Álvaro | `feat/alvaro-integracion` | - | review |
 
