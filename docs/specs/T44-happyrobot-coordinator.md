@@ -10,7 +10,7 @@ Ejecuta el coordinador con la arquitectura nativa de HappyRobot (workflow V3, Re
 - [ ] `COORDINATOR_HARNESS=happyrobot` activa el camino nuevo. `HAPPYROBOT_COORDINATOR_APPLY=true` es obligatorio para persistir un plan; por defecto es shadow.
 - [ ] `POST /workflow/coordinator/happyrobot/consult` y `.../submit` usan `parseConsultArgs`, `answerQuery`, `parseOutput` y el dry-run de `applyOperations`. Rechazan `runId`/`planVersion` obsoletos y sesiones no activas.
 - [ ] `submit_plan` devuelve errores estructurados (`accepted`, `retry`, `errors[]`) para que el agente corrija.
-- [ ] Modo shadow: HappyRobot genera y valida el plan; el backend lo registra y no muta `CrisisState`, no encola tareas y no dispara comunicaciones.
+- [ ] Modo shadow: el plan HappyRobot se registra sin mutar `CrisisState`, encolar tareas ni disparar comunicaciones; si el harness opera el motor, el proveedor textual continúa como coordinador principal.
 - [ ] `POST /coordinator/happyrobot/shadow` devuelve proveedor, modelo, run ID de HappyRobot, latencia, output y errores de validación. No imprime secretos ni thinking.
 - [ ] Tests unitarios con `fetch` mockeado: trigger aceptado, run completado, run fallido, timeout, output mal formado, `runId`/`planVersion` obsoletos, feedback de `submit_plan`.
 - [ ] `make check` pasa sin llamar a proveedores externos.

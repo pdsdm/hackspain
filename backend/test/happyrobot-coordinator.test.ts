@@ -6,12 +6,14 @@ import { createApp } from "../src/app.js";
 import {
   HappyRobotSessionRegistry,
   buildTriggerPayload,
+  happyrobotSessions,
   loadHappyRobotCoordinatorConfig,
   runHappyRobotCoordinator,
   type HappyRobotCoordinatorConfig,
   type HappyRobotSessionDeps,
+  type SubmitResult,
 } from "../src/agents/coordinator/happyrobot.js";
-import { loadLlmConfig } from "../src/agents/coordinator/llm.js";
+import { complete, loadLlmConfig } from "../src/agents/coordinator/llm.js";
 import { runCoordinatorLoop } from "../src/agents/coordinator/loop.js";
 import { crisisInput } from "../src/agents/coordinator/scenario.js";
 import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
@@ -70,6 +72,21 @@ function openDeps(fixture: "calm" | "crisis" = "crisis") {
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+function replaceEnv(values: Record<string, string | undefined>): () => void {
+  const previous = new Map<string, string | undefined>();
+  for (const [key, value] of Object.entries(values)) {
+    previous.set(key, process.env[key]);
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  return () => {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
 }
 
 interface FakeHappyRobot {
@@ -414,6 +431,8 @@ test("los endpoints exigen el token y el shadow devuelve el informe sin mutar el
   try {
     const unauthorized = await fetch(`${base}/workflow/coordinator/happyrobot/submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     assert.equal(unauthorized.status, 401);
+    assert.equal((await fetch(`${base}/coordinator/happyrobot/report`)).status, 401);
+    assert.equal((await fetch(`${base}/coordinator/happyrobot/report`, { headers: { Authorization: "Bearer secreto" } })).status, 404);
     const idle = await fetch(`${base}/workflow/coordinator/happyrobot/consult`, {
       method: "POST",
       headers: { Authorization: "Bearer secreto", "Content-Type": "application/json" },
@@ -429,13 +448,19 @@ test("los endpoints exigen el token y el shadow devuelve el informe sin mutar el
       body: JSON.stringify({ text: "fuga en Acceso Sur" }),
     });
     assert.equal(shadow.status, 200);
-    const report = (await shadow.json()) as { status: string; applied: boolean; consults: number; submissions: number; happyrobotRunId: string; model: string };
+    const report = (await shadow.json()) as { status: string; applied: boolean; consults: number; submissions: number; happyrobotRunId: string; model: string; correlationId: string };
     assert.equal(report.status, "accepted");
     assert.equal(report.applied, false);
     assert.equal(report.consults, 1);
     assert.equal(report.submissions, 1);
     assert.equal(report.happyrobotRunId, "hr-run-1");
     assert.equal(report.model, "gpt-5.6-luna-low");
+    const auditResponse = await fetch(`${base}/coordinator/happyrobot/report`, { headers: { Authorization: "Bearer secreto" } });
+    assert.equal(auditResponse.status, 200);
+    const audit = await auditResponse.json() as { correlationId: string; status: string; applied: boolean };
+    assert.equal(audit.correlationId, report.correlationId);
+    assert.equal(audit.status, "accepted");
+    assert.equal(audit.applied, false);
     assert.equal(await (await fetch(`${base}/state`)).text(), stateBefore);
     assert.equal((await fetch(`${base}/actions`).then((r) => r.json()) as { tasks: unknown[] }).tasks.length, 0);
   } finally {
@@ -460,6 +485,230 @@ test("el shadow responde 503 sin configuración de HappyRobot", async () => {
     if (saved.key !== undefined) process.env.HAPPYROBOT_API_KEY = saved.key;
     if (saved.workflow !== undefined) process.env.HAPPYROBOT_COORDINATOR_WORKFLOW_ID = saved.workflow;
     server.close();
+    database.close();
+  }
+});
+
+test("el shadow HappyRobot conserva el coordinador principal como fallback", async () => {
+  const { database, deps, states, tasks, workflows } = openDeps();
+  const originalFetch = globalThis.fetch;
+  const restoreEnv = replaceEnv({ COORDINATOR_VERBOSE: "0" });
+  const hookUrl = "https://hooks.test/hooks/development/shadow";
+  const config = loadLlmConfig({
+    ...ENV_BASE,
+    HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
+    HELMCODE_API_KEY: "hc_shadow",
+  });
+  const run = states.ensureActiveRun();
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url === hookUrl) {
+      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      queueMicrotask(() => {
+        happyrobotSessions.submit({
+          correlation_id: payload.correlation_id,
+          run_id: payload.run_id,
+          plan_version: payload.plan_version,
+          plan: baseOutput({ planVersion: run.state.planVersion }),
+        });
+      });
+      return new Response("", { status: 200 });
+    }
+    if (url === "https://api.helmcode.com/v1/chat/completions") {
+      return jsonResponse(200, {
+        choices: [{
+          message: {
+            content: JSON.stringify(baseOutput({
+              planVersion: run.state.planVersion,
+              operations: [{ op: "log_event", kind: "accion", text: "Fallback principal aplicado", area: "espacios" }],
+            })),
+          },
+        }],
+      });
+    }
+    throw new Error(`petición inesperada ${url}`);
+  };
+  try {
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "fuga" },
+      { world: deps.world, states, tasks, workflows, config },
+    );
+    assert.equal(result, "ok");
+    const report = happyrobotSessions.getLastReport();
+    assert.equal(report?.status, "accepted");
+    assert.equal(report?.applied, false);
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => event.text === "Fallback principal aplicado"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+    database.close();
+  }
+});
+
+test("un fallo HappyRobot conserva el coordinador principal como fallback", async () => {
+  const { database, deps, states, tasks, workflows } = openDeps();
+  const originalFetch = globalThis.fetch;
+  const restoreEnv = replaceEnv({ COORDINATOR_VERBOSE: "0" });
+  const hookUrl = "https://hooks.test/hooks/development/failure";
+  const config = loadLlmConfig({
+    ...ENV_BASE,
+    HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
+    HELMCODE_API_KEY: "hc_failure",
+  });
+  const run = states.ensureActiveRun();
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === hookUrl) return jsonResponse(503, { error: "unavailable" });
+    if (url === "https://api.helmcode.com/v1/chat/completions") {
+      return jsonResponse(200, {
+        choices: [{
+          message: {
+            content: JSON.stringify(baseOutput({
+              planVersion: run.state.planVersion,
+              operations: [{ op: "log_event", kind: "accion", text: "Fallback tras fallo aplicado", area: "espacios" }],
+            })),
+          },
+        }],
+      });
+    }
+    throw new Error(`petición inesperada ${url}`);
+  };
+  try {
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "fuga" },
+      { world: deps.world, states, tasks, workflows, config },
+    );
+    assert.equal(result, "ok");
+    assert.equal(happyrobotSessions.getLastReport()?.status, "unavailable");
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => event.text === "Fallback tras fallo aplicado"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+    database.close();
+  }
+});
+
+test("complete delega el texto auxiliar al proveedor configurado sin usar HappyRobot", async () => {
+  const config = loadLlmConfig({ ...ENV_BASE, HELMCODE_API_KEY: "hc_test" });
+  const originalFetch = globalThis.fetch;
+  const restoreEnv = replaceEnv({ COORDINATOR_VERBOSE: "0" });
+  let calls = 0;
+  globalThis.fetch = async (input, init) => {
+    calls += 1;
+    assert.equal(String(input), "https://api.helmcode.com/v1/chat/completions");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer hc_test");
+    const body = JSON.parse(String(init?.body)) as { model?: string; messages?: unknown[] };
+    assert.equal(body.model, "deepseek-v4-flash");
+    assert.equal(body.messages?.length, 2);
+    return jsonResponse(200, { choices: [{ message: { content: "respuesta auxiliar" } }] });
+  };
+  try {
+    assert.equal(config.provider, "happyrobot");
+    assert.equal(config.textProvider?.provider, "helmcode");
+    assert.equal(await complete(config, "sistema", "usuario"), "respuesta auxiliar");
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("el incidente HappyRobot atraviesa ingesta, coordinador, submit_plan y persistencia", async () => {
+  const database = openDatabase(":memory:");
+  const originalFetch = globalThis.fetch;
+  const hookUrl = "https://hooks.test/hooks/development/orquestador";
+  const token = "pipeline-token";
+  const coordinatorEnv = {
+    COORDINATOR_MODE: "llm",
+    COORDINATOR_HARNESS: "happyrobot",
+    HAPPYROBOT_API_KEY: "hr_pipeline",
+    HAPPYROBOT_COORDINATOR_WORKFLOW_ID: "wf-pipeline",
+    HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
+    HAPPYROBOT_COORDINATOR_APPLY: "true",
+    HAPPYROBOT_COORDINATOR_TIMEOUT_MS: "3000",
+    HAPPYROBOT_WEBHOOK_TOKEN: token,
+    PUBLIC_BASE_URL: "https://backend.test",
+    COGNITION_API_KEY: undefined,
+    DEVIN_API_KEY: undefined,
+    OPENAI_API_KEY: undefined,
+    HELMCODE_API_KEY: undefined,
+    ANTHROPIC_API_KEY: undefined,
+    COORDINATOR_VERBOSE: "0",
+  } satisfies Record<string, string | undefined>;
+  const restoreEnv = replaceEnv(coordinatorEnv);
+  const config = loadConfig({ ...coordinatorEnv, INITIAL_FIXTURE: "calm" });
+  const server = createApp(database, { workflowToken: token, config }).listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert(address && typeof address !== "string");
+  const base = `http://127.0.0.1:${address.port}`;
+  let callback: Promise<Response> | undefined;
+
+  globalThis.fetch = async (input, init) => {
+    if (String(input) !== hookUrl) return originalFetch(input, init);
+    const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    const planVersion = Number(payload.plan_version);
+    callback = originalFetch(`${base}/workflow/coordinator/happyrobot/submit`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        correlation_id: payload.correlation_id,
+        run_id: payload.run_id,
+        plan_version: planVersion,
+        plan: baseOutput({
+          planVersion,
+          operations: [{ op: "log_event", kind: "accion", text: "Plan HappyRobot aplicado", area: "espacios" }],
+        }),
+      }),
+    });
+    return new Response("", { status: 200 });
+  };
+
+  try {
+    assert.equal(happyrobotSessions.isActive(), false);
+    const response = await fetch(`${base}/workflow/happyrobot/events`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: "pipeline-pipe-1",
+        channel: "call",
+        actor: "SIMULACIÓN · Responsable de recinto",
+        incidentId: "principal_pipe_burst",
+        summary: "Una rotura de tubería obliga a cerrar el Pabellón Principal",
+        evidence: { sessionId: "pipeline-session-1" },
+      }),
+    });
+    assert.equal(response.status, 200);
+    const ingress = await response.json() as { ok: boolean; duplicate: boolean; planVersion: number };
+    assert.equal(ingress.ok, true);
+    assert.equal(ingress.duplicate, false);
+    assert.equal(ingress.planVersion, 2);
+    assert.ok(callback);
+    const callbackResponse = await callback;
+    assert.equal(callbackResponse.status, 200);
+    const submitted = await callbackResponse.json() as SubmitResult;
+    assert.equal(submitted.accepted, true);
+    assert.equal(submitted.retry, false);
+
+    const state = await (await fetch(`${base}/state`)).json() as {
+      spaces: Array<{ id: string; status: string }>;
+      events: Array<{ text?: string }>;
+      coordinatorBusy?: unknown;
+    };
+    assert.equal(state.spaces.find((space) => space.id === "principal")?.status, "cerrado");
+    assert.ok(state.events.some((event) => event.text === "Plan HappyRobot aplicado"));
+    assert.equal(state.coordinatorBusy, undefined);
+    assert.equal(happyrobotSessions.isActive(), false);
+    const report = happyrobotSessions.getLastReport();
+    assert.equal(report?.status, "accepted");
+    assert.equal(report?.applied, true);
+    assert.equal(report?.submissions, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database.close();
   }
 });
