@@ -6,14 +6,14 @@ Hacer visibles a la vez el Principal cerrado y el Muelle bloqueado, su impacto y
 
 ## Criterios de aceptación
 
-- [ ] Overlay compacto con máximo tres incidencias derivadas de `CrisisState`.
-- [ ] Principal muestra cierre, 600 VIP afectados y canal de voz.
-- [ ] Muelle muestra bloqueo, servicios afectados y canal SMS.
-- [ ] Marcadores, rutas y entregas usan los estados reales y destacan cambios.
-- [ ] Cronología distingue voz, SMS, sistema y simulado cuando haya procedencia.
+- [x] Overlay compacto con máximo tres incidencias derivadas de `CrisisState`.
+- [x] Principal muestra cierre, 600 VIP afectados y canal de llamada.
+- [x] Muelle muestra bloqueo, servicios afectados y canal SMS.
+- [x] Marcadores, rutas y entregas usan los estados reales y destacan cambios.
+- [x] Cronología distingue voz, SMS, sistema y simulado cuando haya procedencia.
 - [ ] No tapa KPIs, coordinador, llamada ni resultado a 1920×1080.
-- [ ] En móvil se conserva la cronología y el envío de eventos.
-- [ ] Lint y build pasan.
+- [x] En móvil se conserva la cronología y el envío de eventos.
+- [x] Lint y build pasan.
 
 ## Fuera de alcance
 
