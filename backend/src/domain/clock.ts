@@ -41,10 +41,10 @@ export class SimulationClock {
     this.engine = engine;
   }
 
-  private liveOnStart: { seed: number } | undefined;
+  private liveOnStart: { seed: number; mode: "open" | "catalog" } | undefined;
 
-  enableLiveOnStart(seed: number): void {
-    this.liveOnStart = { seed };
+  enableLiveOnStart(seed: number, mode: "open" | "catalog" = "open"): void {
+    this.liveOnStart = { seed, mode };
   }
 
   start(): void {
@@ -56,6 +56,7 @@ export class SimulationClock {
     if (this.liveOnStart) {
       state.clock.live = true;
       state.clock.liveSeed = this.liveOnStart.seed;
+      state.clock.liveMode = this.liveOnStart.mode;
       state.clock.liveIndex = 0;
       state.clock.liveLastAt = 0;
     }
@@ -158,7 +159,7 @@ export class SimulationClock {
     }
     if (incident) {
       void this.engine
-        ?.handle({ source: "clock", kind: "incident", text: incident.text, payload: { incident: incident.id } })
+        ?.handle({ source: "clock", kind: incident.kind, text: incident.text, payload: { incident: incident.id, index: incident.index } })
         .catch((error) => console.error("[live] handle", error));
     }
   }
@@ -176,14 +177,23 @@ export class SimulationClock {
     return status !== "replanificando" && status !== "esperando_decision" && state.agentsPaused !== true;
   }
 
-  private dueIncident(state: CrisisStateDocument, now: number): { id: string; text: string } | undefined {
+  private dueIncident(
+    state: CrisisStateDocument,
+    now: number,
+  ): { kind: "incident" | "incident_open"; id: string; text: string; index: number } | undefined {
     if (state.clock.live !== true || !this.coordinatorFree(state)) return undefined;
     if (now - Number(state.clock.liveLastAt ?? 0) < LIVE_INTERVAL_SECONDS) return undefined;
     const index = Number(state.clock.liveIndex ?? 0);
+    const open = state.clock.liveMode !== "catalog" && this.engine?.hasLlm() === true;
+    if (open) {
+      state.clock.liveLastAt = now;
+      state.clock.liveIndex = index + 1;
+      return { kind: "incident_open", id: `gen-${index}`, text: "", index };
+    }
     const incident = incidentAt(Number(state.clock.liveSeed ?? 1), index);
     if (!incident) return undefined;
     state.clock.liveLastAt = now;
     state.clock.liveIndex = index + 1;
-    return { id: incident.id, text: incident.text };
+    return { kind: "incident", id: incident.id, text: incident.text, index };
   }
 }

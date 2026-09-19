@@ -331,14 +331,20 @@ const FIXTURE_NAMES = [
   "pabellon_b_400",
 ] as const;
 
-export function parseLive(value: unknown): { enabled: boolean; seed?: number } {
+export function parseLive(value: unknown): { enabled: boolean; seed?: number; mode?: "open" | "catalog" } {
   const input = record(value, "body");
   if (typeof input.enabled !== "boolean") throw new ContractError("enabled must be a boolean", 400);
-  if (input.seed === undefined) return { enabled: input.enabled };
+  const result: { enabled: boolean; seed?: number; mode?: "open" | "catalog" } = { enabled: input.enabled };
+  if (input.mode !== undefined) {
+    if (input.mode !== "open" && input.mode !== "catalog") throw new ContractError("mode must be open or catalog", 400);
+    result.mode = input.mode;
+  }
+  if (input.seed === undefined) return result;
   if (typeof input.seed !== "number" || !Number.isInteger(input.seed) || input.seed < 1) {
     throw new ContractError("seed must be a positive integer", 400);
   }
-  return { enabled: input.enabled, seed: input.seed };
+  result.seed = input.seed;
+  return result;
 }
 
 export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {

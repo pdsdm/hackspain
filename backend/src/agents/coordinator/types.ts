@@ -125,6 +125,11 @@ export interface CoordinatorAction {
   dueAt: number;
   dependsOn: string[];
   reason: string;
+  verificationTarget?: {
+    commitmentId: string;
+    resourceType: "space";
+    resourceId: string;
+  };
 }
 
 export interface CoordinatorCommitment {

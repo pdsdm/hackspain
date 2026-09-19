@@ -6,6 +6,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
 import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
+import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
 import type { AppConfig } from "./config.js";
 import {
   ContractError,
@@ -21,6 +22,7 @@ import {
 import { ControlService } from "./domain/control-service.js";
 import { Engine } from "./domain/engine.js";
 import { DomainValidationError } from "./domain/plan-rules.js";
+import { verifyCallAcceptance, type CallAcceptanceVerification } from "./domain/result-verifier.js";
 import { WorkflowService } from "./domain/workflow-service.js";
 import type { CrisisDatabase } from "./state/database.js";
 import { EventRepository } from "./state/event-repository.js";
@@ -35,6 +37,7 @@ export interface AppOptions {
   workflowToken: string | undefined;
   config?: AppConfig;
   completeFn?: CompleteFn;
+  jevEvaluateFn?: JevEvaluateFn;
 }
 
 function defaultConfig(workflowToken: string | undefined): AppConfig {
@@ -48,6 +51,11 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     initialFixture: "calm",
     clockSpeed: 1,
     coordinatorMode: "rules",
+    jevEnabled: false,
+    jevApplyConfirmations: false,
+    jevReviewedTranscriptHashes: [],
+    typesafeApiKey: undefined,
+    jevModel: "jev-1.13.0",
     hooks: {},
     publicBaseUrl: "http://localhost:8000",
   };
@@ -74,6 +82,19 @@ export function createApp(
     taskRepository,
     new WorkflowEventRepository(database.connection),
   );
+  const jevEvaluateFn = config.jevEnabled
+    ? options.jevEvaluateFn ??
+      (config.typesafeApiKey
+        ? createJevEvaluator({
+            apiKey: config.typesafeApiKey,
+            model: config.jevModel,
+            timeoutMs: 1_500,
+          })
+        : undefined)
+    : undefined;
+  if (config.jevEnabled && !jevEvaluateFn) {
+    console.error("[jev] JEV_ENABLED=true pero falta TYPESAFE_API_KEY");
+  }
   const executor = new ActionExecutor(stateRepository, taskRepository, workflowService, {
     ...config,
     workflowToken: options.workflowToken ?? config.workflowToken,
@@ -147,8 +168,11 @@ export function createApp(
     next();
   };
 
-  const recordWorkflowResult = (envelope: SpecialistResultEnvelope) => {
-    const recorded = workflowService.recordSpecialistResult(envelope);
+  const recordWorkflowResult = (
+    envelope: SpecialistResultEnvelope,
+    verification?: CallAcceptanceVerification,
+  ) => {
+    const recorded = workflowService.recordSpecialistResult(envelope, verification);
     logWorkflow("result", {
       taskId: envelope.taskId,
       eventId: envelope.eventId,
@@ -164,6 +188,36 @@ export function createApp(
       });
     }
     return recorded;
+  };
+
+  // JEV evalúa la evidencia antes de registrar el resultado (T35). Con JEV apagado
+  // la verificación se resuelve sin salir del proceso y el camino es el de siempre.
+  const verifyAndRecord = (
+    envelope: SpecialistResultEnvelope,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    const task = taskRepository.get(envelope.taskId);
+    if (!task) throw new ContractError(`Task not found: ${envelope.taskId}`, 404);
+    const active = stateRepository.ensureActiveRun();
+    const evaluator =
+      task.runId === active.id && task.planVersion === active.state.planVersion
+        ? jevEvaluateFn
+        : undefined;
+    void verifyCallAcceptance(
+      task,
+      envelope,
+      evaluator,
+      active.state,
+      config.jevApplyConfirmations,
+      config.jevReviewedTranscriptHashes,
+    )
+      .then((verification) => {
+        response.status(200).json(
+          recordWorkflowResult(envelope, config.jevEnabled ? verification : undefined),
+        );
+      })
+      .catch(next);
   };
 
   app.get("/health", (_request, response) => {
@@ -209,7 +263,7 @@ export function createApp(
   app.post("/simulation/live", (request, response, next) => {
     try {
       const body = parseLive(request.body ?? {});
-      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed, body.mode) });
     } catch (error) {
       next(error);
     }
@@ -252,7 +306,7 @@ export function createApp(
   // La puerta del contrato: cuerpo exacto, sin interpretación.
   app.post("/workflow/results", authorizeWorkflow, (request, response, next) => {
     try {
-      response.status(200).json(recordWorkflowResult(parseSpecialistResult(request.body)));
+      verifyAndRecord(parseSpecialistResult(request.body), response, next);
     } catch (error) {
       next(error);
     }
@@ -262,9 +316,7 @@ export function createApp(
   // Es la URL que el ejecutor manda en callbackUrl; sin esta ruta, el callback da 404.
   app.post("/workflow/happyrobot/results", authorizeWorkflow, (request, response, next) => {
     try {
-      response.status(200).json(
-        recordWorkflowResult(translateHappyRobotResult(request.body, taskRepository)),
-      );
+      verifyAndRecord(translateHappyRobotResult(request.body, taskRepository), response, next);
     } catch (error) {
       next(error);
     }

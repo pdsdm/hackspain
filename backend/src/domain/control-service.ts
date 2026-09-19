@@ -209,20 +209,22 @@ export class ControlService {
     this.states.saveState(run.id, state);
   }
 
-  setLive(enabled: boolean, seed?: number): { live: boolean; seed: number } {
+  setLive(enabled: boolean, seed?: number, mode?: "open" | "catalog"): { live: boolean; seed: number; mode: "open" | "catalog" } {
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
     const current = Number(state.clock.liveSeed ?? 0);
     const nextSeed = seed ?? (current > 0 ? current : 1 + Math.floor(Math.random() * 99_999));
     state.clock.live = enabled;
     state.clock.liveSeed = nextSeed;
+    if (mode) state.clock.liveMode = mode;
+    const liveMode: "open" | "catalog" = state.clock.liveMode === "catalog" ? "catalog" : "open";
     if (enabled && (seed !== undefined || !state.clock.liveLastAt)) {
       state.clock.liveIndex = 0;
       state.clock.liveLastAt = 0;
     }
-    addEvent(state, "info", enabled ? `Modo vivo activado · semilla ${nextSeed}` : "Modo vivo desactivado");
+    addEvent(state, "info", enabled ? `Modo vivo activado · semilla ${nextSeed} · ${liveMode === "open" ? "incidencias generadas" : "catálogo"}` : "Modo vivo desactivado");
     this.states.saveState(run.id, state);
-    return { live: enabled, seed: nextSeed };
+    return { live: enabled, seed: nextSeed, mode: liveMode };
   }
 
   applyIncident(id: string): void {
@@ -234,6 +236,8 @@ export class ControlService {
     addEvent(state, "incidencia", incident.text, incident.area);
     const fired = Array.isArray(state.incidentsApplied) ? state.incidentsApplied.filter((value): value is string => typeof value === "string") : [];
     state.incidentsApplied = [...fired, id];
+    const texts = Array.isArray(state.incidentTexts) ? state.incidentTexts.filter((value): value is string => typeof value === "string") : [];
+    state.incidentTexts = [...texts, incident.text].slice(-20);
     this.states.saveState(run.id, state);
   }
 

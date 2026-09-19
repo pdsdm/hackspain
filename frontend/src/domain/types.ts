@@ -208,6 +208,7 @@ export interface Clock {
   seed?: number
   live?: boolean
   liveSeed?: number
+  liveMode?: 'open' | 'catalog'
 }
 
 export interface CrisisState {

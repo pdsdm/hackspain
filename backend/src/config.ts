@@ -25,9 +25,15 @@ export interface AppConfig {
   initialFixture: InitialFixture;
   clockSpeed: number;
   coordinatorMode: CoordinatorMode;
+  jevEnabled: boolean;
+  jevApplyConfirmations: boolean;
+  jevReviewedTranscriptHashes: string[];
+  typesafeApiKey: string | undefined;
+  jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
   publicBaseUrl: string;
   simIncidents?: boolean;
+  simIncidentsMode?: "open" | "catalog";
   simSeed?: number;
 }
 
@@ -93,6 +99,14 @@ function readHook(value: string | undefined): string | undefined {
   return url || undefined;
 }
 
+function readReviewedHashes(value: string | undefined): string[] {
+  const hashes = value?.trim().toLowerCase().split(/[\s,]+/).filter(Boolean) ?? [];
+  if (hashes.some((hash) => !/^[a-f0-9]{64}$/.test(hash))) {
+    throw new Error("JEV_REVIEWED_TRANSCRIPT_HASHES must contain SHA-256 hashes separated by commas");
+  }
+  return [...new Set(hashes)];
+}
+
 function readPhone(value: string | undefined): string | undefined {
   const phone = value?.trim();
   if (!phone) return undefined;
@@ -138,9 +152,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     initialFixture: readFixture(env.INITIAL_FIXTURE),
     clockSpeed: readClockSpeed(env.CLOCK_SPEED),
     coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
+    jevEnabled: ["1", "true"].includes(env.JEV_ENABLED?.trim().toLowerCase() ?? ""),
+    jevApplyConfirmations: ["1", "true"].includes(env.JEV_APPLY_CONFIRMATIONS?.trim().toLowerCase() ?? ""),
+    jevReviewedTranscriptHashes: readReviewedHashes(env.JEV_REVIEWED_TRANSCRIPT_HASHES),
+    typesafeApiKey: env.TYPESAFE_API_KEY?.trim() || undefined,
+    jevModel: env.JEV_MODEL?.trim() || "jev-1.13.0",
     hooks,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     simIncidents: (env.SIM_INCIDENTS?.trim().toLowerCase() ?? "off") === "on",
+    simIncidentsMode: env.SIM_INCIDENTS_MODE?.trim().toLowerCase() === "catalog" ? "catalog" : "open",
     ...(seed !== undefined ? { simSeed: seed } : {}),
   };
 }

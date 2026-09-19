@@ -124,6 +124,36 @@ test("pending tasks from a stale plan or an inactive run are never dispatched", 
   }
 });
 
+test("a result eventId cannot be reused for another task", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const run = new StateRepository(database.connection).ensureActiveRun();
+    const tasks = new TaskRepository(database.connection);
+    const input = { runId: run.id, planVersion: run.state.planVersion, area: "espacios", kind: "call", payload: {} };
+    const first = tasks.enqueue({ ...input, idempotencyKey: "first" });
+    const second = tasks.enqueue({ ...input, idempotencyKey: "second" });
+    tasks.recordResult(first.id, "same-id", {});
+    assert.throws(() => tasks.recordResult(second.id, "same-id", {}), /another task/);
+    assert.equal(tasks.get(second.id)?.status, "pending");
+  } finally { database.close(); }
+});
+
+for (const outcome of ["accepted", "accepted_with_conditions", "rejected"]) {
+  test(`verification dependencies require an applied unconditional acceptance: ${outcome}`, () => {
+    const database = openDatabase(":memory:");
+    try {
+      const run = new StateRepository(database.connection).ensureActiveRun();
+      const tasks = new TaskRepository(database.connection);
+      const input = { runId: run.id, planVersion: run.state.planVersion, area: "espacios", kind: "call" };
+      const required = tasks.enqueue({ ...input, payload: {}, idempotencyKey: "required" });
+      const task = tasks.enqueue({ ...input, payload: { dependsOnKeys: ["required"] }, idempotencyKey: "dependent" });
+      assert.equal(tasks.dependenciesSatisfied(task.id), false);
+      tasks.recordResult(required.id, "result", { status: "completed", result: { outcome, conditions: [] } }, (state) => state);
+      assert.equal(tasks.dependenciesSatisfied(task.id), outcome === "accepted");
+    } finally { database.close(); }
+  });
+}
+
 test("a current result mutates state once through its explicit adapter", () => {
   const database = openDatabase(":memory:");
   try {

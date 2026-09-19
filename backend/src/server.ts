@@ -9,7 +9,7 @@ const app = createApp(database, { workflowToken: config.workflowToken, config })
 const executor = app.locals.executor;
 const clock = new SimulationClock(app.locals.stateRepository, executor, config.clockSpeed, config.simSeed);
 clock.attachEngine(app.locals.engine);
-if (config.simIncidents) clock.enableLiveOnStart(config.simSeed ?? 1);
+if (config.simIncidents) clock.enableLiveOnStart(config.simSeed ?? 1, config.simIncidentsMode ?? "open");
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`Backend listening on http://${config.host}:${config.port}`);

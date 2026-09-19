@@ -40,10 +40,10 @@ no se ha demostrado. Este plan no lo sustituye: le da un mundo donde se note.
 
 | ID | Qué | Riesgo | Horas | Cuándo |
 |---|---|---|---|---|
-| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Bajo | 2 | Hoy, ya |
-| T30 | Afluencia con picos y saturación de accesos en el backend | Medio | 3 | Hoy, tras T29 |
-| T31 | Nuevos actores móviles: taxis, VIP, repartidores de última hora | Medio | 4 | Hoy solo si el LLM responde en < 15 s |
-| T32 | Generador de incidencias en vivo con semilla | Alto | 3 | Solo si el recorrido de las 18:00 corre entero |
+| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Bajo | 2 | **Hecho** (PR #38) |
+| T30 | Afluencia con picos y saturación de accesos en el backend | Medio | 3 | **Hecho** (PR #39) |
+| T31 | Nuevos actores móviles: taxis, VIP, repartidores de última hora | Medio | 4 | **Hecho** (PR #43) |
+| T32 | Generador de incidencias en vivo con semilla | Alto | 3 | **Hecho**: PR #30 («Modo vivo»), #42 (catálogo de 18) y #45 (agente mundo: el LLM inventa cada incidencia; el catálogo es respaldo) |
 
 Specs: [`T29`](specs/T29-mundo-ampliado.md) · [`T30`](specs/T30-afluencia-picos.md) ·
 [`T31`](specs/T31-actores-moviles.md) · [`T32`](specs/T32-incidencias-vivo.md).
