@@ -13,6 +13,7 @@ import { CrisisMap } from './components/map/CrisisMap'
 import { EstadoGlobal } from './components/center/EstadoGlobal'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
 import { LlamadaCard } from './components/right/LlamadaCard'
+import { AvisarPanel } from './components/right/AvisarPanel'
 import { DecisionCard } from './components/right/DecisionCard'
 import { Cronologia } from './components/right/Cronologia'
 import { IntervenirModal } from './components/right/IntervenirModal'
@@ -69,6 +70,8 @@ export default function App() {
           <DecisionCard d={decision} authorized={s.budget.authorized} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
           <CoordinadorPanel s={s} />
           <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+
+          <AvisarPanel s={s} />
           {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
           <Cronologia s={s} />
           <button onClick={() => setModal('decisiones')} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>
