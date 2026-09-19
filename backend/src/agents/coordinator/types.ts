@@ -67,6 +67,7 @@ export interface CoordinatorInput {
   world?: { places: Array<Record<string, unknown>>; links: Array<Record<string, unknown>> };
   event?: { source: string; kind: string; text?: string };
   queryAnswers?: unknown[];
+  previousErrors?: string[];
 }
 
 export interface InputShuttle {

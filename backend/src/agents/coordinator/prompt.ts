@@ -197,6 +197,11 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     lines.push(JSON.stringify(input.queryAnswers, null, 2));
   }
 
+  if (input.previousErrors && input.previousErrors.length > 0) {
+    lines.push("", "ERRORES DE LA RONDA ANTERIOR");
+    for (const error of input.previousErrors) lines.push(`- ${error}`);
+  }
+
   lines.push("", "Decide qué hacer ahora y responde solo con el JSON.");
 
   return lines.join("\n");
