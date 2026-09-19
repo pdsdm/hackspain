@@ -109,47 +109,56 @@ curl -X POST https://TU-HOST/incoming-call -d "CallSid=CAtest&From=%2B3460000000
 Estado verificado el 2026-09-19: llamada entrante real al DID → `/incoming-call`
 200 → `/media-stream` 101 → la IA saluda. Coste de esa prueba: $0,022.
 
-## Sala con varias personas
+## Sala con la IA y varias personas
 
-Puedes abrir una sala y meter a varias personas de golpe, sin esperar a que nadie
-llame al número:
+**La IA sí entra en la sala.** El truco es una **TwiML Application**: el leg del agente lo
+crea Twilio (`To=app:APxxxx`), ejecuta nuestro `/ai-leg` y ese leg devuelve
+`<Connect><Stream>`. Así se esquiva la limitación de que un mismo call leg no puede estar
+en `<Dial><Conference>` y en el stream a la vez, **sin SIP ni media server externo**.
+
+La app se crea sola al arrancar y se reapunta si cambia `PUBLIC_HOST`, que es lo que pasa
+cada vez que reinicias el túnel.
+
+### El recorrido
+
+1. Llamas al DID. Hablas con la IA a solas (`CALL_MODE=direct`).
+2. Pides hablar con alguien. La IA usa la tool `transfer_to_human`.
+3. Se monta la sala: **entra la IA, entras tú, y se llama a todos los de
+   `CONFERENCE_PARTICIPANTS`**. Los tres (o los que sean) acaban en la misma conferencia.
+
+El orden no es casual: primero la IA, cuyo leg Twilio crea al instante y arranca la sala;
+luego se redirige al cliente; y por último los humanos, que es lo único que tarda en
+descolgar. Así el cliente nunca se queda en silencio.
+
+### A mano, sin esperar a la conversación
 
 ```bash
-# Llama a todos los de CONFERENCE_PARTICIPANTS y los mete en la misma sala
-curl -X POST http://localhost:8000/conference/start -H "X-Demo-Token: $DEMO_API_TOKEN"
-
-# Solo a estos, ignorando el entorno
-curl -X POST "http://localhost:8000/conference/start?to=%2B34600000000,%2B34600000001" \
+# Monta la sala para una llamada en curso (CallSid de /conferences o del log)
+curl -X POST "http://localhost:8000/transfer?call_sid=CAxxxx&motivo=prueba" \
   -H "X-Demo-Token: $DEMO_API_TOKEN"
 
-# Añadir a alguien más a la sala abierta (la última, si no pasas conference_name)
-curl -X POST "http://localhost:8000/conference/add?to=%2B34600000002" \
+# Añadir más gente a una sala ya montada (varios, separados por coma)
+curl -X POST "http://localhost:8000/add-participant?conference_name=conf-xxx&to=%2B34600000002" \
   -H "X-Demo-Token: $DEMO_API_TOKEN"
 
-# Quién hay dentro, según Twilio
-curl http://localhost:8000/conference/status
+# Sacar a alguien (así se dará de baja a la IA cuando se quiera)
+curl -X POST "http://localhost:8000/remove-participant?conference_name=conf-xxx&call_sid=CAyyyy" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Qué salas hay vivas
+curl http://localhost:8000/conferences
 ```
 
 Detalles que importan:
 
-- Los teléfonos van en **E.164** (`+34600000000`). Lo que no cumpla se descarta con un
-  aviso en consola en vez de llegar a Twilio.
-- Un número que falla **no impide** que la sala se monte con el resto: salen en `failed`.
-- La sala **sobrevive a que alguien cuelgue** (`endConferenceOnExit=false`).
-- El nombre de la sala se recuerda en memoria, así que `/conference/add` no necesita que
-  lo copies del log. Se pierde al reiniciar el proceso.
+- `CONFERENCE_PARTICIPANTS` admite **varios teléfonos separados por coma**, en E.164. Lo
+  que no cumpla el formato se descarta con un aviso en consola en vez de llegar a Twilio.
+- **Un número que falla no tumba la sala**: se monta con el resto y el fallido sale en
+  `failed`.
+- La sala **sobrevive a que un humano cuelgue** (`endConferenceOnExit=false`); termina
+  cuando se va el cliente.
 - Los endpoints que crean llamadas exigen `X-Demo-Token` si `DEMO_API_TOKEN` está puesto.
-  Con el túnel abierto, sin eso cualquiera puede llamar a tu costa.
-
-### Lo que sigue sin resolverse: la IA dentro de la sala
-
-**El agente IA no entra en la conferencia.** `<Connect><Stream>` y `<Dial><Conference>`
-no pueden convivir en el mismo call leg, así que meter la IA exige un segundo leg. Las
-opciones reales son un segundo número, un endpoint SIP, o un media server; `<Start><Stream>`
-serviría para que la IA **escuche** la sala, pero no para que hable.
-
-Hasta que eso se resuelva, la sala es de humanos. Para hablar con la IA está
-`CALL_MODE=direct`, que sí funciona.
+  Con el túnel abierto, un endpoint que marca números es fraude telefónico esperando.
 
 ## Limitaciones conocidas (demo)
 
