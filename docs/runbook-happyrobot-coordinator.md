@@ -78,7 +78,7 @@ COORDINATOR_MODEL=deepseek-v4-flash
 Notas:
 
 - `COORDINATOR_HARNESS=happyrobot` es el interruptor. Sin él, el coordinador es Helmcode y nada de esto se usa.
-- `HAPPYROBOT_COORDINATOR_APPLY=true` aplica el plan en el panel. Con `false` o vacío es *shadow*: HappyRobot razona, el backend valida y registra, y después cae a `rules`. En el panel no se ve nada de HappyRobot.
+- `HAPPYROBOT_COORDINATOR_APPLY=true` aplica el plan en el panel. Con `false` o vacío es *shadow*: HappyRobot razona, el backend valida y registra el informe, y después Helmcode vuelve a planificar y aplica su plan (PR #85). En el panel no se ve nada de HappyRobot.
 - `HAPPYROBOT_COORDINATOR_HOOK_URL` es obligatorio en la cuenta EU: el endpoint `/workflows/{id}/runs` del API devuelve `Workflow not found`.
 - `HELMCODE_API_KEY` no la usa el coordinador. La usan las **contrapartes simuladas** (la voz del responsable en las llamadas simuladas) y el Modo vivo. Sin ella, las llamadas simuladas responden con frases fijas.
 - No dejes claves duplicadas: `COORDINATOR_HARNESS` y `COORDINATOR_MODE` una sola vez. Node se queda con la última.
@@ -142,6 +142,39 @@ Solo hace falta revisarlas si algo falla. Todo está en el workflow `Orquestador
 2. **Variables → `HAPPYROBOT_COORDINATOR_TOKEN`.** Su valor en los tres entornos es el de `HAPPYROBOT_WEBHOOK_TOKEN` del `.env`. Si el backend responde `Invalid workflow token`, no coinciden.
 3. **Webhooks.** URL `{{backend_base_url}}/workflow/coordinator/happyrobot/consult` y `.../submit`. Leen la URL del trigger; no hay que cambiar nada al cambiar de túnel. Bearer token como chip `{ } HAPPYROBOT_COORDINATOR_TOKEN`, no texto.
 4. **Prompt.** Modelo `GPT-5.6 Luna`, `Low reasoning`. Dos chips: `Data System Prompt` y `Data World Snapshot`.
+
+## En Railway y Vercel
+
+No hace falta túnel: Railway ya tiene URL pública.
+
+**Railway → servicio backend → Variables** (redespliega solo al guardar):
+
+| Variable | Valor |
+|---|---|
+| `COORDINATOR_MODE` | `llm` |
+| `COORDINATOR_HARNESS` | `happyrobot` |
+| `HAPPYROBOT_COORDINATOR_APPLY` | `true` para ver los planes de HappyRobot en el panel. Con `false` es shadow: HappyRobot razona, se descarta y Helmcode vuelve a planificar (el doble de latencia). |
+| `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | `1i6zafb6wodb` |
+| `HAPPYROBOT_COORDINATOR_HOOK_URL` | `https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb` |
+| `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development` |
+| `PUBLIC_BASE_URL` | dominio público del servicio (Settings → Networking), p. ej. `https://<servicio>.up.railway.app`, sin barra final |
+| `HAPPYROBOT_API_KEY` | la clave |
+| `HAPPYROBOT_WEBHOOK_TOKEN` | el token; mismo valor que la variable `HAPPYROBOT_COORDINATOR_TOKEN` en HappyRobot |
+| `HELMCODE_API_KEY`, `OPENAI_BASE_URL`, `COORDINATOR_MODEL` | como en local: contrapartes simuladas y fallback |
+| `HAPPYROBOT_HOOK_ESPACIOS` … | con valor = llamadas reales; vacío = simuladas |
+
+Comprobar: `curl https://<servicio>.up.railway.app/health` y en los logs `[coord] listo happyrobot happyrobot gpt-5.6-luna-low`. Un `SIGTERM` en los logs es un redeploy de Railway; mata el run en curso.
+
+**Vercel → proyecto frontend → Environment Variables**:
+
+| Variable | Valor |
+|---|---|
+| `VITE_API_URL` | `https://<servicio>.up.railway.app` |
+| `VITE_DATA_SOURCE` | `api` |
+
+Vite incrusta estas variables en el build: tras cambiarlas hay que redesplegar en Vercel.
+
+En HappyRobot no cambia nada: los webhooks leen `backend_base_url` del trigger.
 
 ## Volver al coordinador normal (Helmcode)
 
