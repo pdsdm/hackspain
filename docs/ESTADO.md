@@ -51,24 +51,35 @@ Todo lo de aquí está mergeado en `main`.
 
 ## Qué falta, por riesgo para la demo
 
-### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`review`)
+### 🔴 1. La llamada real sale, pero el resultado no vuelve · T6 (`doing`), T9 (`review`)
 
-Es el **requisito obligatorio del enunciado** ("interacción de verdad") y lo único que no
-se resuelve con horas de código, porque depende del equipo de HappyRobot, que está en el
-evento.
+Es el **requisito obligatorio del enunciado** ("interacción de verdad").
+
+**La ida ya funciona.** El sábado 19 a las 13:10, desde la rama `feat/alvaro-integracion`,
+el backend hizo el `POST` al workflow `my5asz8ibzd3` y HappyRobot respondió `200`: tarea
+`dispatched` y llamada `en_curso` con `simulated: false`.
+
+**Lo que falta es la vuelta, y es del lado de HappyRobot:** el nodo tiene que mandar el
+`HAPPYROBOT_WEBHOOK_TOKEN` real al `callbackUrl` que recibe. Con el token de relleno la
+respuesta es `401` y la tarea muere en `no_answer` a los 180 s de reloj.
+
+Tres cosas que costaron encontrarse y ya están en
+[`T9-integracion.md`](specs/T9-integracion.md) y en `.env.example`:
+
+1. El host del hook es `workflows.platform.eu.happyrobot.ai`, no `platform.happyrobot.ai`
+   (este último da `307` a `/auth/login` y Node falla con `fetch failed`).
+2. `PUBLIC_BASE_URL` tiene que ser un túnel vivo; los de `trycloudflare` caducan.
+3. El `callbackUrl` es `/workflow/happyrobot/results`, no `/workflow/results`.
 
 `main` ya valida `call_request`, encola una llamada sin LLM, inyecta el destino E.164
 desde entorno y muestra «Avisar a…» sin secretos en el frontend. El recorrido Vite →
 backend → tarea → llamada simulada → callback está verificado.
 
-**Lo que falta exactamente:** `HAPPYROBOT_HOOK_ESPACIOS`, `HAPPYROBOT_WEBHOOK_TOKEN`,
-`PUBLIC_BASE_URL` y la prueba contra una llamada saliente real. El Web call de la rama
-antigua sigue disponible como respaldo.
-
-**T9 ya no bloquea** (rama `feat/alvaro-integracion`, sin mergear): el backend manda el
-teléfono real en E.164 desde el entorno y expone `POST /workflow/happyrobot/results`, que
-traduce el payload nativo del workflow al sobre del contrato. En cuanto exista la URL del
-hook, el círculo se cierra sin tocar más código.
+**T9 no bloquea, pero sigue sin mergear** (rama `feat/alvaro-integracion`). La PR #26 se
+mergeó desde esa rama pero llevaba otra cosa: `main` **no tiene** el traductor de entrada
+(`happyrobot-inbound.ts`), ni la ruta `POST /workflow/happyrobot/results`, ni la spec del
+agente de voz. El tablero dice «mergeada» y el código dice que no. Mergear esa rama es lo
+que hace falta para que la vuelta funcione fuera del portátil de Álvaro.
 
 **Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
 llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →

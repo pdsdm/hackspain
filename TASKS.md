@@ -23,7 +23,7 @@
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
 | T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | todo |
 | T13 | Agente de Transporte | Álvaro | `feat/alvaro-transporte` | [T13](docs/specs/T13-transporte.md) | todo |
-| T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | todo |
+| T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | review |
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
 | T17 | Integración y pruebas críticas | Zhi | `feat/zhi-integracion-final` | [T17](docs/specs/T17-integracion-final.md) | doing |
@@ -36,7 +36,7 @@
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` (PR #15, mergeada) | [T24](docs/specs/T24-motor-eventos.md) | done |
 | T25 | Robustez del motor: cola que no se envenena, reloj vivo tras reset, timeout de callbacks | Zhi | `fix/zhi-engine-robustez` (PR #16, mergeada) | - | done |
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
-| T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` | - | doing |
+| T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` (PR #28, mergeada) | - | done |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | `feat/alvaro-integracion` (PR #26, mergeada) | - | done |
 | T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Carlos (seed) + Pep (mapa) | `feat/carlos-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | todo |
 | T30 | Afluencia con picos y saturación de accesos en el backend | Zhi (tick) + Ventura (regla) | `feat/zhi-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | todo |

@@ -107,6 +107,12 @@ un agente que parece funcionar de uno que sirve. Están marcadas.
 | Transporte | `HAPPYROBOT_HOOK_TRANSPORTE` | Voz | Coordinador de transporte | 180 personas llegando a un acceso que ya no vale |
 | Asistentes | `HAPPYROBOT_HOOK_ASISTENTES` | **SMS**, voz solo por excepción | Invitados y recepción | 600 personas con la instrucción antigua |
 
+> **El host del hook no es el que ves en el navegador.** `platform.happyrobot.ai/hooks/<id>`
+> es el panel web: responde `307` hacia `/auth/login` y el `fetch` de Node se cae con
+> `fetch failed`, sin decir por qué. La URL que acepta el POST es
+> `https://workflows.platform.eu.happyrobot.ai/hooks/<id>`. Verificado el sábado 19
+> contra `my5asz8ibzd3`: el panel devuelve 307, el de workflows devuelve 200.
+
 ### 3.1. Espacios — voz
 
 **Ya está escrito**, no lo reescribas:
@@ -254,6 +260,12 @@ de Asistentes es lo primero que cae.
 
 Es la única que cierra el círculo. Hace `POST {{callbackUrl}}` con
 `Authorization: Bearer <HAPPYROBOT_WEBHOOK_TOKEN>` y `Content-Type: application/json`.
+
+> **Usa `{{callbackUrl}}` tal como llega, no lo escribas a mano.** El backend manda
+> `…/workflow/happyrobot/results`; si apuntas a `/workflow/results`, esa puerta exige el
+> sobre estricto del contrato (con `status` y `result` anidado) y este cuerpo plano se
+> lleva un `400`. Y el Bearer tiene que ser el `HAPPYROBOT_WEBHOOK_TOKEN` real: con el de
+> relleno la vuelta es `401` y la tarea muere en `no_answer` a los 180 s.
 
 **Cuándo:** siempre, justo antes de colgar, también si no contestan.
 

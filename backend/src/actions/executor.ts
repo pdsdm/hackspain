@@ -162,6 +162,7 @@ export class ActionExecutor {
       planVersion: task.planVersion,
       callId,
       eventId: `sim-${randomUUID()}`,
+      guestGroups: records(state, "guestGroups"),
     });
     this.due.push({ at: Number(state.clock.simSeconds) + delay, envelope });
     logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay });
