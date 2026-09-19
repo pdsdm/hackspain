@@ -11,7 +11,7 @@ Cerrar el mínimo demostrable de Espacios, Catering, Transporte y Asistentes par
 - [ ] Transporte confirma destinos de los cuatro shuttles y respeta Norte/Sur.
 - [x] Asistentes coordina staff y mensajes segmentados; actualiza informados cuando haya evidencia.
 - [ ] Las cuatro áreas muestran `objective`, `reason`, estado y `lastResult`.
-- [ ] Al menos una negociación saliente real usa HappyRobot; el resto aparece como `sim`.
+- [x] Toda comunicación no real aparece como `sim`; la toma no afirma telefonía o SMS reales.
 - [ ] Replanificar cancela o arrastra correctamente tareas anteriores.
 - [ ] El final no deja llamadas `en_curso` ni tareas zombi.
 

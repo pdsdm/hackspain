@@ -31,8 +31,9 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
 - Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
 
-### Camino de vídeo T46–T51
+### Camino de vídeo T45–T51
 
+- **T45, en revisión:** `docs/video-scenario.md` congela relato, textos, checkpoints, widgets, etiquetas de simulación y finales principal/respaldo; falta aprobación literal de Carlos/equipo.
 - **T46, PR #71:** `POST /workflow/happyrobot/events` acepta solo `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
 - **T50, PR #73:** el coordinador conoce seis personas de recepción, las coordina mediante Asistentes y permite que Catering dependa de la apertura del muelle.
 - **T51 parcial, PR #74:** Catering y Asistentes actualizan entregas, informados y `lastResult`; las necesidades de accesibilidad/dieta generan una tarea separada.
@@ -47,9 +48,10 @@ Los dos incidentes se probaron localmente contra T46: Principal cerró, Muelle E
 1. **Crear y publicar `Demo Incident Inputs` (T47).** La API key actual devuelve `403 Cannot create use cases`. Un owner debe ejecutar el instalador o crearlo en la UI.
 2. **Ejecutar una toma HappyRobot completa (T48/T52).** Falta rellenar `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` y correr el director con `--inputs=happyrobot`.
 3. **Completar Transporte (T13/T51).** La parte de Álvaro continúa `todo`; Catering y Asistentes ya están integrados.
-4. **Revisión visual (T49).** Falta validar que el overlay no tapa KPIs, llamada, coordinador o resultado a 1920×1080.
-5. **Ensayo y grabación final (T52).** Falta repetir el recorrido desde `calm`, guardar una toma HappyRobot y otra con `--inputs=api`.
-6. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
+4. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
+5. **Revisión visual (T49).** Falta validar que el overlay no tapa KPIs, llamada, coordinador o resultado a 1920×1080.
+6. **Ensayo y grabación final (T52).** Falta repetir el recorrido desde `calm`, guardar una toma HappyRobot y otra con `--inputs=api`.
+7. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
 
 ## Bloqueos
 
@@ -71,10 +73,11 @@ Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists
 
 ## Decisiones pendientes
 
-1. Qué owner de HappyRobot ejecuta el instalador T47.
-2. Quién termina Transporte y verifica los cuatro shuttles.
-3. Qué ordenador graba la toma maestra y quién opera el frontend.
-4. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
+1. Carlos/equipo aprueban los textos literales y la narración de T45.
+2. Qué owner de HappyRobot ejecuta el instalador T47.
+3. Quién termina Transporte y verifica los cuatro shuttles.
+4. Qué ordenador graba la toma maestra y quién opera el frontend.
+5. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
 
 ## Avisos para el siguiente agente
 
