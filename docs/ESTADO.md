@@ -5,9 +5,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 20:18 CEST |
-| **Base del candidato** | `2196e35` (T44 integrada) |
-| **Trabajo verificado** | H1/H2/H4 sobre `2196e35`; T17/T18 reales siguen abiertas |
+| **Foto tomada** | 19 de septiembre de 2026, 21:30 CEST |
+| **Base del candidato** | `9e1cef6` (T46 mergeada mediante PR #71) |
+| **Trabajo verificado** | T46 mergeada en `main`; T47/T52 reales siguen abiertas |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -15,8 +15,8 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `JEV_LIVE_EVAL=false make check` en `feat/zhi-demo-gaps` | **OK** |
-| Tests de backend | 323: **316 pasan, 0 fallan, 7 live omitidos** |
+| `make check` sobre `9e1cef6` | **OK** |
+| Tests de backend | 328: **321 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK; 2 avisos de baseline en backend |
 | Fixtures | 10 JSON reproducibles OK |
 | Node | 22.23.2 |
@@ -218,14 +218,14 @@ Solo presentación, sin cambios de backend ni contratos. `make check` OK: 316
 tests pasan, 7 live omitidos y 10 fixtures verificadas. Revisión visual local en
 localhost:5178. Pendiente de revisión humana, sin commit ni push.
 
-## Entrada de incidentes HappyRobot T46 · revisión local
+## Entrada de incidentes HappyRobot T46 · mergeada en `main`
 
-En `feat/zhi-happyrobot-event-ingress` (`47ab322`), el endpoint autenticado
+T46 está en `main` desde el PR #71, merge commit `9e1cef6`. El endpoint autenticado
 `POST /workflow/happyrobot/events` acepta solo los incidentes congelados de voz y SMS,
 los serializa sobre el estado vigente y conserva canal, actor y sesión en la cronología.
 Los duplicados no vuelven a mutar ni coordinar; reutilizar un `eventId` con otro cuerpo
 responde `409`.
 
-Verificación local: 5 pruebas focalizadas pasan; `make check` OK con 321 pruebas pasando,
-7 live omitidas y 10 fixtures. Quedan pendientes los workflows reales T47 y el E2E T52;
-no se ha probado todavía un canal HappyRobot real contra este endpoint.
+Verificación local sobre `9e1cef6`: 5 pruebas focalizadas pasan; `make check` OK con 321
+pruebas pasando, 7 live omitidas y 10 fixtures. Los workflows HappyRobot reales siguen
+pendientes en T47 y el E2E en T52; aún no se ha probado un canal real contra este endpoint.
