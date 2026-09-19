@@ -247,6 +247,7 @@ Campos de `result.data` que el backend aplica al estado:
 
 - `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
 - `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
+- Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` **no** relanza al coordinador: aplica su efecto y el plan sigue. `rejected`, `no_answer` y `failed` sí lo relanzan. Sin esta regla cada plan generaba 4-7 replanificaciones en cascada y la cola bloqueaba giros e intervenciones.
 - El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot.
 
 ### Salida del backend hacia HappyRobot

@@ -135,6 +135,8 @@ export class Engine {
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
         this.control.applyTwist(twist);
         if (!already) mode = await this.runCoordinator(event);
+      } else if (event.source === "happyrobot" && event.kind === "call_result") {
+        if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
       } else {
         mode = await this.runCoordinator(event);
       }
@@ -258,6 +260,14 @@ export class Engine {
     state.coordinatorStatus = "replanificando";
     this.states.saveState(run.id, state);
   }
+}
+
+function callResultChangesPlan(payload: Record<string, unknown> | undefined): boolean {
+  const status = payload?.status;
+  if (status !== "completed") return true;
+  const result = payload?.result;
+  const outcome = typeof result === "object" && result !== null ? (result as Record<string, unknown>).outcome : undefined;
+  return outcome !== "accepted" && outcome !== "accepted_with_conditions";
 }
 
 function shouldCoordinateIntervention(type: Intervention["type"]): boolean {
