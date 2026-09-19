@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'react-leaflet'
 import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
+import { PIT_LANE, TRACK } from '../../domain/track'
 import { SPACE } from '../ui/status'
 import { pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
@@ -32,14 +33,17 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
 
   return (
     <div className="relative h-full w-full overflow-hidden border border-line bg-panel">
-      <MapContainer center={[40.4712, -3.6215]} zoom={14} zoomControl={false} attributionControl className="h-full w-full">
+      <MapContainer center={[40.4725, -3.6200]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.06, dashArray: '4 4' }} />
         <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.04, dashArray: '4 4' }} />
-        <Marker position={[40.4602, -3.6190]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} />
-        <Marker position={[40.4826, -3.6145]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
-        <Polyline positions={[[40.4715, -3.6190], [40.4720, -3.6150]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6' }}>
+        <Polyline positions={TRACK} pathOptions={{ color: '#ffffff', weight: 9, opacity: 0.9, lineJoin: 'round', interactive: false }} />
+        <Polyline positions={TRACK} pathOptions={{ color: '#1a1d24', weight: 5, opacity: 0.95, lineJoin: 'round', interactive: false }} />
+        <Polyline positions={PIT_LANE} pathOptions={{ color: '#1a1d24', weight: 2, opacity: 0.7, dashArray: '2 4', interactive: false }} />
+        <Marker position={[40.4646, -3.6232]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} />
+        <Marker position={[40.4800, -3.6235]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
+        <Polyline positions={[[40.4720, -3.6255], [40.4720, -3.6145]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6' }}>
           <Tooltip permanent direction="right" offset={[6, 0]}>Sin conexión interior Norte ↔ Sur</Tooltip>
         </Polyline>
 
@@ -91,6 +95,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
       </div>
 
       <div className="absolute bottom-3 left-3 z-[1000] border border-line bg-panel/90 backdrop-blur px-3 py-2 text-[11px] text-muted space-y-1">
+        <div className="flex items-center gap-2"><span className="w-6 h-1 bg-ink" /> Circuito MADRING</div>
         <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-ink" /> Ruta shuttles</div>
         <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-amber" /> Ruta proveedores</div>
         <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-red" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#e5484d 0 4px,transparent 4px 8px)', background: 'none' }} /> Sin conexión / bloqueado</div>
