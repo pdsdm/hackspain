@@ -20,8 +20,8 @@
       "status": "cerrado",
       "note": "Avería de agua · sin hora de reapertura",
       "pos": [
-        40.4652,
-        -3.6212
+        40.4662,
+        -3.62
       ]
     },
     {
@@ -33,8 +33,8 @@
       "status": "pendiente",
       "note": "Disponible desde 12:50; reserva pendiente",
       "pos": [
-        40.468,
-        -3.6172
+        40.4685,
+        -3.6195
       ],
       "readyAt": 46200
     },
@@ -47,8 +47,8 @@
       "status": "pendiente",
       "note": "Disponible desde 13:15; espera y aprobación pendientes",
       "pos": [
-        40.4628,
-        -3.6178
+        40.4672,
+        -3.6228
       ],
       "readyAt": 47700
     },
@@ -62,8 +62,8 @@
       "note": "Primera apertura posible 13:45",
       "readyAt": 49500,
       "pos": [
-        40.4778,
-        -3.6118
+        40.4765,
+        -3.6215
       ]
     },
     {
@@ -74,8 +74,8 @@
       "status": "operativo",
       "note": "Feria de Madrid · 90 invitados esperando",
       "pos": [
-        40.4618,
-        -3.614
+        40.464,
+        -3.6165
       ]
     },
     {
@@ -86,8 +86,8 @@
       "status": "operativo",
       "note": "Valdebebas",
       "pos": [
-        40.481,
-        -3.6138
+        40.4815,
+        -3.618
       ]
     },
     {
@@ -98,8 +98,8 @@
       "status": "cerrado",
       "note": "Asociado al pabellón cerrado",
       "pos": [
-        40.4636,
-        -3.6238
+        40.4645,
+        -3.6245
       ]
     },
     {
@@ -110,8 +110,8 @@
       "status": "pendiente",
       "note": "Requiere apertura por recepción",
       "pos": [
-        40.4672,
-        -3.6118
+        40.47,
+        -3.615
       ]
     },
     {
@@ -122,8 +122,8 @@
       "capacity": 150,
       "status": "inactivo",
       "pos": [
-        40.4632,
-        -3.6122
+        40.4645,
+        -3.615
       ]
     }
   ],
@@ -301,8 +301,8 @@
           -3.626
         ],
         [
-          40.4618,
-          -3.614
+          40.464,
+          -3.6165
         ]
       ],
       "departAt": 43200,
@@ -339,8 +339,8 @@
           -3.626
         ],
         [
-          40.4618,
-          -3.614
+          40.464,
+          -3.6165
         ]
       ],
       "departAt": 43680,
@@ -377,8 +377,8 @@
           -3.629
         ],
         [
-          40.4618,
-          -3.614
+          40.464,
+          -3.6165
         ]
       ],
       "departAt": 43500,
@@ -415,8 +415,8 @@
           -3.608
         ],
         [
-          40.4618,
-          -3.614
+          40.464,
+          -3.6165
         ]
       ],
       "departAt": 43920,
@@ -450,8 +450,8 @@
           -3.623
         ],
         [
-          40.4672,
-          -3.6118
+          40.47,
+          -3.615
         ]
       ],
       "departAt": 43500,
@@ -482,8 +482,8 @@
           -3.623
         ],
         [
-          40.4672,
-          -3.6118
+          40.47,
+          -3.615
         ]
       ],
       "departAt": 45000,

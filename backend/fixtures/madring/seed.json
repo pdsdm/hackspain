@@ -7240,8 +7240,8 @@
       "zone": "sur",
       "capacity": 600,
       "pos": [
-        40.4652,
-        -3.6212
+        40.4662,
+        -3.62
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": true,
@@ -7254,8 +7254,8 @@
       "zone": "sur",
       "capacity": 450,
       "pos": [
-        40.468,
-        -3.6172
+        40.4685,
+        -3.6195
       ],
       "availableFrom": 46200,
       "initialAccessibilityConfirmed": false,
@@ -7268,8 +7268,8 @@
       "zone": "sur",
       "capacity": 150,
       "pos": [
-        40.4628,
-        -3.6178
+        40.4672,
+        -3.6228
       ],
       "availableFrom": 47700,
       "initialAccessibilityConfirmed": false,
@@ -7282,8 +7282,8 @@
       "zone": "norte",
       "capacity": 600,
       "pos": [
-        40.4778,
-        -3.6118
+        40.4765,
+        -3.6215
       ],
       "availableFrom": 49500,
       "initialAccessibilityConfirmed": false,
@@ -7296,8 +7296,8 @@
       "zone": "sur",
       "capacity": null,
       "pos": [
-        40.4618,
-        -3.614
+        40.464,
+        -3.6165
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
@@ -7310,8 +7310,8 @@
       "zone": "norte",
       "capacity": null,
       "pos": [
-        40.481,
-        -3.6138
+        40.4815,
+        -3.618
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
@@ -7324,8 +7324,8 @@
       "zone": "sur",
       "capacity": null,
       "pos": [
-        40.4636,
-        -3.6238
+        40.4645,
+        -3.6245
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
@@ -7338,8 +7338,8 @@
       "zone": "sur",
       "capacity": null,
       "pos": [
-        40.4672,
-        -3.6118
+        40.47,
+        -3.615
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
@@ -7352,8 +7352,8 @@
       "zone": "sur",
       "capacity": 150,
       "pos": [
-        40.4632,
-        -3.6122
+        40.4645,
+        -3.615
       ],
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
@@ -7632,24 +7632,24 @@
       "via": "external",
       "route": [
         [
-          40.4618,
-          -3.614
+          40.464,
+          -3.6165
         ],
         [
-          40.461,
-          -3.609
+          40.464,
+          -3.612
         ],
         [
           40.47,
-          -3.603
+          -3.61
         ],
         [
           40.479,
-          -3.605
+          -3.612
         ],
         [
-          40.481,
-          -3.6138
+          40.4815,
+          -3.618
         ]
       ],
       "driveMinutes": 15,
