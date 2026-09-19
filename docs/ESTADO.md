@@ -5,8 +5,8 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 17:35 CEST |
-| **Base de `main`** | `de7919c` (incluye T39 mergeada y PR #52 Helmcode) |
+| **Foto tomada** | 19 de septiembre de 2026, 17:45 CEST |
+| **Base de `main` integrada** | `585a5e3` (incluye T39 y PR #52) |
 | **Trabajo verificado** | `feat/ventura-jev-routing-pilot`, T40 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
@@ -15,9 +15,10 @@
 
 | Comprobación | Resultado |
 |---|---|
+| `make check` | OK |
 | Tests backend | **287: 280 pasan, 0 fallan, 7 live omitidos** |
-| Lint y build backend | OK |
-| Fixtures | OK |
+| Lint y build | Backend y frontend OK |
+| Fixtures | 10 JSON reproducibles OK |
 | Piloto JEV | 60 consultas, 0 errores, 0 falsos positivos, 0 verdaderos positivos con el gate inicial |
 | Coordinador de referencia | 6/6 respuestas válidas |
 
@@ -27,7 +28,8 @@ sintéticos y un playbook en memoria; no llama a HappyRobot ni modifica la demo 
 ## Qué funciona
 
 - `main` incluye el panel API, motor persistente, HappyRobot, JEV de verificación,
-  afluencia, actores, incidencias, giros, rutas dinámicas, T38 y T39.
+  afluencia, actores, incidencias, giros, rutas dinámicas, T38, T39 y Helmcode con
+  `reasoning_effort=low` por defecto.
 - T40 añade `Choice + Noul + gates deterministas` para reconocer pérdida completa del
   Lounge Sur. El playbook reutiliza `buildReplan("lounge_unavailable")`.
 - El playbook comprueba estado, versión, tareas, llamadas, decisiones, restricciones,
@@ -59,11 +61,9 @@ cobertura suficiente. No se deben bajar umbrales usando el mismo holdout.
 
 ## Qué falta, por riesgo para la demo
 
-1. El piloto necesita una segunda iteración del corpus de desarrollo y una nueva evaluación
-   sobre el holdout congelado. La prioridad es aumentar cobertura sin introducir falsos positivos.
+1. Segunda iteración del corpus de desarrollo y nueva evaluación sobre el holdout congelado.
 2. Si el gate mejora, integrar el routing en `Engine` mediante `beforeCoordinate`, con
-   aplicación transaccional y fallback al LLM. Hoy esa extensión solo existe en la rama
-   histórica de routing local, no en `main`.
+   aplicación transaccional y fallback al LLM.
 3. Sincronizar el prompt/extractor desplegado de HappyRobot y ensayar proveedores reales.
 4. Revisar las ramas locales de recursos y aprendizaje para que no reintroduzcan límites
    presupuestarios ni `ask_budget`.
@@ -78,7 +78,7 @@ cobertura suficiente. No se deben bajar umbrales usando el mismo holdout.
 
 ## Ramas vivas sin mergear
 
-- `feat/ventura-jev-routing-pilot`: T40 aislada, pendiente de análisis y revisión.
+- `feat/ventura-jev-routing-pilot`: T40 aislada, pendiente de revisión.
 - `feat/ventura-aprendizaje`: T20 local, incluye memoria `ask_budget`.
 - GitHub no tenía PR abierto al iniciar este piloto.
 

@@ -3,8 +3,8 @@ import type { PlanProposal } from "../domain/plan-rules.js";
 const AREAS = ["espacios", "catering", "transporte", "asistentes"] as const;
 const ACTION_KINDS = ["call", "sms", "email", "manual"] as const;
 const COMMITMENT_STATUSES = ["propuesto", "en_consulta", "aceptado_condiciones"] as const;
-const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "approve_plan", "reject_plan", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
-export const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_split", "guest_need"] as const;
+const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
+export const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_spend", "reject_split", "guest_need"] as const;
 const EVENT_SOURCES = ["chat", "happyrobot", "jury", "human"] as const;
 const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
@@ -146,8 +146,7 @@ export function parseIntervention(value: unknown): Intervention {
   const text = optionalString(payload?.text, "payload.text");
   const decisionId = optionalString(payload?.decisionId, "payload.decisionId");
   const callId = optionalString(payload?.callId, "payload.callId");
-  if (type === "approve_spend" || type === "reject_spend") throw new ContractError("Economic approvals are disabled", 409);
-  if (["approve_plan", "reject_plan"].includes(type) && !decisionId) throw new ContractError("payload.decisionId is required");
+  if (["approve_spend", "reject_spend", "reject_split"].includes(type) && !decisionId) throw new ContractError("payload.decisionId is required");
   if (type === "set_constraint" && !text) throw new ContractError("payload.text is required");
   if (type === "take_call" && !callId) throw new ContractError("payload.callId is required");
   const parsedPayload = { ...(text ? { text } : {}), ...(decisionId ? { decisionId } : {}), ...(callId ? { callId } : {}) };
@@ -156,19 +155,6 @@ export function parseIntervention(value: unknown): Intervention {
 
 export function parseTwist(value: unknown): TwistId {
   return enumValue(record(value, "body").twist, "twist", TWIST_IDS);
-}
-
-function parseOperationalApproval(value: unknown): NonNullable<PlanProposal["approval"]> {
-  const input = record(value, "proposal.approval");
-  return {
-    kind: enumValue(input.kind, "proposal.approval.kind", ["operational"] as const),
-    title: string(input.title, "proposal.approval.title"),
-    summary: string(input.summary, "proposal.approval.summary"),
-    rationale: string(input.rationale, "proposal.approval.rationale"),
-    conditions: stringArray(input.conditions, "proposal.approval.conditions"),
-    effectApprove: string(input.effectApprove, "proposal.approval.effectApprove"),
-    effectReject: string(input.effectReject, "proposal.approval.effectReject"),
-  };
 }
 
 function parsePlanProposal(value: unknown): PlanProposal {
@@ -185,8 +171,7 @@ function parsePlanProposal(value: unknown): PlanProposal {
     title: string(input.title, "proposal.title"),
     summary: string(input.summary, "proposal.summary"),
     rationale: string(input.rationale, "proposal.rationale"),
-    cost: input.cost === null ? null : finiteNumber(input.cost, "proposal.cost"),
-    ...(input.approval === undefined ? {} : { approval: parseOperationalApproval(input.approval) }),
+    cost: finiteNumber(input.cost, "proposal.cost"),
     conditions: stringArray(input.conditions, "proposal.conditions"),
     allocations,
     confirmedNorthGuestIds: stringArray(input.confirmedNorthGuestIds, "proposal.confirmedNorthGuestIds"),
@@ -275,8 +260,6 @@ export function parseSpecialistResult(value: unknown): SpecialistResultEnvelope 
   const sessionId = optionalString(rawEvidence.sessionId, "result.evidence.sessionId");
   const callId = optionalString(rawEvidence.callId, "result.evidence.callId");
   const transcript = parseTranscript(rawEvidence.transcript);
-  const data = record(rawResult.data, "result.data");
-  if (data.committedCost !== undefined) finiteNumber(data.committedCost, "result.data.committedCost");
   return {
     eventId: string(input.eventId, "eventId"),
     taskId: string(input.taskId, "taskId"),
@@ -288,7 +271,7 @@ export function parseSpecialistResult(value: unknown): SpecialistResultEnvelope 
       summary: string(rawResult.summary, "result.summary"),
       conditions: stringArray(rawResult.conditions, "result.conditions"),
       evidence: { ...(sessionId ? { sessionId } : {}), ...(callId ? { callId } : {}), ...(transcript.length > 0 ? { transcript } : {}) },
-      data,
+      data: record(rawResult.data, "result.data"),
     },
   };
 }

@@ -81,15 +81,6 @@ export function normalizeOperation(raw: unknown): unknown {
     const destinationId = pickString(raw.destinationId, raw.toId, raw.destination, raw.placeId);
     if (destinationId !== undefined) next.destinationId = destinationId;
   }
-  if (raw.op === "spawn_vehicle" || raw.op === "add_vehicle" || raw.op === "dispatch_vehicle") {
-    next.op = "spawn_vehicle";
-    const from = pickString(raw.from, raw.fromId, raw.origin, raw.originId, raw.pickup);
-    const destinationId = pickString(raw.destinationId, raw.toId, raw.destination, raw.placeId, raw.dockId);
-    const who = pickString(raw.who, raw.cargo, raw.item, raw.description);
-    if (from !== undefined) next.from = from;
-    if (destinationId !== undefined) next.destinationId = destinationId;
-    if (who !== undefined) next.who = who;
-  }
   return next;
 }
 
@@ -99,9 +90,6 @@ export function operationReady(raw: unknown): boolean {
   if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
   if (raw.op === "redirect_delivery") return typeof raw.id === "string" && typeof raw.dockId === "string";
   if (raw.op === "redirect_vehicle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
-  if (raw.op === "spawn_vehicle") {
-    return typeof raw.from === "string" && typeof raw.destinationId === "string" && typeof raw.who === "string";
-  }
   if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
   if (raw.op === "set_group") return typeof raw.id === "string";
   if (raw.op === "set_gate") return typeof raw.id === "string";
@@ -159,7 +147,17 @@ function checkShape(value: unknown): ValidationIssue[] {
       if (typeof raw.dueAt !== "number") add(`actions[${index}].dueAt no es un número`);
       if (!isStringArray(raw.dependsOn)) add(`actions[${index}].dependsOn no es una lista`);
       if (typeof raw.reason !== "string") add(`actions[${index}].reason no es un texto`);
-      // Un verificationTarget mal formado se descarta en validateOutput, no invalida el plan.
+      if (raw.verificationTarget !== undefined) {
+        const target = raw.verificationTarget;
+        if (
+          !isRecord(target) ||
+          typeof target.commitmentId !== "string" ||
+          target.resourceType !== "space" ||
+          typeof target.resourceId !== "string"
+        ) {
+          add(`actions[${index}].verificationTarget inválido`);
+        }
+      }
     }
   }
 
@@ -203,8 +201,7 @@ function checkShape(value: unknown): ValidationIssue[] {
           add(`decision.${field} vacío`);
         }
       }
-      if (value.decision.cost !== null && (typeof value.decision.cost !== "number" || !Number.isFinite(value.decision.cost) || value.decision.cost < 0)) add("decision.cost debe ser no negativo o null");
-      if (value.decision.kind !== undefined && value.decision.kind !== "operational") add("decision.kind desconocido");
+      if (typeof value.decision.cost !== "number") add("decision.cost no es un número");
       if (!isStringArray(value.decision.conditions)) add("decision.conditions no es una lista");
     }
   }
@@ -224,7 +221,6 @@ function checkShape(value: unknown): ValidationIssue[] {
           "reroute_shuttle",
           "redirect_delivery",
           "redirect_vehicle",
-          "spawn_vehicle",
           "set_group",
           "cancel_action",
           "set_agent",
@@ -241,9 +237,6 @@ function checkShape(value: unknown): ValidationIssue[] {
         }
         if (raw.op === "redirect_vehicle" && (typeof raw.id !== "string" || typeof raw.destinationId !== "string")) {
           add(`operations[${index}] redirect_vehicle incompleto`);
-        }
-        if (raw.op === "spawn_vehicle" && (typeof raw.from !== "string" || typeof raw.destinationId !== "string" || typeof raw.who !== "string")) {
-          add(`operations[${index}] spawn_vehicle incompleto`);
         }
         if (raw.op === "cancel_action" && (typeof raw.taskId !== "string" || typeof raw.reason !== "string")) {
           add(`operations[${index}] cancel_action incompleto`);
@@ -290,6 +283,22 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
     for (const dependency of action.dependsOn) {
       if (!actionIds.has(dependency)) {
         add("dependencia_inexistente", `acción ${action.id} depende de ${dependency}`);
+      }
+    }
+    if (action.verificationTarget) {
+      const target = action.verificationTarget;
+      const commitment = output.commitments.find((item) => item.id === target.commitmentId);
+      const resource = input.spaces.find((item) => item.id === target.resourceId);
+      if (action.area !== "espacios" || action.channel !== "llamada") {
+        add("target_no_confirmable", `acción ${action.id} no es una llamada de espacios`);
+      }
+      if (commitment?.area !== "espacios") {
+        add("target_compromiso_inexistente", target.commitmentId);
+      }
+      if (!resource) add("target_espacio_inexistente", target.resourceId);
+      if (target.resourceId !== "pabellonB" || target.commitmentId !== "c-pabB" || resource?.zone !== "sur" ||
+        commitment?.title !== "Reserva de Pabellón B · 450 plazas") {
+        add("target_fuera_demo", "Solo c-pabB: Reserva de Pabellón B · 450 plazas (Sur)");
       }
     }
   }
@@ -342,43 +351,23 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
     }
   }
 
-  if (output.estimatedCost !== null && output.estimatedCost !== undefined &&
-    (typeof output.estimatedCost !== "number" || !Number.isFinite(output.estimatedCost) || output.estimatedCost < 0)) {
-    add("coste_invalido", "estimatedCost debe ser un importe no negativo o null");
-  }
-  if (output.decision === null && output.coordinatorStatus === "esperando_decision") {
-    add("estado_sin_escalado", "esperando_decision sin decision operativa");
-  }
-  if (output.decision !== null && output.coordinatorStatus !== "esperando_decision") {
-    add("estado_sin_esperar", `hay decision pero el estado es ${output.coordinatorStatus}`);
+  if (output.decision === null) {
+    if (input.budget.forecast > input.budget.authorized) {
+      add("falta_escalado", `previsto ${input.budget.forecast} > autorizado ${input.budget.authorized}`);
+    }
+    if (output.coordinatorStatus === "esperando_decision") {
+      add("estado_sin_escalado", "esperando_decision sin decision");
+    }
+  } else {
+    if (output.decision.cost <= input.budget.authorized) {
+      add("escalado_innecesario", `${output.decision.cost} cabe en ${input.budget.authorized}`);
+    }
+    if (output.coordinatorStatus !== "esperando_decision") {
+      add("estado_sin_esperar", `hay decision pero el estado es ${output.coordinatorStatus}`);
+    }
   }
 
   return issues;
-}
-
-// El target de verificación es un extra opcional de la demo (T35): si el modelo lo pone
-// donde no toca, se retira la marca y el plan sigue siendo válido. Nunca tumba un replan.
-function dropUnconfirmableTargets(output: CoordinatorOutput, input: CoordinatorInput): void {
-  for (const action of output.actions) {
-    const target: unknown = action.verificationTarget;
-    if (target === undefined) continue;
-    if (!isRecord(target)) {
-      delete action.verificationTarget;
-      continue;
-    }
-    const commitment = output.commitments.find((item) => item.id === target.commitmentId);
-    const resource = input.spaces.find((item) => item.id === target.resourceId);
-    const confirmable =
-      action.area === "espacios" &&
-      action.channel === "llamada" &&
-      target.commitmentId === "c-pabB" &&
-      target.resourceType === "space" &&
-      target.resourceId === "pabellonB" &&
-      commitment?.area === "espacios" &&
-      commitment.title === "Reserva de Pabellón B · 450 plazas" &&
-      resource?.zone === "sur";
-    if (!confirmable) delete action.verificationTarget;
-  }
 }
 
 export function validateOutput(
@@ -391,15 +380,9 @@ export function validateOutput(
   }
 
   const output = value as CoordinatorOutput;
-  if (output.estimatedCost === undefined) output.estimatedCost = output.decision?.cost ?? null;
-  if (output.decision && output.decision.kind !== "operational") {
-    output.decision = null;
-    if (output.coordinatorStatus === "esperando_decision") output.coordinatorStatus = "replanificando";
-  }
   output.operations = Array.isArray(output.operations) ? output.operations : [];
   output.queries = Array.isArray(output.queries) ? output.queries : [];
   output.done = output.done !== false;
-  dropUnconfirmableTargets(output, input);
   const issues = checkInvariants(output, input);
   return { output: issues.length === 0 ? output : null, issues };
 }

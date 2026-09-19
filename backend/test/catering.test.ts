@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { useAcceptingSeed } from "./sim-support.js";
 
 import { extract, guessDeliveryId, parseAnswer, toResultData } from "../src/agents/catering/extract.js";
 import { QUESTION_ORDER, SYSTEM_PROMPT, buildUserPrompt } from "../src/agents/catering/prompt.js";
@@ -96,7 +95,7 @@ test("a dietary need not covered adds a condition even when the provider says ye
   assert.equal(result.commitments[0]?.status, "aceptado_condiciones");
 });
 
-test("a completed catering result moves the delivery in /state but never onto a closed dock", async () => {
+test("a completed catering result moves the delivery in /state but never onto a closed dock", () => {
   const database = openDatabase(":memory:");
   try {
     const states = new StateRepository(database.connection);
@@ -115,7 +114,7 @@ test("a completed catering result moves the delivery in /state but never onto a 
     spaces.find((item) => item.id === "muelleSur")!.status = "cerrado";
     states.saveState(run.id, state);
 
-    const task = tasks.enqueue({
+    tasks.enqueue({
       runId: run.id,
       planVersion: run.state.planVersion,
       area: "catering",
@@ -123,9 +122,7 @@ test("a completed catering result moves the delivery in /state but never onto a 
       payload: { objective: "Confirmar CAT-02 en el muelle este", counterpart: "Responsable de catering" },
       idempotencyKey: "call-cat-02",
     });
-    useAcceptingSeed(states, task);
     executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
     executor.fireDue(Number(run.state.clock.simSeconds) + 60);
 
     const after = (states.ensureActiveRun().state.deliveries as Array<Record<string, unknown>>).find((item) => item.id === "CAT-02")!;

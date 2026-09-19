@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { useAcceptingSeed } from "./sim-support.js";
 
 import { extract, guessGroupId, toResultData } from "../src/agents/attendees/extract.js";
 import { SMS_MAX_CHARS, buildMessage, buildNeedsMessage } from "../src/agents/attendees/templates.js";
@@ -60,7 +59,7 @@ test("extract keeps sent, delivered and accepted apart and rejects impossible co
   assert.equal(guessGroupId("Avisar a g-shuttles (180 informados)"), "g-shuttles");
 });
 
-test("a completed asistentes result moves informedCount and acceptedCount in /state", async () => {
+test("a completed asistentes result moves informedCount and acceptedCount in /state", () => {
   const database = openDatabase(":memory:");
   try {
     const states = new StateRepository(database.connection);
@@ -76,7 +75,7 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
     shuttles.acceptedCount = 0;
     states.saveState(run.id, state);
 
-    const task = tasks.enqueue({
+    tasks.enqueue({
       runId: run.id,
       planVersion: run.state.planVersion,
       area: "asistentes",
@@ -84,9 +83,7 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
       payload: { objective: "Avisar del nuevo destino", counterpart: "g-shuttles (180 en ruta)" },
       idempotencyKey: "sms-shuttles",
     });
-    useAcceptingSeed(states, task);
     executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
     executor.fireDue(Number(run.state.clock.simSeconds) + 60);
 
     const after = (states.ensureActiveRun().state.guestGroups as Array<Record<string, unknown>>).find((group) => group.id === "g-shuttles")!;

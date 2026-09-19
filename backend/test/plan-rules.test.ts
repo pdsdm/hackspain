@@ -19,11 +19,6 @@ function proposal(overrides: Partial<PlanProposal> = {}): PlanProposal {
     rationale: "Es la opción viable más rápida dentro de Sur",
     cost: 3200,
     conditions: ["Confirmar ambos espacios"],
-    approval: {
-      kind: "operational", title: "Aceptar apertura escalonada", summary: "150 invitados esperan hasta las 13:15",
-      rationale: "Es la opción viable más rápida dentro de Sur", conditions: ["Confirmar ambos espacios"],
-      effectApprove: "Aceptar la distribución", effectReject: "Buscar otra distribución",
-    },
     allocations: [],
     confirmedNorthGuestIds: [],
     confirmedExternalTransferSeats: 0,
@@ -37,7 +32,7 @@ const allocation = (number: number, spaceId: string): GuestAllocation => ({
   status: "proposed",
 });
 
-test("an operational proposal versions commitments and requests a non-financial decision", () => {
+test("a proposal increments planVersion, invalidates old commitments and escalates spend", () => {
   const database = openDatabase(":memory:");
   try {
     const states = new StateRepository(database.connection);
@@ -144,7 +139,7 @@ test("resolving an obsolete decision is refused and does not move authorized bud
     const stale = states.ensureActiveRun().state.decisions.find((decision) => decision.cost === 3200);
 
     assert.throws(
-      () => control.applyIntervention({ type: "approve_plan", payload: { decisionId: String(stale?.id) } }),
+      () => control.applyIntervention({ type: "approve_spend", payload: { decisionId: String(stale?.id) } }),
       (error: unknown) => error instanceof ContractError && error.status === 409,
     );
     assert.equal(states.ensureActiveRun().state.budget.authorized, 1500);
@@ -153,7 +148,7 @@ test("resolving an obsolete decision is refused and does not move authorized bud
   }
 });
 
-test("reject_split twist resolves the decision the plan is waiting for", () => {
+test("reject_spend twist resolves the decision the plan is waiting for", () => {
   const database = openDatabase(":memory:");
   try {
     const states = new StateRepository(database.connection);
@@ -166,7 +161,7 @@ test("reject_split twist resolves the decision the plan is waiting for", () => {
     if (stale) stale.status = "pendiente";
     states.saveState(run.id, state);
 
-    new ControlService(states).applyTwist("reject_split");
+    new ControlService(states).applyTwist("reject_spend");
 
     const after = states.ensureActiveRun().state;
     assert.equal(after.decisions.find((decision) => decision.id === live.waitingForDecision)?.status, "rechazada");

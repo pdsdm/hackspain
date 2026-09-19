@@ -4,11 +4,11 @@ import { AGENT, COORD } from '../ui/status'
 
 const DOT: Record<string, string> = { ink: 'bg-ink', amber: 'bg-amber', red: 'bg-red', green: 'bg-green', muted: 'bg-line-2' }
 
-export function CoordinadorPanel({ s, className = 'bg-panel border border-line' }: { s: CrisisState; className?: string }) {
+export function CoordinadorPanel({ s }: { s: CrisisState }) {
   const c = COORD[s.coordinatorStatus] ?? COORD.replanificando
   return (
-    <section className={`flex flex-col ${className}`}>
-      <header className="flex items-center gap-2.5 px-4 py-2.5 border-b border-line">
+    <section className="bg-panel border border-line flex flex-col">
+      <header className="flex items-center gap-2.5 px-4 py-3 border-b border-line">
         <h2 className="label">Coordinador</h2>
         <span className="ml-auto" />
         <Pill tone={c.tone} pulse={s.coordinatorStatus !== 'estable'}>{c.label}</Pill>
@@ -17,7 +17,7 @@ export function CoordinadorPanel({ s, className = 'bg-panel border border-line' 
         {s.agents.map((a) => {
           const st = AGENT[a.status] ?? AGENT.activo
           return (
-            <li key={a.id} className="flex items-center gap-3 px-4 py-2 border-b border-line last:border-0">
+            <li key={a.id} className="flex items-center gap-3 px-4 py-3 border-b border-line last:border-0">
               <span className={`w-2 h-2 flex-none ${DOT[st.tone]} ${a.status === 'llamada' ? 'animate-pulse' : ''}`} />
               <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                 <div className="display font-bold text-[13px] leading-tight">{a.name}</div>

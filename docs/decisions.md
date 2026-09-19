@@ -51,12 +51,6 @@
 - **Por qué:** los vehículos circulan por calles reales y la ruta cambia sola cuando un evento cambia el destino (`destinationId` / `dockId`). Sin clave de API y sin servidor propio.
 - **Nota:** el servidor demo de OSRM no garantiza disponibilidad. La demo no depende de él: sin red, el mapa muestra las rutas rectas.
 
-### D16: orígenes libres con Nominatim + OSRM (amplía D8)
-
-- **Qué:** el coordinador no usa un diccionario de sitios. `consult_world` / `spawn_vehicle` resuelven `from` contra `world.json` por id o nombre; si no está, Nominatim (OpenStreetMap) geocodifica el texto y OSRM calcula calles y minutos. El mapa pide a OSRM solo origen y destino. Sin clave. Si Nominatim u OSRM fallan, queda la recta y un ETA por distancia.
-- **Por qué:** una llamada tipo «pieza en un concesionario» no cabe en paradas precargadas. HappyRobot negocia con el transportista; el trazado no se hardcodea.
-- **Descartado:** Google Directions (clave), API de DHL/SEUR (no hay cuenta ni encaja en 36 h), y una lista McLaren/DHL/Chamartín en código.
-
 ### D9: plano operativo y comparación de estados (amplía D5)
 
 - **Qué:** vista esquemática sin dependencias de red como entrada al dashboard; Leaflet sigue disponible como mapa. Se conserva el diseño Zhivel. La comparación usa una referencia fija de la sesión que el operador puede actualizar.

@@ -6,7 +6,6 @@ import {
   etaFor,
   type WorldModel,
 } from "../../world/world.js";
-import { planTrip } from "../../world/locate.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -17,62 +16,31 @@ function records(state: CrisisStateDocument, field: string): Array<Record<string
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-export async function answerQuery(
+export function answerQuery(
   query: CoordinatorQuery,
   state: CrisisStateDocument,
   world: WorldModel,
-): Promise<unknown> {
+): unknown {
   if (query.type === "affected_by") return affectedBy(state, world, query.placeId);
   if (query.type === "alternatives_for") {
     return alternativesFor(world, state, query.placeId, query.minCapacity);
   }
-  const now = Number(state.clock.simSeconds);
-  if (query.fromId) {
-    const trip = await planTrip(world, query.fromId, query.destinationId);
-    if (!trip) return { error: `no encuentro origen «${query.fromId}» o destino ${query.destinationId}` };
-    return {
-      fromId: trip.from.id,
-      origin: trip.from.name,
-      originPos: trip.from.pos,
-      destinationId: query.destinationId,
-      destination: trip.toName,
-      minutes: trip.minutes,
-      arriveAt: now + trip.minutes * 60,
-      source: trip.source,
-    };
-  }
   const shuttle = records(state, "shuttles").find((item) => item.id === query.vehicleId);
   const delivery = records(state, "deliveries").find((item) => item.id === query.vehicleId);
-  const extra = records(state, "vehicles").find((item) => item.id === query.vehicleId);
-  const vehicle = shuttle ?? delivery ?? extra;
+  const vehicle = shuttle ?? delivery;
   if (!vehicle) return { error: `vehículo desconocido ${query.vehicleId}` };
   const dockId = typeof vehicle.dockId === "string" ? vehicle.dockId : undefined;
-  const fromQuery = String(vehicle.from ?? vehicle.origin ?? (delivery ? "Coslada" : ""));
-  const trip = await planTrip(world, fromQuery, query.destinationId);
-  if (trip) {
-    return {
-      fromId: trip.from.id,
-      origin: trip.from.name,
-      originPos: trip.from.pos,
-      destinationId: query.destinationId,
-      destination: trip.toName,
-      minutes: trip.minutes,
-      arriveAt: Math.max(now, Number(vehicle.departAt ?? now)) + trip.minutes * 60 + Number(vehicle.delayMin ?? 0) * 60,
-      source: trip.source,
-    };
-  }
   return etaFor(
     world,
     {
-      origin: fromQuery,
-      from: fromQuery,
+      origin: String(vehicle.origin ?? (delivery ? "Coslada" : "")),
       destinationId: String(vehicle.destinationId ?? vehicle.dockId ?? ""),
       ...(dockId ? { dockId } : {}),
-      departAt: Number(vehicle.departAt ?? now),
+      departAt: Number(vehicle.departAt ?? state.clock.simSeconds),
       delayMin: Number(vehicle.delayMin ?? 0),
     },
     query.destinationId,
-    now,
+    Number(state.clock.simSeconds),
   );
 }
 
@@ -92,16 +60,10 @@ export function parseConsultArgs(raw: unknown): CoordinatorQuery | { error: stri
     };
   }
   if (type === "route") {
-    if (typeof raw.destinationId !== "string") return { error: "route requiere destinationId" };
-    const vehicleId = typeof raw.vehicleId === "string" ? raw.vehicleId : undefined;
-    const fromId = typeof raw.fromId === "string" ? raw.fromId : typeof raw.from === "string" ? raw.from : undefined;
-    if (!vehicleId && !fromId) return { error: "route requiere fromId (cualquier sitio) o vehicleId" };
-    return {
-      type,
-      destinationId: raw.destinationId,
-      ...(vehicleId ? { vehicleId } : {}),
-      ...(fromId ? { fromId } : {}),
-    };
+    if (typeof raw.vehicleId !== "string" || typeof raw.destinationId !== "string") {
+      return { error: "route requiere vehicleId y destinationId" };
+    }
+    return { type, vehicleId: raw.vehicleId, destinationId: raw.destinationId };
   }
   return { error: `consulta desconocida ${String(type)}` };
 }

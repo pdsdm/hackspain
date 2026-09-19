@@ -103,11 +103,16 @@ export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): vo
       addEvent(state, "fallo", "El transportista no responde", "transporte");
       break;
     }
-    case "reject_split": {
-      for (const decision of state.decisions) {
-        if (decision.status === "pendiente") decision.status = "rechazada";
-      }
+    case "reject_spend": {
+      const pending =
+        (typeof state.waitingForDecision === "string" ? findById(state.decisions, state.waitingForDecision) : undefined) ??
+        state.decisions.find((decision) => decision.status === "pendiente");
+      if (pending && pending.status === "pendiente") pending.status = "rechazada";
       state.waitingForDecision = null;
+      addEvent(state, "intervencion", "El responsable rechaza el gasto adicional");
+      break;
+    }
+    case "reject_split": {
       for (const id of ["pabellonB", "loungeSur"]) {
         const space = findById(spaces, id);
         if (space) space.status = "descartado";
@@ -173,24 +178,18 @@ export class ControlService {
       }
       case "approve_spend":
       case "reject_spend":
-        throw new ContractError("Economic approvals are disabled", 409);
-      case "reject_split":
-        if (!twists(state).includes("reject_split")) applyTwistEffect(state, "reject_split");
-        break;
-      case "approve_plan":
-      case "reject_plan": {
+      case "reject_split": {
         const decisionId = intervention.payload!.decisionId!;
         const decision = findById(state.decisions, decisionId);
         if (!decision) throw new ContractError(`Decision not found: ${decisionId}`, 404);
-        if (decision.kind !== "operational" || decision.status !== "pendiente" || state.waitingForDecision !== decisionId) {
-          throw new ContractError(`Decision is not a pending operational decision: ${decisionId}`, 409);
-        }
-        const approved = intervention.type === "approve_plan";
+        if (decision.status !== "pendiente") throw new ContractError(`Decision is already resolved: ${decisionId}`, 409);
+        const approved = intervention.type === "approve_spend";
         decision.status = approved ? "aprobada" : "rechazada";
-        if (!approved) state.rejectedPlanVersion = state.planVersion;
         state.waitingForDecision = null;
-        addEvent(state, "intervencion", `El responsable ${approved ? "acepta" : "rechaza"} ${String(decision.title)}`);
+        if (approved) state.budget.authorized = Math.max(state.budget.authorized, Number(decision.cost ?? 0));
+        addEvent(state, "intervencion", `El responsable ${approved ? "autoriza" : "rechaza"} ${String(decision.title)}`);
         state.coordinatorStatus = "replanificando";
+        if (intervention.type === "reject_split") applyTwistEffect(state, "reject_split");
         break;
       }
     }
@@ -255,7 +254,27 @@ export class ControlService {
   }
 
   reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
+    // El modo vivo se configura al arrancar el servidor y vive en el reloj, que el
+    // fixture sobrescribe. Sin arrastrarlo, «Reiniciar simulación» dejaba un mundo
+    // quieto: el reloj corría pero no volvía a pasar nada.
+    const previous = this.states.ensureActiveRun().state.clock;
+    const live = previous.live === true;
+    const seed = Number(previous.liveSeed ?? 0);
+    const mode = previous.liveMode === "catalog" ? "catalog" : "open";
+
     const run = this.states.reset(fixture);
+    if (live) {
+      const state = structuredClone(run.state);
+      state.clock.live = true;
+      state.clock.liveSeed = seed > 0 ? seed : 1 + Math.floor(Math.random() * 99_999);
+      state.clock.liveMode = mode;
+      // La secuencia empieza de cero: mundo nuevo, incidencias desde la primera.
+      state.clock.liveIndex = 0;
+      state.clock.liveLastAt = 0;
+      addEvent(state, "info", `Modo vivo mantenido tras el reinicio · semilla ${state.clock.liveSeed}`);
+      this.states.saveState(run.id, state);
+      return { runId: run.id, planVersion: state.planVersion };
+    }
     return { runId: run.id, planVersion: run.state.planVersion };
   }
 }

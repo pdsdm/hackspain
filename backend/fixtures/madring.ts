@@ -129,8 +129,8 @@ export function buildMadringFixtures() {
   resource(proposal, 'loungeSur').note = 'Disponible desde 13:15; espera y aprobación pendientes';
   resource(proposal, 'muelleEste').status = 'pendiente';
   proposal.budget.forecast = 3200;
-  addCommitment(proposal, { id: 'c-pabB', title: 'Reserva de Pabellón B · 450 plazas', area: 'espacios', counterpart: 'Recinto', status: 'aceptado_condiciones', conditions: ['Confirmación de reserva'] });
-  addCommitment(proposal, { id: 'c-lounge', title: 'Reserva de Lounge Sur · 150 plazas', area: 'espacios', counterpart: 'Recinto', status: 'aceptado_condiciones', conditions: ['Montaje 13:15', 'Espera autorizada', 'Apertura escalonada aceptada'] });
+  addCommitment(proposal, { id: 'c-pabB', title: 'Reserva de Pabellón B · 450 plazas', area: 'espacios', counterpart: 'Recinto', status: 'aceptado_condiciones', conditions: ['Autorización de gasto', 'Confirmación de reserva'] });
+  addCommitment(proposal, { id: 'c-lounge', title: 'Reserva de Lounge Sur · 150 plazas', area: 'espacios', counterpart: 'Recinto', status: 'aceptado_condiciones', conditions: ['Montaje 13:15', 'Espera autorizada', 'Apertura escalonada aceptada', 'Autorización de gasto'] });
   addCommitment(proposal, { id: 'c-muelle', title: 'Habilitar Muelle Este Sur', area: 'espacios', counterpart: 'Recinto + Recepción', status: 'en_consulta', conditions: ['Validar acceso de camión', 'Asignar receptor'] });
   addCommitment(proposal, { id: 'c-espera', title: 'Espera Sur para 150 hasta las 13:15', area: 'asistentes', counterpart: 'Recinto + Recepción', status: 'aceptado_condiciones', conditions: ['Autorizar espera', 'Asignar recepción'] });
   addCommitment(proposal, { id: 'c-accesibilidad', title: 'Acceso adaptado en Pabellón B para 12 invitados', area: 'espacios', counterpart: 'Recinto', status: 'en_consulta', conditions: ['Verificar recorrido sin escalones y acceso para sillas de ruedas'] });
@@ -143,14 +143,14 @@ export function buildMadringFixtures() {
     });
   }
   proposal.decisions = [{
-    id: 'd-plan-sur', kind: 'operational', title: 'Aceptar apertura escalonada en Sur', summary: '450 plazas a las 13:00 y 150 a las 13:15 con espera autorizada. Decisión sobre el servicio, no sobre su coste.',
+    id: 'd-plan-sur', title: 'Autorizar Pabellón B + Lounge Sur', summary: '450 plazas a las 13:00 y 150 a las 13:15 con espera autorizada.',
     cost: 3200, conditions: ['Espera para 150', 'Muelle y recepción', 'Reserva de espacios'],
-    effectApprove: 'Acepta la apertura escalonada; las reservas y condiciones requieren confirmación.',
+    effectApprove: 'Autoriza gasto y apertura escalonada; las condiciones requieren confirmación.',
     effectReject: 'Evaluar alternativa Norte con permisos, traslado exterior, coste y retraso.', status: 'pendiente', createdAt: 44280,
   }];
   proposal.waitingForDecision = 'd-plan-sur';
   proposal.events.push({ id: 'proposal-condition', time: 44220, kind: 'acuerdo', text: 'Recinto: Lounge solo desde 13:15; aceptación condicionada', area: 'espacios' });
-  proposal.events.push({ id: 'proposal-decision', time: 44280, kind: 'decision', text: 'Se consulta apertura escalonada: 150 personas esperan hasta 13:15. Coste informativo 3.200 €; ninguna reserva confirmada todavía' });
+  proposal.events.push({ id: 'proposal-decision', time: 44280, kind: 'decision', text: 'Se solicitan 3.200 €; ninguna reserva confirmada todavía' });
   for (const a of proposal.agents) { a.status = 'esperando'; a.objective = 'Esperar aprobación y condiciones de la propuesta Sur'; }
   fixtures.proposal = { state: proposal, allocations: [{ spaceId: 'pabellonB', guestIds: ids(1, 450), status: 'proposed' }, { spaceId: 'loungeSur', guestIds: ids(451, 600), status: 'proposed' }], description: 'Propuesta Sur de 3.200 €; cobertura confirmada cero mientras faltan acuerdos.' };
 
@@ -158,7 +158,7 @@ export function buildMadringFixtures() {
   recovered.clock.simSeconds = 44700; // 12:25, arrivals still in the future.
   recovered.coordinatorStatus = 'estable'; recovered.waitingForDecision = null;
   recovered.decisions[0]!.status = 'aprobada';
-  recovered.budget.committed = 3200;
+  recovered.budget.authorized = 3200; recovered.budget.committed = 3200;
   for (const id of ['pabellonB', 'loungeSur', 'muelleEste', 'esperaSur']) {
     resource(recovered, id).status = 'confirmado';
     resource(recovered, id).note = id === 'loungeSur' ? 'Reserva desde 13:15 con espera confirmada' : 'Acuerdo confirmado en el fixture';
