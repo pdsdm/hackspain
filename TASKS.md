@@ -17,7 +17,7 @@
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` | [T5](docs/specs/T5-seed.md) | review |
 | T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `feat/alvaro-prueba-voz` | [T6](docs/specs/T6-prueba-voz.md) | todo |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/zhi-estado` | [T7](docs/specs/T7-estado.md) | todo |
-| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` | [T8](docs/specs/T8-dashboard.md) | todo |
+| T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` | [T8](docs/specs/T8-dashboard.md) | review |
 | T9 | Adaptador HappyRobot y callbacks | Álvaro | `feat/alvaro-integracion` | [T9](docs/specs/T9-integracion.md) | todo |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` | [T10](docs/specs/T10-coordinador.md) | todo |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` | [T11](docs/specs/T11-espacios.md) | todo |

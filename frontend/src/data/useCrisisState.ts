@@ -1,40 +1,68 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { CrisisState, Intervention, TwistId } from '../domain/types'
 import { createInitialState } from '../domain/initialState'
+import { createFixtureState, type FixtureName } from '../domain/fixtures'
 import { reducer } from '../domain/reducer'
 import { api } from './apiClient'
 
 export type DataSource = 'sim' | 'api'
-
 export interface CrisisController {
   state: CrisisState
   source: DataSource
+  ready: boolean
   error: string | null
-  intervene: (i: Intervention) => void
+  stale: boolean
+  ageSeconds: number
+  pending: boolean
+  feedback: string | null
+  reference: CrisisState | null
+  setReference: () => void
+  intervene: (i: Intervention) => Promise<boolean>
   twist: (t: TwistId) => void
   setSpeed: (n: number) => void
   togglePause: () => void
   select: (id: string | null) => void
   reset: () => void
+  loadFixture: (name: FixtureName) => void
 }
 
-const SOURCE: DataSource = (import.meta.env.VITE_DATA_SOURCE as string) === 'api' ? 'api' : 'sim'
-const TICK_MS = 250
+const SOURCE: DataSource = import.meta.env.VITE_DATA_SOURCE === 'api' ? 'api' : 'sim'
 
 export function useCrisisState(): CrisisController {
   const [state, dispatch] = useReducer(reducer, undefined, createInitialState)
+  const [reference, setReference] = useState<CrisisState | null>(() => SOURCE === 'sim' ? createFixtureState('normal') : null)
+  const [selectedId, select] = useState<string | null>('principal')
+  const [ready, setReady] = useState(SOURCE === 'sim')
   const [error, setError] = useState<string | null>(null)
-  const last = useRef<number>(0)
+  const [receivedAt, setReceivedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(Date.now)
+  const [pending, setPending] = useState(false)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const requestInFlight = useRef(false)
+  const previous = useRef<CrisisState | null>(null)
+  const pollInFlight = useRef(false)
+  const ageSeconds = receivedAt === null ? 0 : Math.floor((now - receivedAt) / 1000)
+  const stale = SOURCE === 'api' && (!ready || !!error || ageSeconds >= 10)
+
+  const receive = useCallback((s: CrisisState) => {
+    // A server reset begins a new comparison. Do not compare two different runs.
+    const old = previous.current
+    const reset = old && s.clock.simSeconds < old.clock.simSeconds && s.planVersion <= old.planVersion
+    setReference((ref) => !ref || reset ? structuredClone(s) : ref)
+    previous.current = s
+    dispatch({ type: 'REPLACE', state: s })
+    const at = Date.now()
+    setReceivedAt(at); setNow(at); setReady(true); setError(null)
+  }, [])
 
   useEffect(() => {
     if (SOURCE !== 'sim') return
-    last.current = performance.now()
+    let last = performance.now()
     const id = setInterval(() => {
-      const t = performance.now()
-      const delta = Math.min(2, (t - last.current) / 1000)
-      last.current = t
-      dispatch({ type: 'TICK', deltaSeconds: delta })
-    }, TICK_MS)
+      const time = performance.now()
+      dispatch({ type: 'TICK', deltaSeconds: Math.min(2, (time - last) / 1000) })
+      last = time
+    }, 250)
     return () => clearInterval(id)
   }, [])
 
@@ -42,39 +70,55 @@ export function useCrisisState(): CrisisController {
     if (SOURCE !== 'api') return
     let alive = true
     const poll = async () => {
+      if (pollInFlight.current) return
+      pollInFlight.current = true
       try {
         const s = await api.getState()
-        if (!alive) return
-        dispatch({ type: 'REPLACE', state: { ...s, simulated: s.simulated ?? false } })
-        setError(null)
+        if (alive) receive(s)
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : 'Backend no disponible')
-      }
+      } finally { pollInFlight.current = false }
     }
     void poll()
-    const id = setInterval(() => void poll(), 2000)
-    return () => { alive = false; clearInterval(id) }
-  }, [])
+    const polling = setInterval(() => void poll(), 2000)
+    const clock = setInterval(() => setNow(Date.now()), 1000)
+    return () => { alive = false; clearInterval(polling); clearInterval(clock) }
+  }, [receive])
 
-  const intervene = useCallback((i: Intervention) => {
-    if (SOURCE === 'api') { api.intervene(i).catch((e: Error) => setError(e.message)); return }
-    dispatch({ type: 'INTERVENE', intervention: i })
-  }, [])
-
-  const twist = useCallback((t: TwistId) => {
-    if (SOURCE === 'api') { api.twist(t).catch((e: Error) => setError(e.message)); return }
-    dispatch({ type: 'TWIST', twist: t })
-  }, [])
+  const intervene = async (i: Intervention) => {
+    if (requestInFlight.current || stale) return false
+    setFeedback(null)
+    if (SOURCE === 'sim') {
+      dispatch({ type: 'INTERVENE', intervention: i })
+      setFeedback('Intervención aplicada en la simulación.')
+      return true
+    }
+    requestInFlight.current = true; setPending(true)
+    try {
+      await api.intervene(i)
+      setFeedback('Solicitud enviada. El estado se actualizará con la respuesta del sistema.')
+      return true
+    } catch (e) {
+      setFeedback('No se pudo enviar: ' + (e instanceof Error ? e.message : 'error de conexión') + '. Puedes reintentarlo.')
+      return false
+    } finally { requestInFlight.current = false; setPending(false) }
+  }
 
   return {
-    state,
-    source: SOURCE,
-    error,
+    state: { ...state, selectedId }, source: SOURCE, ready, error, stale, ageSeconds, pending, feedback, reference,
+    setReference: () => setReference(structuredClone(state)),
     intervene,
-    twist,
-    setSpeed: (n) => dispatch({ type: 'SET_SPEED', speed: n }),
-    togglePause: () => dispatch({ type: 'TOGGLE_PAUSE' }),
-    select: (id) => dispatch({ type: 'SELECT', id }),
-    reset: () => dispatch({ type: 'RESET' }),
+    twist: (twist) => { if (SOURCE === 'sim') dispatch({ type: 'TWIST', twist }) },
+    setSpeed: (speed) => { if (SOURCE === 'sim') dispatch({ type: 'SET_SPEED', speed }) },
+    togglePause: () => { if (SOURCE === 'sim') dispatch({ type: 'TOGGLE_PAUSE' }) },
+    select,
+    reset: () => {
+      if (SOURCE !== 'sim') return
+      dispatch({ type: 'RESET' }); setReference(createFixtureState('normal')); select('principal'); setFeedback(null)
+    },
+    loadFixture: (name) => {
+      if (SOURCE !== 'sim') return
+      dispatch({ type: 'REPLACE', state: createFixtureState(name) }); select(null); setFeedback(null)
+    },
   }
 }
