@@ -58,6 +58,7 @@ html, body, #root {
 .chat-log { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%); mask-image: linear-gradient(to bottom, transparent 0, #000 22%); }
 .chat-msg { display: flex; gap: 8px; align-items: baseline; padding: 5px 8px; border-left: 3px solid #1a1d24; background: rgba(255,255,255,.55); }
 .chat-msg + .chat-msg { margin-top: 4px; }
+.chat-log > li:first-child { margin-top: auto; }
 
 .marker-pin {
   display: flex; align-items: center; gap: 6px;

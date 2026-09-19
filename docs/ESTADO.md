@@ -5,9 +5,8 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 17:20 CEST |
-| **Commit de `main`** | `de7919c` (PR #53) |
-| **Rama verificada** | `fix/zhi-demo-readiness` sobre `de7919c` |
+| **Foto tomada** | 19 de septiembre de 2026, 18:20 CEST |
+| **Commit de `main`** | `dd74178` (PR #56), tras recuperar los 38 commits que descartó el merge `585a5e3` |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -15,11 +14,11 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `fix/zhi-demo-readiness` | OK |
-| Tests de backend | 269: **262 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en la rama de rescate | OK |
+| Tests de backend | 271: **264 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node | 22.23.2 |
+| Node | 23.10.0 |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
@@ -77,6 +76,20 @@ T17 real y recuperación operativa.
 - T39 figura `review` aunque PR #53 está mergeado; corresponde a Pep actualizar su fila.
 - T13, T19, T20–T22 siguen `todo`; T1, T9, T12, T14–T16 y T33–T35 siguen `review`.
 
+### Añadido en PR #56 (T39 y T40)
+
+- **T39:** el mapa ocupa toda la vista; KPIs, aforo, coordinador y cronología tipo chat
+  flotan sobre él. La llamada solo aparece mientras está `en_curso`. Velocidad
+  ×1→×2→×5→×10→×20 en modo `sim`.
+- **T40:** el estado operativo se copia a Postgres cuando hay service role; SQLite sigue
+  siendo el motor y el panel no habla con Supabase directo.
+
+### Aviso de integración
+
+El merge `585a5e3` descartó 38 commits de `main` (PR #51, #52, #53 y #54, `world/locate.ts`,
+el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir historia. Si
+`make check` baja de golpe el número de tests, sospechad de un merge resuelto a lo bruto.
+
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
@@ -88,13 +101,10 @@ T17 real y recuperación operativa.
 
 ## Ramas vivas sin mergear
 
-- `fix/zhi-demo-readiness`: fixes de seed, reset, estado, callbacks obsoletos, target
-  opcional y puertas; basada en `de7919c`.
-- `Prueba-de-plataforma-y-llamada-real`: trabajo antiguo de voz/frontend sin PR abierto.
-- `docs/estado-1200`: estado obsoleto basado en `c371546`.
-- `origin/feat/pep-afluencia`: referencia sin diff funcional contra main.
-
-## Decisiones pendientes
+- `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
+- `feat/pep-supabase`: T40 espejo Postgres; falta la clave de servicio en el `.env` local.
+- `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
+- `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
 1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
    modo caos; el segundo no garantiza convergencia.

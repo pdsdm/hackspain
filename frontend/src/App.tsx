@@ -53,28 +53,28 @@ export default function App() {
       <main className="flex-1 min-h-0 relative">
         <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId}>
           <div className="map-overlays">
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 max-w-[calc(100%-680px)]">
-              <KpiOverlay s={s} />
-              <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_plan', payload: { decisionId: decision!.id } })} />
-            </div>
-            <div className="absolute top-3 right-3 flex flex-col gap-3 w-[300px]">
+            <div className="absolute top-3 left-3 w-[300px]">
               <AforoOverlay s={s} />
-              <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
             </div>
-            <div className="absolute bottom-3 left-3 flex items-end gap-3">
+            <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
+              <KpiOverlay s={s} />
+              <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
+            </div>
+            <div className="absolute bottom-3 left-3">
               <CoordinadorPanel s={s} className="glass w-[320px]" />
-              <CronologiaChat s={s} />
+            </div>
+            <div className="absolute top-3 right-3 bottom-3 w-[404px] flex flex-col gap-3">
+              <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+              <CronologiaChat s={s} className="flex-1 min-h-0" footer={
+                <EventChat className="border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe un evento…' : 'Eventos libres solo contra el backend'} />
+              } />
             </div>
           </div>
         </CrisisMap>
       </main>
 
       <Drawer open={drawer} onClose={() => setDrawer(false)}>
-        {ctl.source === 'api' && (
-          <EventChat disabled={disabled} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} />
-        )}
         {ctl.source === 'api' && <AvisarPanel disabled={disabled} />}
-        {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
         {ctl.source === 'sim' && (
           <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="calm">Estable · 12:00</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
         )}

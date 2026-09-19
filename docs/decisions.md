@@ -117,6 +117,11 @@ sin plan, con el respaldo determinista solo para giros.
 - **Se conserva:** validación de importes, aforo, accesos, evidencia, condiciones, idempotencia y control humano operativo. Los campos de límites quedan como legado del contrato, sin efecto. Descartados presupuestos artificialmente altos y aprobaciones humanas automáticas.
 - **Integración pendiente:** los cambios locales de ciclo de recursos no deben reintroducir límites por recurso ni reservas de saldo; T20 debe excluir las recomendaciones históricas `ask_budget`. El prompt desplegado en HappyRobot debe sincronizarse con el guion del repo.
 
+### D18: Supabase Postgres como copia del estado (amplía D7)
+
+- **Qué:** el motor y los tests siguen en SQLite. Si hay `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, al arrancar se hidrata SQLite desde Postgres y cada escritura se copia a las mismas tablas (`demo_runs`, tareas, eventos). El frontend sigue hablando con Express (`VITE_DATA_SOURCE=api`).
+- **Por qué:** un único proyecto cloud (pdsdm's Project) para la demo, sin reescribir el motor síncrono ni romper `make check`. Descartado sustituir SQLite por Postgres en el hot path (todo el dominio es síncrono) y exponer el service role al navegador.
+
 ### Propuesta T35: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.

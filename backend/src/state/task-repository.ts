@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import type { DatabaseSync } from "node:sqlite";
 
+import { notifyRemote } from "./database.js";
+
 import { ContractError } from "../contracts/api.js";
 import { parseCrisisState, type CrisisStateDocument } from "../domain/crisis-state.js";
 
@@ -81,6 +83,7 @@ export class TaskRepository {
     const row = this.database
       .prepare("SELECT * FROM dispatch_tasks WHERE run_id = ? AND idempotency_key = ?")
       .get(input.runId, input.idempotencyKey) as unknown as TaskRow;
+    notifyRemote(this.database);
     return this.toTask(row);
   }
 
@@ -111,6 +114,7 @@ export class TaskRepository {
         WHERE id = ? AND status IN ('pending', 'dispatching')
       `)
       .run(taskId);
+    if (result.changes === 1) notifyRemote(this.database);
     return result.changes === 1;
   }
 
@@ -122,6 +126,7 @@ export class TaskRepository {
         WHERE id = ? AND status IN ('pending', 'dispatching', 'dispatched')
       `)
       .run(planVersion, taskId);
+    if (result.changes === 1) notifyRemote(this.database);
     return result.changes === 1;
   }
 
@@ -164,6 +169,7 @@ export class TaskRepository {
         `)
         .run(row.id);
       this.database.exec("COMMIT");
+      notifyRemote(this.database);
       return { ...this.toTask(row), status: "dispatching", attempts: row.attempts + 1 };
     } catch (error) {
       this.database.exec("ROLLBACK");
@@ -182,6 +188,7 @@ export class TaskRepository {
     if (result.changes !== 1) {
       throw new Error(`Dispatching task not found: ${taskId}`);
     }
+    notifyRemote(this.database);
   }
 
   dependenciesSatisfied(taskId: string): boolean {
@@ -276,6 +283,7 @@ export class TaskRepository {
         `)
         .run(terminalStatus, taskId);
       this.database.exec("COMMIT");
+      notifyRemote(this.database);
       return { applied, duplicate: false };
     } catch (error) {
       this.database.exec("ROLLBACK");

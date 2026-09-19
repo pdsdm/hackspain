@@ -1,7 +1,7 @@
 import type { Decision } from '../../domain/types'
 
 export function DecisionCard({ d, onApprove, onReject, disabled, className = 'bg-panel border border-line' }: { d: Decision | null; disabled?: boolean; onApprove: () => void; onReject: () => void; className?: string }) {
-  if (!d || d.kind !== 'operational') return null
+  if (!d) return null
   return (
     <section className={`border-t-[3px] border-t-amber p-4 flex flex-col gap-2.5 fade-in ${className}`}>
       <div className="flex items-center gap-2.5">
