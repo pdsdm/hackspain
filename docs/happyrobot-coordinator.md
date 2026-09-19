@@ -39,16 +39,18 @@ El modelo se elige dentro del workflow. El informe muestra siempre `gpt-5.6-luna
 
 Workflow `Orquestador`, versión V3 no publicada. Pasos que faltan:
 
-1. **Esquema del trigger.** Envía un POST de ejemplo al Incoming hook y genera el esquema. JSON mínimo:
+1. **Esquema del trigger.** Envía un POST al hook con el slug de la versión: `https://workflows.platform.eu.happyrobot.ai/hooks/<workflow-slug>/<version-slug>`. Registra el payload y genera el esquema sin ejecutar el workflow. Sin cabecera `Authorization`: el registro guarda las cabeceras. JSON mínimo:
    ```json
    { "correlation_id": "x", "run_id": "x", "plan_version": 1, "event": { "source": "chat", "kind": "free_text", "text": "x" }, "system_prompt": "x", "system_prompt_version": "x", "world_snapshot": "x", "backend_base_url": "https://x" }
    ```
 2. **Prompt del agente.** Sustituye `<!-- INYECTAR AQUI -->` por las variables `system_prompt` y `world_snapshot` del trigger. Modelo `gpt-5.6-luna-low`.
-3. **Webhooks.** URL: `{{backend_base_url}}/workflow/coordinator/happyrobot/consult` y `.../submit`. Método POST, JSON. Auth bearer con una variable de entorno de HappyRobot que contenga `HAPPYROBOT_WEBHOOK_TOKEN`.
+3. **Webhooks.** URL: `{{backend_base_url}}/workflow/coordinator/happyrobot/consult` y `.../submit`. Método POST, JSON. Auth bearer con la variable `HAPPYROBOT_COORDINATOR_TOKEN` del workflow (Workflow settings → Variables). Su valor en los tres entornos es el de `HAPPYROBOT_WEBHOOK_TOKEN`. En el campo Bearer se selecciona con `@`; si aparece como texto plano, el backend recibe el nombre y responde `Invalid workflow token`.
 4. **Body de `consult_world`:** `correlation_id`, `run_id`, `plan_version` desde el trigger (fijos). `query` desde el parámetro de la herramienta: objeto con `type`, `placeId`, `minCapacity`, `vehicleId`, `fromId`, `destinationId`.
 5. **Body de `submit_plan`:** los tres fijos más `plan` desde el parámetro de la herramienta (objeto `CoordinatorOutput` completo).
 6. **Tool Call Result.** Exponer solo: `consult_world` → `ok`, `stale`, `error`, `answer`. `submit_plan` → `accepted`, `retry`, `stale`, `errors`, `plan_version`. Generar el esquema requiere el backend público en marcha.
-7. **Publicar** en `development`.
+7. **Publicar** en `development`. El hook de ejecución solo enruta a versiones publicadas: `hooks/<workflow-slug>` (production) o `hooks/development/<workflow-slug>`.
+
+Estado al 19/09/2026 21:30: fork `mpp8gtbh590v` publicado en `development` con todo lo anterior hecho. Falta la única ejecución live.
 
 ## Prueba manual única (shadow)
 
