@@ -28,6 +28,7 @@ export interface AppConfig {
   hooks: Partial<Record<AreaHook, string>>;
   publicBaseUrl: string;
   simIncidents?: boolean;
+  simIncidentsMode?: "open" | "catalog";
   simSeed?: number;
 }
 
@@ -141,6 +142,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     hooks,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     simIncidents: (env.SIM_INCIDENTS?.trim().toLowerCase() ?? "off") === "on",
+    simIncidentsMode: env.SIM_INCIDENTS_MODE?.trim().toLowerCase() === "catalog" ? "catalog" : "open",
     ...(seed !== undefined ? { simSeed: seed } : {}),
   };
 }

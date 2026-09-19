@@ -123,10 +123,13 @@ test("every incident applies to the calm fixture and changes something", () => {
   }
 });
 
-test("with an LLM an incident reaches the coordinator; POST /simulation/live toggles clock.live", async () => {
-  let calls = 0;
-  const completeFn = async () => {
-    calls += 1;
+test("with an LLM the world agent invents the incident, applies its operations and the coordinator answers", async () => {
+  const systems: string[] = [];
+  const completeFn = async (_config: unknown, system: string) => {
+    systems.push(system);
+    if (system.startsWith("Eres el mundo")) {
+      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }] });
+    }
     return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "estable", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
   };
   const { database, states, control, clock, engine } = world(completeFn);
@@ -134,12 +137,55 @@ test("with an LLM an incident reaches the coordinator; POST /simulation/live tog
     control.setLive(true, 3);
     clock.tick();
     await engine.handle({ source: "human", kind: "resume" });
-    assert.equal(calls, 1);
-    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 1);
+    assert.equal(systems.length, 2);
+    assert.ok(systems[0]!.startsWith("Eres el mundo"));
+    const state = states.ensureActiveRun().state;
+    assert.deepEqual(state.incidentsApplied, ["gen-0"]);
+    assert.deepEqual(state.incidentTexts, ["Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar"]);
+    const taxi = (state.vehicles as Array<Record<string, unknown>>).find((item) => item.id === "TX-01")!;
+    assert.equal(taxi.status, "retenido");
+    assert.equal(taxi.destinationId, "accesoSur2");
+    const parking = (state.spaces as Array<Record<string, unknown>>).find((item) => item.id === "parkingSur")!;
+    assert.notEqual(parking.status, "confirmado");
+    assert.ok((state.events as Array<{ kind: string; text: string }>).some((event) => event.kind === "incidencia" && event.text.includes("camión de TV")));
   } finally {
     clock.stop();
     database.close();
   }
+});
+
+test("with an LLM in catalog mode, or when the world agent fails, the catalogue incident is used", async () => {
+  let calls = 0;
+  const completeFn = async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "estable", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  };
+  const catalog = world(completeFn);
+  try {
+    catalog.control.setLive(true, 3, "catalog");
+    catalog.clock.tick();
+    await catalog.engine.handle({ source: "human", kind: "resume" });
+    assert.equal(calls, 1);
+    assert.deepEqual(catalog.states.ensureActiveRun().state.incidentsApplied, [incidentSequence(3)[0]]);
+  } finally {
+    catalog.clock.stop();
+    catalog.database.close();
+  }
+  calls = 0;
+  const broken = world(completeFn);
+  try {
+    broken.control.setLive(true, 3);
+    broken.clock.tick();
+    await broken.engine.handle({ source: "human", kind: "resume" });
+    assert.equal(calls, 2);
+    assert.deepEqual(broken.states.ensureActiveRun().state.incidentsApplied, [incidentSequence(3)[0]]);
+  } finally {
+    broken.clock.stop();
+    broken.database.close();
+  }
+});
+
+test("POST /simulation/live toggles clock.live", async () => {
 
   const database2 = openDatabase(":memory:");
   const app = createApp(database2, { workflowToken: undefined });
@@ -151,7 +197,9 @@ test("with an LLM an incident reaches the coordinator; POST /simulation/live tog
     const base = `http://127.0.0.1:${address.port}`;
     const post = (body: unknown) => fetch(`${base}/simulation/live`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     let response = await post({ enabled: true, seed: 42 });
-    assert.deepEqual(await response.json(), { ok: true, live: true, seed: 42 });
+    assert.deepEqual(await response.json(), { ok: true, live: true, seed: 42, mode: "open" });
+    response = await post({ enabled: true, seed: 42, mode: "catalog" });
+    assert.deepEqual(await response.json(), { ok: true, live: true, seed: 42, mode: "catalog" });
     let state = await (await fetch(`${base}/state`)).json() as { clock: Record<string, unknown> };
     assert.equal(state.clock.live, true);
     assert.equal(state.clock.liveSeed, 42);
