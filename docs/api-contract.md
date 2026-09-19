@@ -77,7 +77,7 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 - `set_constraint`: requiere `payload.text`.
 - `take_call`: requiere `payload.callId` de una llamada `en_curso`.
 
-Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Mientras haya una decisión pendiente no se despachan acciones nuevas; las ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
 
 **Respuesta 200**: `{ "ok": true }`.
 

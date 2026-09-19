@@ -121,7 +121,46 @@ Solo hace falta configurar el hook de las áreas que se prueben. Con un hook y `
 
 Resultado esperado: el backend registra `[actions]`, HappyRobot realiza la llamada, el callback registra `[workflow]` y el siguiente `GET /state` muestra la llamada terminada, el resultado del agente y el compromiso actualizado.
 
-## 6. Estado y limitaciones conocidas
+## 6. Operación repetible de la demo
+
+Requisitos: Node 22 o superior, dependencias instaladas con `./scripts/setup.sh` y `cloudflared` disponible en `PATH` para el modo público. El script no instala herramientas ni escribe secretos.
+
+Prueba local segura, sin LLM ni llamadas reales:
+
+```bash
+./scripts/demo.sh up-local
+./scripts/demo.sh status
+./scripts/demo.sh reset calm
+```
+
+Demo con Helmcode, HappyRobot y Quick Tunnel:
+
+```bash
+DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=real ./scripts/demo.sh up
+```
+
+El orden es automático: Quick Tunnel → descubrimiento de la URL `trycloudflare.com` → backend con esa URL en `PUBLIC_BASE_URL` → frontend en modo API → comprobación de `/health` local y público. La salida muestra el panel y el callback público. Cada nuevo Quick Tunnel tiene otra URL; el workflow debe usar el `callbackUrl` recibido en el payload, no una URL copiada a mano.
+
+El estado persiste en `backend/data/demo.db`. Los logs y PID quedan en `.demo/`, que Git ignora. Operación y recuperación:
+
+```bash
+./scripts/demo.sh restart-backend
+./scripts/demo.sh status
+./scripts/demo.sh reset calm
+./scripts/demo.sh down
+```
+
+| Fallo | Recuperación |
+|---|---|
+| Backend | `restart-backend`; conserva SQLite. Si se interrumpió una acción `sim`, ejecutar `reset calm` antes del ensayo. |
+| Quick Tunnel | `down` y repetir `up`; la URL nueva se vuelve a inyectar al backend. |
+| Helmcode | `down` y arrancar con `DEMO_COORDINATOR_MODE=rules`; el panel y los giros siguen operativos. |
+| HappyRobot | `down` y arrancar con `DEMO_CALL_MODE=sim`, o usar el Web call de respaldo. La pantalla lo etiqueta como simulado. |
+| Estado de ensayo sucio | `reset calm`; crea otra ejecución sin borrar la evidencia anterior de SQLite. |
+
+`HAPPYROBOT_API_KEY`, `HAPPYROBOT_TEST_PHONE`, `HAPPYROBOT_WEBHOOK_TOKEN` y `HAPPYROBOT_HOOK_*` solo se rellenan en el `.env` raíz. No se copian a argumentos ni logs.
+
+## 7. Estado y limitaciones conocidas
 
 - Verificado localmente: Vite en modo `api` llega a `/health`, `/state`, `/events` y `/simulation/*`; el backend registra el evento.
 - Probado por tests: despacho al hook, timeout sin callback, autenticación e idempotencia de `/workflow/results`.
