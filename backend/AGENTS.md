@@ -27,7 +27,8 @@
 
 - `src/app.ts`: middleware y composición de rutas HTTP.
 - `src/config.ts`: configuración validada desde variables de entorno.
-- `src/state/`: conexión, esquema y repositorios SQLite.
+- `src/domain/`: reglas deterministas y aplicación de propuestas.
+- `src/state/`: conexión, esquema, estado y cola transaccional SQLite.
 - `src/server.ts`: arranque y apagado ordenado del proceso.
 - `test/`: pruebas con el runner integrado de Node.js.
 

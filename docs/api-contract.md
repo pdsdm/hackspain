@@ -24,7 +24,7 @@ Comprueba que el backend está vivo.
 { "status": "ok" }
 ```
 
-## Panel de supervisión (propuesto por el frontend; pendiente de implementar en backend)
+## Panel de supervisión
 
 El frontend consume estos tres endpoints cuando `VITE_DATA_SOURCE=api`. Los tipos exactos están en `frontend/src/domain/types.ts` (`CrisisState`); ese archivo es la referencia de campos.
 
@@ -36,7 +36,7 @@ Estado completo de la crisis. El frontend hace polling cada 2 s.
 
 ```json
 {
-  "simulated": true,
+  "simulated": false,
   "clock": { "simSeconds": 44100, "speed": 1, "paused": false, "openingAt": 46800, "lunchAt": 48600, "raceAt": 54000 },
   "planVersion": 1,
   "coordinatorStatus": "replanificando",
@@ -57,7 +57,7 @@ Estado completo de la crisis. El frontend hace polling cada 2 s.
 }
 ```
 
-Los tiempos son segundos desde medianoche (12:15 = 44100). Los campos `scriptId`, `scriptCursor`, `nextScriptAt` solo importan a la simulación del frontend; el backend puede devolverlos con valores fijos.
+Los tiempos son segundos desde medianoche (12:15 = 44100). En modo API el backend devuelve `simulated: false` y fija `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; el coordinador no consume ni modifica esos campos.
 
 Los importes de `budget` y `decisions[].cost` se expresan en euros. Hay seis ejemplos completos y reproducibles de `CrisisState` en [`backend/fixtures/madring/states/`](../backend/fixtures/madring/states/), con [guía y reglas de los datos](../backend/fixtures/README.md). Son snapshots sintéticos pausados para desarrollo; no implementan `/state` ni cambian su formato. El roster individual y las asignaciones auxiliares están en `seed.json` y `manifest.json`, fuera de la respuesta de este endpoint.
 

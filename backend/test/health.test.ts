@@ -25,3 +25,29 @@ test("GET /health reports that the backend is ready", async () => {
     database.close();
   }
 });
+
+test("GET /state returns the persisted CrisisState contract", async () => {
+  const database = openDatabase(":memory:");
+  const server = createApp(database).listen(0, "127.0.0.1");
+
+  try {
+    await once(server, "listening");
+    const address = server.address();
+    assert(address && typeof address !== "string");
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/state`);
+    const state = (await response.json()) as Record<string, unknown>;
+
+    assert.equal(response.status, 200);
+    assert.equal(state.planVersion, 1);
+    assert.equal(state.simulated, false);
+    assert.deepEqual(state.scriptId, "main");
+    assert.deepEqual(state.scriptCursor, 0);
+    assert.deepEqual(state.nextScriptAt, null);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    database.close();
+  }
+});
