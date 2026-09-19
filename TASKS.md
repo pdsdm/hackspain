@@ -15,10 +15,10 @@
 | T3 | Cerrar contrato backend, frontend y workflows | Zhi | `zhi-t3-contrato` (PR #13, mergeada) | [T3](docs/specs/T3-contrato.md) | done |
 | T4 | Panel de supervisión (frontend) con simulación local | Pepe | `feat/pepe-frontend-panel` (PR #11, mergeada) | [T4](docs/specs/T4-frontend-panel.md) | done |
 | T5 | Seed MADRING y fixtures de demo | Carlos | `feat/carlos-seed` (PR #7, mergeada) | [T5](docs/specs/T5-seed.md) | done |
-| T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro | `Prueba-de-plataforma-y-llamada-real` (sin mergear) | [T6](docs/specs/T6-prueba-voz.md) | doing |
+| T6 | Validar cuenta HappyRobot y primera llamada real | Álvaro (apoyo: Zhi) | `Prueba-de-plataforma-y-llamada-real` (sin mergear), `fix/zhi-real-call-robustez` (PR #40) | [T6](docs/specs/T6-prueba-voz.md) | doing |
 | T7 | Estado persistente, reglas y despacho de tareas | Zhi | `feat/t7-estado` (PR #8, mergeada) | [T7](docs/specs/T7-estado.md) | done |
 | T8 | Dashboard y plano Norte/Sur | Carlos | `feat/carlos-dashboard` (PR #9, mergeada) | [T8](docs/specs/T8-dashboard.md) | done |
-| T9 | Adaptador HappyRobot y callbacks | Álvaro | `feat/alvaro-integracion` (PR #26, mergeada) | [T9](docs/specs/T9-integracion.md) | review |
+| T9 | Adaptador HappyRobot y callbacks | Álvaro (apoyo: Zhi) | `feat/alvaro-integracion` (PR #26, mergeada), `fix/zhi-real-call-robustez` (PR #40) | [T9](docs/specs/T9-integracion.md) | review |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` (PR #14, mergeada) | [T10](docs/specs/T10-coordinador.md) | done |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
 | T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | review |
@@ -38,10 +38,10 @@
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
 | T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` (PR #28, mergeada) | - | done |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | `feat/alvaro-integracion` (PR #26, mergeada) | - | done |
-| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Carlos (seed) + Pep (mapa) | `feat/carlos-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | todo |
+| T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Pep | `feat/pep-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | review |
 | T30 | Afluencia con picos y saturación de accesos en el backend | Zhi (tick) + Ventura (regla) | `feat/zhi-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | todo |
 | T31 | Actores móviles: taxis, VIP y repartidores de última hora | Zhi + Pep + Ventura | `feat/zhi-actores` | [T31](docs/specs/T31-actores-moviles.md) | todo |
-| T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | todo |
+| T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | review |
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
 | T34 | Sala de conferencia con varios participantes en el agente demo de voz | Álvaro | `feat/alvaro-integracion` | - | review |
 

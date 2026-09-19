@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { ContractError, type Intervention, type TwistId } from "../contracts/api.js";
 import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
+import { findIncident } from "./incidents.js";
 import type { StateRepository } from "../state/state-repository.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -200,6 +201,34 @@ export class ControlService {
     if (twists(run.state).includes(twist)) return;
     const state = structuredClone(run.state);
     applyTwistEffect(state, twist);
+    this.states.saveState(run.id, state);
+  }
+
+  setLive(enabled: boolean, seed?: number): { live: boolean; seed: number } {
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    const current = Number(state.clock.liveSeed ?? 0);
+    const nextSeed = seed ?? (current > 0 ? current : 1 + Math.floor(Math.random() * 99_999));
+    state.clock.live = enabled;
+    state.clock.liveSeed = nextSeed;
+    if (enabled && (seed !== undefined || !state.clock.liveLastAt)) {
+      state.clock.liveIndex = 0;
+      state.clock.liveLastAt = 0;
+    }
+    addEvent(state, "info", enabled ? `Modo vivo activado · semilla ${nextSeed}` : "Modo vivo desactivado");
+    this.states.saveState(run.id, state);
+    return { live: enabled, seed: nextSeed };
+  }
+
+  applyIncident(id: string): void {
+    const incident = findIncident(id);
+    if (!incident) throw new ContractError(`Unknown incident: ${id}`, 400);
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    incident.apply(state);
+    addEvent(state, "incidencia", incident.text, incident.area);
+    const fired = Array.isArray(state.incidentsApplied) ? state.incidentsApplied.filter((value): value is string => typeof value === "string") : [];
+    state.incidentsApplied = [...fired, id];
     this.states.saveState(run.id, state);
   }
 

@@ -27,6 +27,8 @@ export interface AppConfig {
   coordinatorMode: CoordinatorMode;
   hooks: Partial<Record<AreaHook, string>>;
   publicBaseUrl: string;
+  simIncidents?: boolean;
+  simSeed?: number;
 }
 
 function readPort(value: string | undefined): number {
@@ -100,6 +102,15 @@ function readPhone(value: string | undefined): string | undefined {
   return phone;
 }
 
+function readSeed(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const seed = Number(value);
+  if (!Number.isInteger(seed) || seed < 1) {
+    throw new Error(`SIM_SEED must be a positive integer, received "${value}"`);
+  }
+  return seed;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
   const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
@@ -116,6 +127,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
   }
 
+  const seed = readSeed(env.SIM_SEED);
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
@@ -128,6 +140,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
     hooks,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
+    simIncidents: (env.SIM_INCIDENTS?.trim().toLowerCase() ?? "off") === "on",
+    ...(seed !== undefined ? { simSeed: seed } : {}),
   };
 }
 

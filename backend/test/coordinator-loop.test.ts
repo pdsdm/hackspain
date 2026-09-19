@@ -72,6 +72,46 @@ test("the coordinator loop answers queries, feeds errors back and finishes", asy
   }
 });
 
+test("a done plan with leftover queries is persisted instead of looping", async () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(
+      states,
+      tasks,
+      new WorkflowEventRepository(database.connection),
+    );
+    let round = 0;
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "cerramos Acceso Sur" },
+      {
+        world: loadWorld(),
+        states,
+        tasks,
+        workflows,
+        config: undefined,
+        completeFn: async () => {
+          round += 1;
+          return JSON.stringify(
+            baseOutput({
+              operations: [{ op: "set_place", id: "accesoSur", status: "cerrado" }],
+              queries: [{ type: "affected_by", placeId: "accesoSur" }],
+              done: true,
+            }),
+          );
+        },
+      },
+    );
+    assert.equal(result, "ok");
+    assert.equal(round, 1);
+    const acceso = states.ensureActiveRun().state.spaces.find((space) => space.id === "accesoSur");
+    assert.equal(acceso?.status, "cerrado");
+  } finally {
+    database.close();
+  }
+});
+
 test("the Cognition tool harness consults the world and submits a plan", async () => {
   const database = openDatabase(":memory:");
   try {

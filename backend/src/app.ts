@@ -5,13 +5,14 @@ import express, { type NextFunction, type Request, type Response } from "express
 
 import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
-import { loadLlmConfig } from "./agents/coordinator/llm.js";
+import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
 import type { AppConfig } from "./config.js";
 import {
   ContractError,
   parseCoordinatorProposal,
   parseEvent,
   parseIntervention,
+  parseLive,
   parseReset,
   parseSpecialistResult,
   parseTwist,
@@ -93,6 +94,7 @@ export function createApp(
       llmConfig.harness,
       llmConfig.model,
       llmConfig.orgId ? "org=sí" : "org=no",
+      llmVerbose() ? "verbose=sí" : "verbose=no",
     );
   }
   const engine = new Engine(
@@ -118,6 +120,7 @@ export function createApp(
   app.locals.engine = engine;
   app.locals.executor = executor;
   stateRepository.ensureActiveRun();
+  engine.recoverInterruptedCoordinator();
 
   app.use((_request, response, next) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
@@ -142,6 +145,25 @@ export function createApp(
       return;
     }
     next();
+  };
+
+  const recordWorkflowResult = (envelope: SpecialistResultEnvelope) => {
+    const recorded = workflowService.recordSpecialistResult(envelope);
+    logWorkflow("result", {
+      taskId: envelope.taskId,
+      eventId: envelope.eventId,
+      status: envelope.status,
+      applied: recorded.applied,
+      duplicate: recorded.duplicate,
+    });
+    if (recorded.applied && !recorded.duplicate) {
+      void engine.handle({
+        source: "happyrobot",
+        kind: "call_result",
+        payload: envelope as unknown as Record<string, unknown>,
+      });
+    }
+    return recorded;
   };
 
   app.get("/health", (_request, response) => {
@@ -184,6 +206,15 @@ export function createApp(
     }
   });
 
+  app.post("/simulation/live", (request, response, next) => {
+    try {
+      const body = parseLive(request.body ?? {});
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post("/simulation/reset", (request, response, next) => {
     try {
       const body = parseReset(request.body ?? {});
@@ -218,29 +249,10 @@ export function createApp(
     }
   });
 
-  const recordResult = (envelope: SpecialistResultEnvelope, response: Response) => {
-    const recorded = workflowService.recordSpecialistResult(envelope);
-    logWorkflow("result", {
-      taskId: envelope.taskId,
-      eventId: envelope.eventId,
-      status: envelope.status,
-      applied: recorded.applied,
-      duplicate: recorded.duplicate,
-    });
-    if (recorded.applied && !recorded.duplicate) {
-      void engine.handle({
-        source: "happyrobot",
-        kind: "call_result",
-        payload: envelope as unknown as Record<string, unknown>,
-      });
-    }
-    response.status(200).json(recorded);
-  };
-
   // La puerta del contrato: cuerpo exacto, sin interpretación.
   app.post("/workflow/results", authorizeWorkflow, (request, response, next) => {
     try {
-      recordResult(parseSpecialistResult(request.body), response);
+      response.status(200).json(recordWorkflowResult(parseSpecialistResult(request.body)));
     } catch (error) {
       next(error);
     }
@@ -250,7 +262,9 @@ export function createApp(
   // Es la URL que el ejecutor manda en callbackUrl; sin esta ruta, el callback da 404.
   app.post("/workflow/happyrobot/results", authorizeWorkflow, (request, response, next) => {
     try {
-      recordResult(translateHappyRobotResult(request.body, taskRepository), response);
+      response.status(200).json(
+        recordWorkflowResult(translateHappyRobotResult(request.body, taskRepository)),
+      );
     } catch (error) {
       next(error);
     }

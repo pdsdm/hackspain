@@ -1,5 +1,7 @@
 import type { ActionExecutor } from "../actions/executor.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
+import type { Engine } from "./engine.js";
+import { LIVE_INTERVAL_SECONDS, incidentAt } from "./incidents.js";
 import type { StateRepository } from "../state/state-repository.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -14,6 +16,7 @@ function records(state: CrisisStateDocument, field: string): Array<Record<string
 export class SimulationClock {
   private timer: ReturnType<typeof setInterval> | undefined;
   private speed: number;
+  private engine: Engine | undefined;
 
   constructor(
     private readonly states: StateRepository,
@@ -23,11 +26,27 @@ export class SimulationClock {
     this.speed = speed;
   }
 
+  attachEngine(engine: Engine): void {
+    this.engine = engine;
+  }
+
+  private liveOnStart: { seed: number } | undefined;
+
+  enableLiveOnStart(seed: number): void {
+    this.liveOnStart = { seed };
+  }
+
   start(): void {
     this.stop();
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
     state.clock.speed = this.speed;
+    if (this.liveOnStart) {
+      state.clock.live = true;
+      state.clock.liveSeed = this.liveOnStart.seed;
+      state.clock.liveIndex = 0;
+      state.clock.liveLastAt = 0;
+    }
     this.states.saveState(run.id, state);
     this.timer = setInterval(() => this.tick(), 1000);
   }
@@ -74,7 +93,7 @@ export class SimulationClock {
     state.deliveries = records(state, "deliveries");
 
     for (const call of records(state, "calls")) {
-      if (call.status !== "en_curso") continue;
+      if (call.status !== "en_curso" || call.simulated === false) continue;
       const ended = Number(call.startedAt ?? now) + Number(call.endsAfter ?? 0);
       if (ended <= now) {
         call.status = "terminada";
@@ -83,8 +102,28 @@ export class SimulationClock {
     }
     state.calls = records(state, "calls");
 
+    const incident = this.dueIncident(state, now);
+    if (incident) changed = true;
     if (changed) this.states.saveState(run.id, state);
     this.executor.fireDue(now);
     this.executor.pump();
+    if (incident) {
+      void this.engine
+        ?.handle({ source: "clock", kind: "incident", text: incident.text, payload: { incident: incident.id } })
+        .catch((error) => console.error("[live] handle", error));
+    }
+  }
+
+  private dueIncident(state: CrisisStateDocument, now: number): { id: string; text: string } | undefined {
+    if (!this.engine || state.clock.live !== true) return undefined;
+    const status = String(state.coordinatorStatus ?? "");
+    if (status === "replanificando" || status === "esperando_decision" || state.agentsPaused === true) return undefined;
+    if (now - Number(state.clock.liveLastAt ?? 0) < LIVE_INTERVAL_SECONDS) return undefined;
+    const index = Number(state.clock.liveIndex ?? 0);
+    const incident = incidentAt(Number(state.clock.liveSeed ?? 1), index);
+    if (!incident) return undefined;
+    state.clock.liveLastAt = now;
+    state.clock.liveIndex = index + 1;
+    return { id: incident.id, text: incident.text };
   }
 }

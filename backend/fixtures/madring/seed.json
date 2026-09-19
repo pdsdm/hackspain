@@ -7358,6 +7358,104 @@
       "availableFrom": null,
       "initialAccessibilityConfirmed": false,
       "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "accesoSur2",
+      "name": "Acceso Sur 2 · Puerta 7",
+      "kind": "acceso",
+      "zone": "sur",
+      "capacity": null,
+      "pos": [
+        40.4668,
+        -3.6125
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "accesoNorte2",
+      "name": "Acceso Norte 2",
+      "kind": "acceso",
+      "zone": "norte",
+      "capacity": null,
+      "pos": [
+        40.4745,
+        -3.6192
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "accesoPaddock",
+      "name": "Acceso Paddock",
+      "kind": "acceso",
+      "zone": "norte",
+      "capacity": null,
+      "pos": [
+        40.4782,
+        -3.6254
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "paddockNorte",
+      "name": "Paddock Club Norte",
+      "kind": "paddock",
+      "zone": "norte",
+      "capacity": 120,
+      "pos": [
+        40.479,
+        -3.624
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "parkingNorte",
+      "name": "Parking Norte",
+      "kind": "parking",
+      "zone": "norte",
+      "capacity": 400,
+      "pos": [
+        40.4808,
+        -3.6232
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "parkingSur",
+      "name": "Parking Sur",
+      "kind": "parking",
+      "zone": "sur",
+      "capacity": 900,
+      "pos": [
+        40.4618,
+        -3.6135
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
+    },
+    {
+      "id": "muelleNorte",
+      "name": "Muelle Norte",
+      "kind": "muelle",
+      "zone": "norte",
+      "capacity": null,
+      "pos": [
+        40.4755,
+        -3.6246
+      ],
+      "availableFrom": null,
+      "initialAccessibilityConfirmed": false,
+      "contactRef": "test-venue-manager"
     }
   ],
   "shuttles": [
