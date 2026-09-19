@@ -1,5 +1,7 @@
 # Piloto T44: HappyRobot Reasoning Agent como coordinador
 
+Para levantarlo paso a paso: [`runbook-happyrobot-coordinator.md`](runbook-happyrobot-coordinator.md).
+
 Experimento paralelo. El coordinador por defecto (Helmcode + `deepseek-v4-flash`) no cambia. Este camino solo se activa con `COORDINATOR_HARNESS=happyrobot`.
 
 ## Arquitectura
