@@ -9,6 +9,7 @@ import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
 import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
+import { AgentDetailCard, type AgentFocus } from './components/map/AgentDetailCard'
 import { ActiveIncidents } from './components/map/ActiveIncidents'
 import { CronologiaChat } from './components/map/CronologiaChat'
 import { CierreCard } from './components/map/CierreCard'
@@ -30,6 +31,7 @@ export default function App() {
   const { state: s } = ctl
   const [modal, setModal] = useState<'intervenir' | 'decisiones' | null>(null)
   const [drawer, setDrawer] = useState(false)
+  const [openAgent, setOpenAgent] = useState<AgentFocus | null>(null)
   const decision = pendingDecision(s)
   const call = activeCall(s)
   const disabled = ctl.pending || ctl.stale
@@ -57,8 +59,9 @@ export default function App() {
           <div className="flex-1 min-h-0">
           <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId}>
             <div className="map-overlays">
-              <div className="absolute top-3 left-3 w-[300px] flex flex-col gap-3">
+              <div className="absolute top-3 left-3 bottom-[calc(var(--footer-rail)+24px)] w-[300px] flex flex-col gap-3 min-h-0">
                 <AforoOverlay s={s} />
+                {openAgent && <AgentDetailCard s={s} id={openAgent} onClose={() => setOpenAgent(null)} />}
                 <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
@@ -67,7 +70,7 @@ export default function App() {
                 <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
               </div>
 
-              <CoordinadorPanel s={s} className="absolute left-3 right-[428px] bottom-3" />
+              <CoordinadorPanel s={s} selected={openAgent} onSelect={(id) => setOpenAgent((cur) => cur === id ? null : id)} className="absolute left-3 right-[428px] bottom-3 h-[var(--footer-rail)]" />
             </div>
           </CrisisMap>
           </div>

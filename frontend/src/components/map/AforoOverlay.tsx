@@ -8,7 +8,7 @@ export function AforoOverlay({ s }: { s: CrisisState }) {
   const a = attendance(s)
   const pct = a.expected > 0 ? Math.min(100, Math.round((a.entered / a.expected) * 100)) : 0
   return (
-    <Glass label="Aforo del circuito" className="w-[300px]">
+    <Glass label="Aforo del circuito" className="w-[300px] flex-none">
       <header className="flex items-center justify-between px-4 py-2.5 border-b border-line">
         <h2 className="label">Aforo del circuito</h2>
         <span className={`text-[10px] uppercase tracking-[0.08em] ${a.saturated ? 'text-amber' : 'text-muted'}`}>{a.saturated ? `${a.saturated} puerta${a.saturated > 1 ? 's' : ''} saturada${a.saturated > 1 ? 's' : ''}` : 'flujo normal'}</span>
