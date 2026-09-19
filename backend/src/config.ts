@@ -21,12 +21,11 @@ export interface AppConfig {
   port: number;
   workflowToken: string | undefined;
   happyrobotApiKey: string | undefined;
+  happyrobotTestPhone: string | undefined;
   initialFixture: InitialFixture;
   clockSpeed: number;
   coordinatorMode: CoordinatorMode;
   hooks: Partial<Record<AreaHook, string>>;
-  /** Teléfono de la contraparte por área, más `default` como número de pruebas. */
-  contactPhones: Record<string, string>;
   publicBaseUrl: string;
 }
 
@@ -92,6 +91,15 @@ function readHook(value: string | undefined): string | undefined {
   return url || undefined;
 }
 
+function readPhone(value: string | undefined): string | undefined {
+  const phone = value?.trim();
+  if (!phone) return undefined;
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+    throw new Error("HAPPYROBOT_TEST_PHONE must use E.164, for example +34600000000");
+  }
+  return phone;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
   const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
@@ -102,19 +110,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (catering) hooks.catering = catering;
   if (transporte) hooks.transporte = transporte;
   if (asistentes) hooks.asistentes = asistentes;
-
-  const contactPhones: Record<string, string> = {};
-  const phoneByArea: Record<string, string | undefined> = {
-    espacios: env.HAPPYROBOT_PHONE_ESPACIOS,
-    catering: env.HAPPYROBOT_PHONE_CATERING,
-    transporte: env.HAPPYROBOT_PHONE_TRANSPORTE,
-    asistentes: env.HAPPYROBOT_PHONE_ASISTENTES,
-    default: env.HAPPYROBOT_TEST_PHONE,
-  };
-  for (const [area, value] of Object.entries(phoneByArea)) {
-    const phone = value?.trim();
-    // El formato se valida en el adaptador, que es quien puede avisar sin romper el arranque.
-    if (phone) contactPhones[area] = phone;
+  const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
+  const happyrobotTestPhone = readPhone(env.HAPPYROBOT_TEST_PHONE);
+  if (happyrobotApiKey && Object.keys(hooks).length > 0 && !happyrobotTestPhone) {
+    throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
   }
 
   return {
@@ -122,12 +121,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     host: env.HOST?.trim() || "0.0.0.0",
     port: readPort(env.PORT),
     workflowToken: env.HAPPYROBOT_WEBHOOK_TOKEN?.trim() || undefined,
-    happyrobotApiKey: env.HAPPYROBOT_API_KEY?.trim() || undefined,
+    happyrobotApiKey,
+    happyrobotTestPhone,
     initialFixture: readFixture(env.INITIAL_FIXTURE),
     clockSpeed: readClockSpeed(env.CLOCK_SPEED),
     coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
     hooks,
-    contactPhones,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
   };
 }

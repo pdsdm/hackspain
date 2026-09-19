@@ -15,7 +15,7 @@ Sin esto la llamada real suena pero no cambia el estado, y el coordinador no rep
 - [ ] `outcome` y `status` se normalizan desde texto libre en español o inglés (`aceptado`, `con condiciones`, `rechazado`, `no contesta`, `error`) a los enums del contrato.
 - [ ] La transcripción de HappyRobot (`role`/`speaker` + `content`/`text`) se mapea a `{ who: "agente" | "humano", text, at }` y aparece en `calls[].transcript`.
 - [ ] Un cuerpo que no permite identificar la tarea devuelve `400` con mensaje legible, y una tarea de otra ejecución o versión devuelve `200` con `applied: false`, sin tocar el estado vigente.
-- [ ] El adaptador de salida manda un teléfono real en E.164 tomado del entorno (`HAPPYROBOT_PHONE_<AREA>`, con `HAPPYROBOT_TEST_PHONE` de reserva); un número mal formado se registra y no se envía.
+- [ ] El adaptador de salida manda un teléfono real en E.164 tomado del entorno (`HAPPYROBOT_TEST_PHONE`); un número mal formado impide el arranque en vez de fallar en la llamada.
 - [ ] Un hook que responde error deja traza con su código de estado en vez de fallar en silencio.
 - [ ] `make check` pasa con tests nuevos del traductor y del endpoint.
 

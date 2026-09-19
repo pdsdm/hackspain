@@ -49,7 +49,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "title": "…", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
-  "calls": [],
+  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "simulated": true, "transcript": [] }],
   "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
   "constraints": ["Norte y Sur sin conexión interior"],
@@ -64,7 +64,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 }
 ```
 
-En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`.
+En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
 
 ### `POST /interventions`
 
@@ -119,9 +119,28 @@ Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre 
 - `kind`: texto no vacío (`free_text`, `call_result`, un giro, un tipo de intervención…).
 - `text`, `payload` y `actorId` son opcionales.
 
+Una solicitud manual de llamada usa un payload validado y encola una tarea aunque el coordinador esté en modo `rules`:
+
+```json
+{
+  "source": "human",
+  "kind": "call_request",
+  "actorId": "responsable",
+  "text": "Llamar al recinto para confirmar el Pabellón B",
+  "payload": {
+    "area": "espacios",
+    "counterpart": "Responsable de recinto - MADRING",
+    "objective": "Confirmar Pabellón B para 450 invitados",
+    "commitmentId": "c-pabB-v2"
+  }
+}
+```
+
+`area`, `counterpart` y `objective` son obligatorios. `commitmentId` es opcional y permite aplicar el resultado al compromiso correspondiente.
+
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
 
 ### `GET /actions`
 
@@ -265,7 +284,9 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "counterpart": "Transportes Ibéricos",
   "reason": "El Acceso Sur está cerrado",
   "callId": "call-7a31…",
+  "phone_number": "+34600000000",
   "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": "+34600000000", "email": null },
+  "data": { "commitmentId": "c-transporte-v2" },
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
   "callbackUrl": "https://demo.example/workflow/happyrobot/results"
 }
@@ -273,4 +294,4 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
 
 El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
 
-`contact.phone` sale del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_PHONE_<AREA>`, con `HAPPYROBOT_TEST_PHONE` de reserva. Va en E.164 (`+34600000000`, sin espacios ni guiones); un número mal formado se registra en el log y se manda `null`.
+`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). El formato se valida al arrancar: un número mal formado, o su ausencia habiendo hooks configurados, impide el arranque en vez de fallar en mitad de la demo.

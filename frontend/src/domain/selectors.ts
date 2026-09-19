@@ -2,7 +2,10 @@ import type { CrisisState, Space } from './types'
 
 export function kpis(s: CrisisState) {
   const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
-  const confirmed = s.guestGroups.reduce((a, g) => a + g.confirmedCount, 0)
+  const confirmed = s.guestGroups.reduce((a, g) => {
+    const space = s.spaces.find((x) => x.id === g.assignedSpaceId)
+    return a + (space?.status === 'confirmado' ? Math.min(g.confirmedCount, g.count) : 0)
+  }, 0)
   const informed = s.guestGroups.reduce((a, g) => a + g.informedCount, 0)
   const accepted = s.guestGroups.reduce((a, g) => a + g.acceptedCount, 0)
   const cateringTotal = s.deliveries.reduce((a, d) => a + d.services, 0)
@@ -32,7 +35,8 @@ export function spaceById(s: CrisisState, id: string | null): Space | undefined 
 }
 
 export function pendingDecision(s: CrisisState) {
-  return s.decisions.find((d) => d.status === 'pendiente') ?? null
+  const waiting = s.waitingForDecision ? s.decisions.find((d) => d.id === s.waitingForDecision && d.status === 'pendiente') : undefined
+  return waiting ?? s.decisions.find((d) => d.status === 'pendiente') ?? null
 }
 
 export function activeCall(s: CrisisState) {

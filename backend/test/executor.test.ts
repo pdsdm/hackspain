@@ -96,6 +96,7 @@ test("a dispatched task without callback times out as no_answer", async () => {
     coordinatorMode: "rules" as const,
     hooks: { transporte: "http://hook.test/transporte" },
     happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
   const originalFetch = globalThis.fetch;
@@ -124,7 +125,10 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(payload.taskId, task.id);
     assert.equal(payload.runId, run.id);
     assert.equal(payload.planVersion, run.state.planVersion);
-    // T9: el workflow contesta por la puerta traducida, no por la estricta del contrato.
+    assert.equal(payload.phone_number, "+34600000000");
+    assert.equal((payload.contact as Record<string, unknown>).phone, "+34600000000");
+    assert.deepEqual(payload.data, {});
+    // El workflow contesta por la puerta traducida (T9), no por la estricta del contrato.
     assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
     const now = Number(run.state.clock.simSeconds);
     executor.fireDue(now + 60);
@@ -150,7 +154,7 @@ test("a native HappyRobot callback closes the open call with its transcript", as
     ...loadConfig(),
     coordinatorMode: "rules" as const,
     hooks: { espacios: "http://hook.test/espacios" },
-    contactPhones: { espacios: "+34600000000" },
+    happyrobotTestPhone: "+34600000000",
     happyrobotApiKey: "key",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
@@ -193,44 +197,6 @@ test("a native HappyRobot callback closes the open call with its transcript", as
     assert.equal(calls[0]?.status, "terminada");
     assert.deepEqual(calls[0]?.transcript, [{ who: "humano", text: "Lo tienes a las 13:00", at: 20 }]);
     assert.equal(tasks.get(task.id)?.status, "completed");
-  } finally {
-    globalThis.fetch = originalFetch;
-    database.close();
-  }
-});
-
-test("a phone that is not E.164 is dropped instead of being dialled", async () => {
-  const database = openDatabase(":memory:");
-  const states = new StateRepository(database.connection);
-  const tasks = new TaskRepository(database.connection);
-  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
-  const config = {
-    ...loadConfig(),
-    coordinatorMode: "rules" as const,
-    hooks: { catering: "http://hook.test/catering" },
-    contactPhones: { catering: "600 00 00 00" },
-    happyrobotApiKey: "key",
-  };
-  const executor = new ActionExecutor(states, tasks, workflows, config);
-  const originalFetch = globalThis.fetch;
-  let sent: Record<string, unknown> = {};
-  globalThis.fetch = (async (_url: string, init: RequestInit) => {
-    sent = JSON.parse(String(init.body)) as Record<string, unknown>;
-    return new Response("{}", { status: 200 });
-  }) as unknown as typeof fetch;
-  try {
-    const run = states.ensureActiveRun();
-    tasks.enqueue({
-      runId: run.id,
-      planVersion: run.state.planVersion,
-      area: "catering",
-      kind: "call",
-      payload: { objective: "Recolocar el servicio", counterpart: "Catering" },
-      idempotencyKey: "bad-phone",
-    });
-    executor.pump();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.equal((sent.contact as Record<string, unknown>).phone, null);
   } finally {
     globalThis.fetch = originalFetch;
     database.close();

@@ -10,19 +10,19 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:18 |
-| **Commit de `main`** | `2c95d63` (PR #23) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 11:50 |
+| **Commit de `main`** | `c371546` (PR #26) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, prueba de integración T17 |
+| **Generado por** | Devin, cierre de recuperación T6/T9 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
 | `make check` | ✅ OK |
-| Tests de backend | ✅ **99 de 99** |
+| Tests de backend | ✅ **102 de 102** |
 
-Ambos verificados en `feat/zhi-integracion-final`, basada en `2c95d63`, con Node 22.23.2.
+Ambos verificados sobre `c371546` con Node 22.23.2.
 
 ## Qué funciona
 
@@ -41,6 +41,8 @@ Todo lo de aquí está mergeado en `main`.
   consultas → validación → persistir`, sin SDK. Proveedores: Cognition (por defecto),
   Helmcode/Deepseek, OpenAI, Anthropic.
 - **Motor de eventos** (T24): `POST /events` con texto libre; reloj simulado que avanza.
+- **Trazabilidad de integración** (T17): logs de acciones/callbacks, prueba del payload HappyRobot y guía de pruebas mergeados en PR #24.
+- **Camino único de llamada** (T9, T28): «Avisar» crea `call_request`, el backend valida y despacha, el destino E.164 se inyecta desde entorno y el callback actualiza `/state` (PR #26).
 - **Replanificación tras giro** (T16, en `review`): invalidación determinista de acuerdos.
 - **Agente de Espacios** (T11): guion de conversación y extractor de resultados.
 - **Frontend** (T4, T8, T23): panel de 3 columnas, plano Norte/Sur, mapa Leaflet, KPIs con
@@ -55,14 +57,13 @@ Es el **requisito obligatorio del enunciado** ("interacción de verdad") y lo ú
 se resuelve con horas de código, porque depende del equipo de HappyRobot, que está en el
 evento.
 
-Hay más avance del que dice el tablero. La rama **`Prueba-de-plataforma-y-llamada-real`**
-(sin mergear) tiene un workflow desplegado que funciona como **Web call** (micro del
-navegador), un panel «Avisar a…» y el envío del botón a `POST /events`; el frontend ya no
-maneja secretos de HappyRobot.
+`main` ya valida `call_request`, encola una llamada sin LLM, inyecta el destino E.164
+desde entorno y muestra «Avisar a…» sin secretos en el frontend. El recorrido Vite →
+backend → tarea → llamada simulada → callback está verificado.
 
-**Lo que falta exactamente:** la URL de un trigger **Webhook**, un número de prueba que
-llegue al adaptador y la prueba contra una llamada saliente real. POSTear al deployment
-del Web call devuelve HTML.
+**Lo que falta exactamente:** `HAPPYROBOT_HOOK_ESPACIOS`, `HAPPYROBOT_WEBHOOK_TOKEN`,
+`PUBLIC_BASE_URL` y la prueba contra una llamada saliente real. El Web call de la rama
+antigua sigue disponible como respaldo.
 
 **T9 ya no bloquea** (rama `feat/alvaro-integracion`, sin mergear): el backend manda el
 teléfono real en E.164 desde el entorno y expone `POST /workflow/happyrobot/results`, que
@@ -74,14 +75,18 @@ llamada saliente por API → **web call por navegador (ya funciona)** → SMS o 
 `sim` etiquetado como simulado en pantalla. Nunca presentar una grabación como llamada en
 vivo.
 
-### 🔴 2. No hay ninguna clave de LLM · sin tarea asignada
+### 🟡 2. Proveedor LLM sin prueba de demo
 
-**No existe fichero `.env` en el repo, solo `.env.example`.** Y sin clave, el coordinador
-no decide nada: verificado que `POST /events` con texto libre solo escribe en la cronología
-y el mundo no cambia.
+Hay `HELMCODE_API_KEY` en el `.env` local; Cognition y Devin siguen sin clave. El camino
+Helmcode no se ha probado en esta sesión con un evento real. `rules` mantiene el respaldo
+determinista para los giros.
 
-Esto está al mismo nivel de bloqueo que la llamada, y es mucho más fácil de resolver: hay
-créditos de Cognition y de Helmcode sin usar.
+**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`):** Pep tiene un `.env` local
+con clave de Cognition. Verificado que `api.cognition.ai` **no resuelve en DNS**, así que el
+harness `tools` (el rápido, por defecto) devuelve `unavailable` siempre. Solo funciona
+`COORDINATOR_HARNESS=devin`: una sesión Devin por evento, **60-70 s** hasta el primer plan.
+Para la demo hace falta una clave OpenAI-compatible real (Helmcode, OpenAI o Anthropic) o
+asumir esa latencia.
 
 ### 🟠 3. El panel enseña la simulación, no el backend · T27 (`todo`)
 
@@ -92,28 +97,36 @@ es el sistema.**
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
 
-### 🟠 4. Camino de llamada aún sin mergear · T28 (`todo`)
+**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`, sin mergear):** el panel en
+modo `api` ya corre el cierre del Principal por `POST /events` con datos del backend:
+agentes, llamadas, cronología, KPIs, decisión y aprobación. Arreglado en la rama:
+`POST /interventions` y `/simulation/twists` esperaban a toda la cola del coordinador (más de
+2 min con `devin`) y el panel las daba por fallidas a los 4 s; ahora responden al encolar.
+Cada `call` lleva `simulated` para no etiquetar como «vía HappyRobot» una llamada del
+adaptador `sim`. Pendiente del coordinador (Ventura/Zhi): tras cada `call_result` replanifica
+y **duplica la decisión pendiente** (3 × 4.200 € en la misma ejecución) y acumula llamadas
+`en_curso` (20 llamadas, 12 vivas a los 2 min).
 
-La última rama de voz ya manda el botón «Avisar» a `POST /events` y deja HappyRobot en el
-backend. T17 registra la decisión y añade logs, pero ambos cambios siguen fuera de `main`.
-Falta mergear una sola implementación y probarla con el trigger real.
-
-### 🟡 5. Resto
+### 🟡 4. Resto
 
 - Agentes de Catering, Transporte y Asistentes (T12, T13, T14): sin guion ni extractor.
-- Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
+- Control humano verificado (T15): **hecho en `feat/pep-control` (sin mergear, sábado
+  12:30)**: los 5 controles probados en modo `rules`, y al replanificar la decisión pendiente
+  anterior pasa a `rechazada` («obsoleta» en cronología), así que solo hay una pendiente.
+  Un gasto ya autorizado no vuelve a pedir aprobación. 3 tests nuevos (105 en total).
+  Texto anterior: `/interventions` existe y registra, pero nadie ha
   comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
   coordinador después.
-- Integración (T17): la rama prueba Vite → backend → giro → acciones → callback y añade
-  logs/runbook; sigue sin llamada real. Entorno, pitch y vídeo (T18, T19, T21): nada.
+- Integración (T17): logs y runbook ya están en `main`; sigue sin llamada real. Entorno,
+  pitch y vídeo (T18, T19, T21): nada.
 - Aprendizaje entre ejecuciones (T20, bonus): nada.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Llamada real | trigger Webhook del workflow | **Sí — equipo de HappyRobot** |
-| Coordinador decidiendo | una clave de LLM en `.env` | No |
+| Llamada real | hook, token de callback y backend público | **Sí — equipo de HappyRobot + despliegue** |
+| Coordinador Helmcode | prueba real con la clave local | No |
 | Panel real | T27, y de que el backend aguante | No |
 | Guion del pitch | decidir giro principal y desenlace | No |
 
@@ -121,10 +134,7 @@ Falta mergear una sola implementación y probarla con el trigger real.
 
 | Rama | Qué tiene |
 |---|---|
-| `Prueba-de-plataforma-y-llamada-real` | T6/T28: Web call, sala de voz y panel «Avisar a…» que ya envía `POST /events`; sin mergear ni llamada saliente verificada. |
-| `feat/alvaro-integracion` | T9: teléfono E.164 desde entorno, `POST /workflow/happyrobot/results` que traduce el webhook nativo del workflow, y la spec del agente de voz en `agent/happyrobot/AGENTE-VOZ.md`. Al día con `main`. |
-| `feat/zhi-integracion-final` | T17: logs, prueba del payload HappyRobot y guía sobre `2c95d63`; **ya mergeada** en `2118ace`. |
-| `feat/ventura-specs-cerebro` | Obsoleta: su contenido ya está en `main`. Se puede borrar. |
+| `Prueba-de-plataforma-y-llamada-real` | Web call y sala Twilio de respaldo; no portar a `main` mientras HappyRobot siga disponible. |
 
 ## Decisiones pendientes que bloquean a otros
 

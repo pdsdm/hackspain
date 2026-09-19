@@ -8,7 +8,7 @@ import { liveCoordinatorInput } from "../agents/coordinator/scenario.js";
 import { validateOutput } from "../agents/coordinator/validate.js";
 import type { LlmConfig } from "../agents/coordinator/llm.js";
 import type { CoordinatorMode, InitialFixture } from "../config.js";
-import { ContractError, parseIntervention, parseTwist, type Intervention, type TwistId } from "../contracts/api.js";
+import { ContractError, parseCallRequest, parseIntervention, parseTwist, type Intervention, type TwistId } from "../contracts/api.js";
 import { persistReplan } from "./apply-coordinator.js";
 import { ControlService } from "./control-service.js";
 import type { ActionExecutor } from "../actions/executor.js";
@@ -117,13 +117,17 @@ export class Engine {
     let mode: CoordinatorRunMode = "none";
     try {
       if (event.source === "human") {
-        const intervention = parseIntervention({
-          type: event.kind,
-          payload: event.payload,
-        });
-        this.control.applyIntervention(intervention);
-        if (shouldCoordinateIntervention(intervention.type)) {
-          mode = await this.runCoordinator(event);
+        if (event.kind === "call_request") {
+          this.enqueueCallRequest(event);
+        } else {
+          const intervention = parseIntervention({
+            type: event.kind,
+            payload: event.payload,
+          });
+          this.control.applyIntervention(intervention);
+          if (shouldCoordinateIntervention(intervention.type)) {
+            mode = await this.runCoordinator(event);
+          }
         }
       } else if (event.source === "jury") {
         const twist = parseTwist({ twist: event.payload?.twist ?? event.kind });
@@ -140,6 +144,25 @@ export class Engine {
       this.markCoordinatorDown();
     }
     this.events.setMode(event.id, mode);
+  }
+
+  private enqueueCallRequest(event: IncomingEvent & { id: string }): void {
+    const request = parseCallRequest(event.payload ?? {});
+    const run = this.states.ensureActiveRun();
+    this.tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: request.area,
+      kind: "call",
+      payload: {
+        objective: request.objective,
+        counterpart: request.counterpart,
+        reason: "Solicitud manual del responsable",
+        data: request.commitmentId ? { commitmentId: request.commitmentId } : {},
+      },
+      idempotencyKey: `call-request:${event.id}`,
+    });
+    this.executor?.pump();
   }
 
   private appendTimeline(kind: string, text: string): void {

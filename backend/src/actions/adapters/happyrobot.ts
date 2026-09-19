@@ -36,29 +36,9 @@ function contacts(): SeedContact[] {
   return seedContacts;
 }
 
-// E.164: "+" y de 7 a 15 dígitos, sin espacios ni guiones. HappyRobot rechaza el resto.
-const E164 = /^\+[1-9]\d{6,14}$/;
-const warnedPhones = new Set<string>();
-
-/**
- * Los teléfonos no están en el fixture a propósito (es sintético y público): salen del
- * entorno, por área y con un número de pruebas de reserva.
- */
-function phoneFor(area: string, phones: Record<string, string>): string | null {
-  const raw = phones[area] ?? phones.default;
-  if (raw === undefined) return null;
-  if (E164.test(raw)) return raw;
-  if (!warnedPhones.has(raw)) {
-    warnedPhones.add(raw);
-    logActionError(`teléfono de ${area} descartado, no está en E.164 (+34600000000): "${raw}"`);
-  }
-  return null;
-}
-
-function contactFor(area: string, phones: Record<string, string>): SeedContact {
+function contactFor(area: string): SeedContact {
   const role = ROLE_BY_AREA[area] ?? "organizer";
-  const contact = contacts().find((item) => item.role === role) ?? FALLBACK_CONTACT;
-  return { ...contact, phone: contact.phone ?? phoneFor(area, phones) };
+  return contacts().find((item) => item.role === role) ?? FALLBACK_CONTACT;
 }
 
 export async function dispatchHappyRobot(input: {
@@ -69,16 +49,17 @@ export async function dispatchHappyRobot(input: {
   planVersion: number;
   callId: string;
   publicBaseUrl: string;
-  contactPhones: Record<string, string>;
+  testPhone: string | undefined;
   state: CrisisStateDocument;
 }): Promise<"dispatched" | "unknown"> {
   const payload = typeof input.task.payload === "object" && input.task.payload !== null
     ? (input.task.payload as Record<string, unknown>)
     : {};
-  const contact = contactFor(input.task.area, input.contactPhones);
-  if (contact.phone === null && input.task.kind === "call") {
-    logAction(`sin teléfono para ${input.task.area}: el workflow decidirá a quién llama`);
-  }
+  const data = typeof payload.data === "object" && payload.data !== null
+    ? (payload.data as Record<string, unknown>)
+    : {};
+  const seedContact = contactFor(input.task.area);
+  const contact = { ...seedContact, phone: input.testPhone ?? seedContact.phone };
   try {
     const response = await fetch(input.hookUrl, {
       method: "POST",
@@ -95,7 +76,9 @@ export async function dispatchHappyRobot(input: {
         counterpart: payload.counterpart ?? "",
         reason: payload.reason ?? "",
         callId: input.callId,
+        phone_number: contact.phone,
         contact,
+        data,
         situation: {
           simSeconds: input.state.clock.simSeconds,
           planVersion: input.state.planVersion,

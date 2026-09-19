@@ -39,6 +39,17 @@ test("POST /events accepts a chat event and rejects a bad body", async () => {
       body: JSON.stringify({ source: "nope", kind: "x" }),
     });
     assert.equal(bad.status, 400);
+
+    const badCall = await fetch(`${base}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "human",
+        kind: "call_request",
+        payload: { area: "unknown", counterpart: "Recinto", objective: "Llamar" },
+      }),
+    });
+    assert.equal(badCall.status, 400);
   });
 });
 

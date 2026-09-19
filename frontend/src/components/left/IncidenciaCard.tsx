@@ -19,6 +19,8 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
   const d = s.deliveries.find((x) => x.id === id)
   const area = id ? AREA_TEXT[id] : undefined
   const left = s.clock.openingAt - s.clock.simSeconds
+  const closed = s.spaces.filter((x) => x.status === 'cerrado' && x.kind !== 'acceso' && x.kind !== 'muelle')
+  const headline = closed.length > 0 ? closed.map((x) => x.name).join(' y ') + (closed.length > 1 ? ' cerrados' : ' cerrado') : s.coordinatorStatus === 'estable' ? 'Sin incidencias activas' : 'Replanificando'
 
   let body: React.ReactNode
   if (sp) {
@@ -78,8 +80,8 @@ export function IncidenciaCard({ s }: { s: CrisisState }) {
   }
 
   return (
-    <Panel title={<span className="flex items-center gap-2.5"><span className="w-2.5 h-2.5 bg-red" style={{ clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' }} /> Incidencia</span>} right={<span className="text-[11px] text-muted num">T−{Math.max(0, Math.floor(left / 60))} min</span>}>
-      <p className="display font-bold text-[16px] leading-tight m-0">Pabellón Principal cerrado</p>
+    <Panel title={<span className="flex items-center gap-2.5"><span className={`w-2.5 h-2.5 ${closed.length > 0 ? 'bg-red' : 'bg-green'}`} style={{ clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' }} /> Incidencia</span>} right={<span className="text-[11px] text-muted num">T−{Math.max(0, Math.floor(left / 60))} min</span>}>
+      <p className="display font-bold text-[16px] leading-tight m-0">{headline}</p>
       <div className="mt-3 pt-3 border-t border-line">{body}</div>
     </Panel>
   )
