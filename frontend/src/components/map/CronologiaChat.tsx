@@ -28,6 +28,18 @@ const CHANNEL = {
   api: { label: 'API', icon: Radio },
 } as const
 
+const RAW: Array<[RegExp, string]> = [
+  [/^happyrobot:call_result$/i, 'Resultado de llamada recibido de HappyRobot'],
+  [/^happyrobot:sms_result$/i, 'Resultado de SMS recibido de HappyRobot'],
+  [/^happyrobot:(\w+)$/i, 'Evento de HappyRobot'],
+]
+
+function renderText(text: string) {
+  const hit = RAW.find(([re]) => re.test(text.trim()))
+  if (!hit) return text
+  return <><code>{text.trim()}</code> {hit[1]}</>
+}
+
 export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
   const follow = useRef(true)
@@ -37,39 +49,39 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
     if (el && follow.current) el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })
   }, [n])
   const items = s.events.slice(-40)
+  const lastId = items[items.length - 1]?.id
   return (
-    <Glass label="Cronología" className={`chronology-panel ${className}`}>
-      <header className="chronology-heading">
-        <div><h2>Cronología</h2><p>La operación, paso a paso.</p></div>
-        <span className="chronology-count num">{n} {n === 1 ? 'evento' : 'eventos'}</span>
-      </header>
+    <Glass label={`Cronología · ${n} ${n === 1 ? 'evento' : 'eventos'}`} className={`chronology-panel ${className}`}>
       <ul ref={ref} className="chat-log" aria-label="Eventos de la operación" onScroll={() => {
         const el = ref.current
         if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 64
       }}>
-        {items.length === 0 && <li className="chronology-empty">
-          <span className="chronology-empty-icon"><Activity size={22} strokeWidth={1.5} /></span>
-          <h3>Todo empieza aquí</h3>
-          <p>Los avisos, las acciones y las decisiones aparecerán en esta cronología.</p>
-        </li>}
         {items.map((e) => {
           const look = EVENT[e.kind] ?? EVENT.info
           const area = e.area ? AREA[e.area] : undefined
           const source = e.channel ? CHANNEL[e.channel] : undefined
-          const Icon = source?.icon ?? area?.icon ?? look.icon
+          const Icon = area?.icon ?? look.icon
           const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
           const simulated = e.simulated || e.actor?.startsWith('SIMULACIÓN')
-          const sourceLabel = source ? `${source.label}${simulated ? ' · simulado' : ''}` : undefined
+          const tone = e.kind === 'intervencion' ? 'intervencion' : look.tone
           return (
-            <li key={e.id} className={`timeline-card timeline-card--${look.tone}`}>
-              <div className="timeline-card-heading">
-                <span className="timeline-avatar"><Icon size={16} strokeWidth={1.7} /></span>
-                <span className="timeline-author">{name}</span>
-                <time className="timeline-time num">{fmtClock(e.time)}</time>
-              </div>
-              <p className="timeline-text">{e.text}</p>
-              <span className="timeline-kind"><look.icon size={11} aria-hidden="true" />{sourceLabel ? `${sourceLabel} · ${look.label}` : look.label}</span>
-            </li>
+              <li key={e.id} className={`timeline-item timeline-item--${tone}${e.id === lastId ? ' is-new' : ''}`}>
+                <div className="timeline-card">
+                  <div className="timeline-card-heading">
+                    <span className="timeline-avatar"><Icon size={13} strokeWidth={1.8} /></span>
+                    <span className="timeline-author">{name}</span>
+                    <span className="timeline-chip"><look.icon aria-hidden="true" />{look.label}</span>
+                    <time className="timeline-time num">{fmtClock(e.time)}</time>
+                  </div>
+                  <p className="timeline-text">{renderText(e.text)}</p>
+                  {(source || simulated) && (
+                    <span className="timeline-meta">
+                      {source && <><source.icon aria-hidden="true" />{source.label}</>}
+                      {simulated && <span className="sim">simulado</span>}
+                    </span>
+                  )}
+                </div>
+              </li>
           )
         })}
       </ul>

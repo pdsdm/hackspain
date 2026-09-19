@@ -9,7 +9,7 @@ const ORDER: Area[] = ['espacios', 'catering', 'transporte', 'asistentes']
 export function CoordinadorPanel({ s, className = '' }: { s: CrisisState; className?: string }) {
   const c = COORD[s.coordinatorStatus] ?? COORD.replanificando
   return (
-    <section className={`agents-panel ${className}`} aria-label="Panel de agentes">
+    <section className={`agents-panel glass ${className}`} aria-label="Panel de agentes">
       <header className="agents-panel-heading">
         <h2 className="label">Panel de agentes</h2>
         <span>Coordinación y especialistas · Plan v{s.planVersion}</span>

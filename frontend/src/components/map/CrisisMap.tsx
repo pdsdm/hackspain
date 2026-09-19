@@ -4,7 +4,7 @@ import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
 import { PIT_LANE, TRACK } from '../../domain/track'
 import { spaceLook } from '../ui/status'
-import { gateIcon, pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
+import { emptyIcon, gateIcon, pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'
 import { useOsrmRoutes } from './routing'
@@ -42,11 +42,12 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
         <Polyline positions={TRACK} pathOptions={{ color: '#ffffff', weight: 9, opacity: 0.9, lineJoin: 'round', interactive: false }} />
         <Polyline positions={TRACK} pathOptions={{ color: '#1a1d24', weight: 5, opacity: 0.95, lineJoin: 'round', interactive: false }} />
         <Polyline positions={PIT_LANE} pathOptions={{ color: '#1a1d24', weight: 2, opacity: 0.7, dashArray: '2 4', interactive: false }} />
-        <Marker position={[40.4646, -3.6232]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} />
-        <Marker position={[40.4800, -3.6235]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
-        <Polyline positions={[[40.4720, -3.6255], [40.4720, -3.6145]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6' }}>
-          <Tooltip permanent direction="right" offset={[6, 0]}>Sin conexión interior Norte ↔ Sur</Tooltip>
-        </Polyline>
+        <Marker position={[40.4602, -3.6205]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} zIndexOffset={-500} />
+        <Marker position={[40.4790, -3.6310]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} zIndexOffset={-500} />
+        <Polyline positions={[[40.4720, -3.6255], [40.4720, -3.6145]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6', interactive: false }} />
+        <Marker position={[40.4720, -3.6255]} icon={emptyIcon} interactive={false} zIndexOffset={-400}>
+          <Tooltip permanent direction="left" offset={[-4, 0]} className="cut">Sin conexión interior Norte ↔ Sur</Tooltip>
+        </Marker>
 
         {layers.accesos && s.gates.map((g) => (
           <Marker key={g.id} position={g.pos} icon={gateIcon(g.name.split(' · ')[0], g.entered, g.waiting, g.status)} zIndexOffset={300}>
