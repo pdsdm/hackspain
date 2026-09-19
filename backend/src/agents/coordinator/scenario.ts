@@ -135,6 +135,16 @@ export function liveCoordinatorInput(
     arriveAt: Number(delivery.arriveAt ?? 0),
     status: String(delivery.status ?? ""),
   }));
+  const vehicles = asRecords(state.vehicles).map((vehicle) => ({
+    id: String(vehicle.id),
+    kind: String(vehicle.kind ?? ""),
+    who: String(vehicle.who ?? ""),
+    count: Number(vehicle.count ?? 0),
+    from: String(vehicle.from ?? ""),
+    destinationId: String(vehicle.destinationId ?? ""),
+    arriveAt: Number(vehicle.arriveAt ?? 0),
+    status: String(vehicle.status ?? ""),
+  }));
   const gates = asRecords(state.gates).map((gate) => ({
     id: String(gate.id),
     status: String(gate.status ?? ""),
@@ -152,6 +162,7 @@ export function liveCoordinatorInput(
     constraints,
     shuttles,
     deliveries,
+    vehicles,
     gates,
     ...extras,
   };

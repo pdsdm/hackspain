@@ -77,14 +77,14 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
         })}
 
         {vehicles.map((v) => {
-          if (v.kind === 'bus' && !layers.transporte) return null
-          if (v.kind === 'truck' && !layers.proveedores) return null
+          if ((v.kind === 'bus' || v.kind === 'taxi' || v.kind === 'vip') && !layers.transporte) return null
+          if ((v.kind === 'truck' || v.kind === 'van') && !layers.proveedores) return null
           if (v.done) return null
           const path = routes[v.id] ?? v.fallback
           if (!path || path.length < 2) return null
           const pos = pointAlong(path, v.pct / 100)
           const lit = hover === v.id || hover === v.destId || selected === v.id
-          const color = v.kind === 'truck' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
+          const color = v.kind === 'truck' || v.kind === 'van' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
           return (
             <Fragment key={v.id}>
               <Polyline positions={path} pathOptions={{ color, weight: lit ? 5 : 2.5, opacity: lit ? 1 : v.tone === 'amber' && v.kind === 'bus' ? 0.5 : 0.85, className: `route-hover ${v.done ? '' : 'route-anim'}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>

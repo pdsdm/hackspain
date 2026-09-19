@@ -48,8 +48,8 @@ function world(completeFn?: () => Promise<string>) {
   return { database, states, control, clock, engine };
 }
 
-test("the catalogue has 10-12 incidents, none repeats a twist, and a seed gives one sequence", () => {
-  assert(INCIDENTS.length >= 10 && INCIDENTS.length <= 12);
+test("the catalogue has at least 10 incidents, none repeats a twist, and a seed gives one sequence", () => {
+  assert(INCIDENTS.length >= 10);
   const ids = new Set(INCIDENTS.map((incident) => incident.id));
   assert.equal(ids.size, INCIDENTS.length);
   for (const twist of TWIST_IDS) assert(!ids.has(twist));

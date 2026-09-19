@@ -1,4 +1,5 @@
 import type { CrisisStateDocument } from "./crisis-state.js";
+import { mulberry32 } from "./random.js";
 
 export type IncidentArea = "espacios" | "catering" | "transporte" | "asistentes";
 
@@ -59,6 +60,16 @@ function noteDelivery(state: CrisisStateDocument, id: string, patch: Record<stri
   if (!delivery || delivery.status === "entregada") return;
   Object.assign(delivery, patch);
   state.deliveries = records(state, "deliveries");
+}
+
+function holdVehicle(state: CrisisStateDocument, id: string, minutes: number, note: string, status: "retenido" | "desviado" = "retenido"): void {
+  const vehicle = findById(records(state, "vehicles"), id);
+  if (!vehicle || vehicle.status === "llegado") return;
+  vehicle.delayMin = Number(vehicle.delayMin ?? 0) + minutes;
+  vehicle.arriveAt = Math.max(Number(vehicle.arriveAt ?? now(state)), now(state)) + minutes * 60;
+  vehicle.status = status;
+  vehicle.note = note;
+  state.vehicles = records(state, "vehicles");
 }
 
 function noteGroup(state: CrisisStateDocument, id: string, needs: string): void {
@@ -164,18 +175,75 @@ export const INCIDENTS: readonly Incident[] = [
     text: "Empieza a llover: 60 invitados por sus medios piden si pueden entrar antes de la apertura",
     apply: (state) => noteGroup(state, "g-propios", "60 piden entrar antes por lluvia"),
   },
+  {
+    id: "parking_sur_lleno",
+    area: "transporte",
+    text: "Parking Sur lleno: el taxi TX-03 con 4 invitados no puede entrar y pregunta dónde dejarlos",
+    apply: (state) => {
+      noteSpace(state, "parkingSur", { status: "cerrado", note: "Lleno · sin plazas hasta nuevo aviso" });
+      holdVehicle(state, "TX-03", 10, "Retenido en la entrada del Parking Sur · lleno");
+    },
+  },
+  {
+    id: "vip_llega_antes",
+    area: "espacios",
+    text: "El director de Alpine (VIP-01) llega 20 minutos antes al Paddock: la sala no está montada",
+    apply: (state) => {
+      const vehicle = findById(records(state, "vehicles"), "VIP-01");
+      if (vehicle && vehicle.status !== "llegado") {
+        vehicle.arriveAt = Math.max(now(state) + 120, Number(vehicle.arriveAt ?? now(state)) - 1200);
+        vehicle.note = "Adelanta 20 min · sala sin montar";
+        state.vehicles = records(state, "vehicles");
+      }
+      noteSpace(state, "paddockNorte", { status: "pendiente", readyAt: now(state) + 1500, note: "Montaje en curso · listo en 25 min" });
+    },
+  },
+  {
+    id: "repartidor_muelle_norte",
+    area: "catering",
+    text: "El repartidor REP-01 se ha ido al Muelle Norte por error: no tiene pase Norte y no le dejan descargar",
+    apply: (state) => {
+      holdVehicle(state, "REP-01", 15, "En Muelle Norte sin pase · espera instrucciones", "desviado");
+      const vehicle = findById(records(state, "vehicles"), "REP-01");
+      if (vehicle) vehicle.destinationId = "muelleNorte";
+      state.vehicles = records(state, "vehicles");
+    },
+  },
+  {
+    id: "acceso_paddock_control",
+    area: "espacios",
+    text: "Control reforzado en el Acceso Paddock: 25 minutos de cola para todos los vehículos VIP",
+    apply: (state) => {
+      noteSpace(state, "accesoPaddock", { note: "Control reforzado · 25 min de cola" });
+      holdVehicle(state, "VIP-02", 25, "En cola del Acceso Paddock · control reforzado", "desviado");
+      holdVehicle(state, "VIP-03", 25, "En cola del Acceso Paddock · control reforzado", "desviado");
+    },
+  },
+  {
+    id: "acceso_sur2_cerrado",
+    area: "asistentes",
+    text: "Una ambulancia bloquea el Acceso Sur 2 (Puerta 7): cerrado 20 minutos, los taxis se desvían al Acceso Sur",
+    apply: (state) => {
+      noteSpace(state, "accesoSur2", { status: "cerrado", readyAt: now(state) + 1200, note: "Ambulancia en la puerta · 20 min" });
+      pushGate(state, "gate-sur", 300, 720);
+    },
+  },
+  {
+    id: "taxi_dejado_norte",
+    area: "transporte",
+    text: "El taxi TX-04 ha dejado a 2 invitados en el Parking Norte: tienen pase Sur y no pueden cruzar a pie",
+    apply: (state) => {
+      const vehicle = findById(records(state, "vehicles"), "TX-04");
+      if (vehicle) {
+        vehicle.destinationId = "parkingNorte";
+        vehicle.status = "llegado";
+        vehicle.note = "Invitados en Parking Norte con pase Sur · necesitan traslado";
+        state.vehicles = records(state, "vehicles");
+      }
+      noteGroup(state, "g-propios", "2 invitados en Parking Norte sin pase Norte; traslado exterior pendiente");
+    },
+  },
 ];
-
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export function incidentSequence(seed: number): string[] {
   const random = mulberry32(seed);
