@@ -1,6 +1,9 @@
 import type { CrisisState, Intervention, TwistId } from '../domain/types'
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+const BASE = import.meta.env.DEV
+  ? ''
+  : (configured || 'http://127.0.0.1:8000').replace('://localhost', '://127.0.0.1')
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const ctrl = new AbortController()
