@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { CrisisStateDocument } from "./crisis-state.js";
 
 export interface GuestAllocation {
@@ -114,7 +116,21 @@ export function applyPlanProposal(
     }
   }
 
-  if (proposal.cost > state.budget.autonomousLimit) {
+  for (const decision of state.decisions) {
+    if (decision.status !== "pendiente") continue;
+    decision.status = "rechazada";
+    const events = Array.isArray(state.events) ? state.events : [];
+    events.push({
+      id: `event-${randomUUID()}`,
+      time: state.clock.simSeconds,
+      kind: "decision",
+      text: `Decisión «${String(decision.title)}» obsoleta: el plan al que pertenecía ya no está activo`,
+    });
+    state.events = events.slice(-80);
+  }
+  state.waitingForDecision = null;
+
+  if (proposal.cost > Math.max(state.budget.autonomousLimit, state.budget.authorized)) {
     const decisionId = `decision-plan-${state.planVersion}`;
     state.decisions.push({
       id: decisionId,
