@@ -1,14 +1,14 @@
 # Estado del proyecto
 
 > Memoria del proyecto: contrastar esta foto con `origin/main` antes de trabajar.
-> Esta actualización distingue la base integrada del trabajo local T37; no afirma que
+> Esta actualización distingue la base integrada del trabajo local T38; no afirma que
 > los cambios de esta rama estén ya mergeados.
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 16:35 CEST |
-| **Base de `main` inspeccionada** | `dfd47ca` |
-| **Trabajo verificado** | `feat/ventura-costes-informativos`, T37, cambios locales sobre esa base |
+| **Foto tomada** | 19 de septiembre de 2026, 16:43 CEST |
+| **Base de `main` integrada** | `9969945` (incluye PR #50 y #48) |
+| **Trabajo verificado** | `feat/ventura-costes-informativos`, T38, después de integrar esa base |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -16,25 +16,26 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la rama T37 | OK |
-| Tests | 260: **253 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en la rama T38 | OK |
+| Tests | 265: **258 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node de esta verificación | 23.10.0; compatibilidad Node 22 no ejecutada en esta sesión |
+| Node de esta verificación | 22.14.0: suite, lint, build y fixtures completos |
 | Navegador Orca | Frontend API → evento → llamada simulada → coste visible; pausa humana verificada |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
-La base traía un retorno `string | undefined` en `originStopId`; esta rama incluye
-la corrección mínima. También adapta tres tests de simulación al adaptador asíncrono
-con semilla, y regenera el contacto sintético DHL que ya estaba en el generador.
+Se integraron PR #50 (rutas) y #48 (JEV) antes de repetir la verificación.
+Se conserva íntegro su comportamiento; `originStopId` ya no existe tras esos cambios.
+La rama adapta tres tests de simulación al adaptador asíncrono con semilla.
+T37/D16 pasaron a T38/D17 porque main ya asignó esos identificadores a rutas.
 
 ## Qué funciona
 
-- La base `dfd47ca` incluye panel API, motor persistente, callbacks HappyRobot,
-  verificación opcional JEV, afluencia, actores, incidencias y giros automáticos.
+- La base `9969945` incluye panel API, motor persistente, callbacks HappyRobot,
+  verificación opcional JEV, afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
 - T6 tiene código integrado en `main`; la antigua indicación «sin mergear» no describe
   todo el trabajo entregado. No se han repetido llamadas reales en esta sesión.
-- **T37, solo en esta rama:** costes informativos sin límites ni aprobaciones económicas.
+- **T38, solo en esta rama:** costes informativos sin límites ni aprobaciones económicas.
   `estimatedCost` es independiente de las decisiones; un coste desconocido es `null`.
 - `committedCost` registra el coste adicional de una tarea aceptada con evidencia,
   sin duplicarlo al repetir callbacks ni inventarlo desde una previsión.
@@ -49,7 +50,7 @@ con semilla, y regenera el contacto sintético DHL que ya estaba en el generador
 
 ## Qué falta, por riesgo para la demo
 
-1. Revisar e integrar T37. No hay push ni PR de esta rama en esta sesión.
+1. Revisar y mergear T38; su rama ya incorpora los PR #50 y #48. Publicación solicitada por Ventura.
 2. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
    comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
 3. Ensayar el mismo recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por
@@ -67,23 +68,23 @@ con semilla, y regenera el contacto sintético DHL que ya estaba en el generador
 
 ## Ramas vivas sin mergear
 
-- `feat/ventura-costes-informativos`: T37 implementada y verificada, pendiente de revisión.
+- `feat/ventura-costes-informativos`: T38 implementada y verificada, pendiente de revisión.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos y coordinador sobre
   una base anterior; contiene límites por recurso, saldo autorizado y reservas de saldo.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
-- Git muestra además referencias remotas no ancestro de `main`, entre ellas voz,
-  `docs/estado-1200`, afluencia, asistentes, JEV y specs del cerebro. Que una referencia
-  no sea ancestro no prueba que su funcionalidad falte en main. PRs actuales sin verificar.
+- Git conserva otras referencias remotas no ancestro de `main`; eso no prueba que su
+  funcionalidad falte en main. GitHub consultado el 19/09 a las 16:43: ningún PR abierto;
+  #50 y #48 ya mergeados e incorporados aquí. Orden de integración: #50/#48 → T38.
 
 ## Decisiones pendientes
 
-- La política de T37 ya está aprobada por Ventura: recuperar servicio, registrar costes,
-  no bloquear por importe. Véanse D16 y el contrato.
+- La política de T38 ya está aprobada por Ventura: recuperar servicio, registrar costes,
+  no bloquear por importe. Véanse D17 y el contrato.
 - Coordinar su aplicación con las ramas de recursos/aprendizaje y el workflow de voz.
 
 ## Avisos para el siguiente agente
 
-- Empezar una ejecución nueva al ensayar T37. No se migran ni aprueban silenciosamente
+- Empezar una ejecución nueva al ensayar T38. No se migran ni aprueban silenciosamente
   decisiones económicas guardadas en ejecuciones antiguas; se conserva su histórico.
 - Los campos `contingency`, `autonomousLimit` y `authorized` quedan por compatibilidad,
   pero ya no limitan, autorizan ni aparecen en los prompts o el panel.

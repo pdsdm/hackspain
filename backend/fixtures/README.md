@@ -39,7 +39,7 @@ El cargador no cambia el estado inicial de la demo ni añade un selector visual.
 - B está disponible desde las 12:50; Lounge desde las 13:15, con espera autorizada para 150 y apertura escalonada aprobada. La espera no cuenta como espacio de hospitalidad.
 - La accesibilidad inicial está en `seed.resources[].initialAccessibilityConfirmed`; las verificaciones por snapshot están en `manifest.fixtures[].accessibilityVerifiedSpaceIds`. La propuesta debe confirmar el acceso adaptado de B antes de alojar allí a los 12 invitados.
 - `confirmedCount` cuenta reservas; `informedCount` avisos recibidos; `acceptedCount` aceptaciones del destinatario. No son equivalentes. Un grupo repartido entre espacios no tiene un `assignedSpaceId` único: consultar el manifest.
-- Dinero en **euros** y tiempo en **segundos desde medianoche**, según el contrato vigente. T37: costes informativos sin límites ni aprobación económica; plan Sur: 1.500 + 900 + 400 + 400 = 3.200 €. Los antiguos campos de límite se mantienen solo por compatibilidad. Los giros conservan lo comprometido, sin inventar reembolsos.
+- Dinero en **euros** y tiempo en **segundos desde medianoche**, según el contrato vigente. T38: costes informativos sin límites ni aprobación económica; plan Sur: 1.500 + 900 + 400 + 400 = 3.200 €. Los antiguos campos de límite se mantienen solo por compatibilidad. Los giros conservan lo comprometido, sin inventar reembolsos.
 - `contactRef: test-*` identifica dobles de prueba; no es un destino para comunicaciones. Los datos no configuran números de HappyRobot.
 
 ## Regenerar y verificar

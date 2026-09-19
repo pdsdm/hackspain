@@ -9,7 +9,7 @@ El agente que decide. Recibe el `CrisisState` y devuelve, en JSON, qué ha cambi
 - [ ] Acepta como entrada un `CrisisState` completo (`frontend/src/domain/types.ts`) sin pedir campos que no existan en él.
 - [ ] Ante el estado inicial (Pabellón Principal cerrado, nada confirmado) devuelve al menos una `action` con `area: "espacios"`, `objective`, `counterpart` y `dueAt`.
 - [ ] Cada `action` lleva `reason` en una frase, y el panel la muestra tal cual sin reescribirla.
-- [ ] T37: emite `estimatedCost` independiente de `decision`; nunca escala por importe. Solo una elección operativa explícita puede generar `decision.kind: operational`.
+- [ ] T38: emite `estimatedCost` independiente de `decision`; nunca escala por importe. Solo una elección operativa explícita puede generar `decision.kind: operational`.
 - [ ] No emite cobertura: asigna `guestGroups[].assignedSpaceId` y la suma asignada a un espacio nunca supera su `capacity`. Los totales los deriva el panel con `kpis()`.
 - [ ] Un espacio sin aceptación verificable sale como `propuesto`, `en_consulta` o `aceptado_condiciones`, nunca como `confirmado`.
 - [ ] Las acciones independientes salen con `dependsOn` vacío; las que esperan una condición la citan.

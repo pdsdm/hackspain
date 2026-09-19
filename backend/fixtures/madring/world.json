@@ -293,22 +293,12 @@
     },
     {
       "id": "coslada",
-      "name": "Hub DHL Coslada",
+      "name": "Coslada",
       "kind": "parada",
       "zone": null,
       "pos": [
         40.4405,
         -3.585
-      ]
-    },
-    {
-      "id": "dealerMclaren",
-      "name": "Concesionario McLaren Madrid",
-      "kind": "parada",
-      "zone": null,
-      "pos": [
-        40.5414,
-        -3.6419
       ]
     }
   ],

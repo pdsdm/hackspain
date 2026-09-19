@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Demostrar el recorrido real del motor: evento libre → coordinador → propuesta con coste informativo → llamada sin aprobación económica → callback → giro → replanificación. Las decisiones operativas se verifican por separado (T37).
+Demostrar el recorrido real del motor: evento libre → coordinador → propuesta con coste informativo → llamada sin aprobación económica → callback → giro → replanificación. Las decisiones operativas se verifican por separado (T38).
 
 ## Criterios de aceptación
 

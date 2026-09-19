@@ -72,7 +72,7 @@ Viven dentro del documento de estado de la ejecución activa:
 | `commitments` | Acuerdos con contrapartes y sus condiciones | Coordinador. **Una llamada nunca confirma** |
 | `agents` | Los cuatro especialistas y su estado | Motor y resultados |
 | `calls` | Cada llamada, SMS o email, con su transcripción | Ejecutor y callbacks |
-| `decisions` | Elecciones operativas explícitas; nunca aprobaciones económicas (T37) | Coordinador e intervenciones |
+| `decisions` | Elecciones operativas explícitas; nunca aprobaciones económicas (T38) | Coordinador e intervenciones |
 | `guestGroups` | Los tres grupos de invitados, con informados y aceptados | Agente de Asistentes |
 | `shuttles`, `deliveries`, `gates` | Transporte, catering y accesos | Reloj y resultados |
 | `budget` | Previsión (o sin estimar) y costes comprometidos; límites legacy sin efecto | Propuestas y resultados con coste explícito |

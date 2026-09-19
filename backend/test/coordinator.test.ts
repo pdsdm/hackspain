@@ -73,6 +73,40 @@ test("el plan de referencia del escenario inicial pasa la validación", () => {
   assert.equal(output?.assignments.length, 4);
 });
 
+test("un verificationTarget fuera de la demo se descarta sin invalidar el plan", () => {
+  const plan = validPlan();
+  plan.commitments.push({
+    id: "c-pabB",
+    title: "Reserva de Pabellón B · 450 plazas",
+    area: "espacios",
+    status: "en_consulta",
+    counterpart: "Recinto",
+    conditions: ["Confirmar reserva"],
+  });
+  plan.actions[0]!.verificationTarget = { commitmentId: "c-pabB", resourceType: "space", resourceId: "pabellonB" };
+  plan.actions[1]!.verificationTarget = { commitmentId: "c-entrega1", resourceType: "space", resourceId: "muelleEste" };
+
+  const { output, issues } = validateOutput(plan, crisisInput());
+
+  assert.deepEqual(issues, []);
+  assert.deepEqual(output?.actions[0]?.verificationTarget, {
+    commitmentId: "c-pabB",
+    resourceType: "space",
+    resourceId: "pabellonB",
+  });
+  assert.equal(output?.actions[1]?.verificationTarget, undefined);
+});
+
+test("un verificationTarget mal formado tampoco tumba el plan", () => {
+  const plan = validPlan();
+  (plan.actions[0] as { verificationTarget?: unknown }).verificationTarget = "c-pabB";
+
+  const { output, issues } = validateOutput(plan, crisisInput());
+
+  assert.deepEqual(issues, []);
+  assert.equal(output?.actions[0]?.verificationTarget, undefined);
+});
+
 test("rechaza superar el aforo de un espacio", () => {
   const plan = validPlan();
   plan.assignments = [{ groupId: "g-propios", spaceId: "loungeSur", count: 330 }];

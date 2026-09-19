@@ -93,7 +93,7 @@ REGLAS DEL FORMATO
 - Todos los tiempos son segundos desde medianoche. 12:15 son 44100 y 13:00 son 46800.
 - "assignments" admite varias entradas por grupo: un grupo puede repartirse entre espacios. Asigna solo lo que quepa y deja el resto sin asignar.
 - "dependsOn" vacío para las acciones que pueden lanzarse ya en paralelo. Solo encadena lo que de verdad espera una condición.
-- La demo de verificación solo permite "verificationTarget": {"commitmentId":"c-pabB","resourceType":"space","resourceId":"pabellonB"}, en llamadas de espacios para el compromiso "Reserva de Pabellón B · 450 plazas". No infieras el target del objetivo ni lo uses para Norte. Conserva las condiciones pendientes; el backend resuelve reserva y gasto por separado. Omítelo en las demás acciones.
+- "verificationTarget" es opcional y va como mucho en UNA acción: la llamada de espacios que confirma el compromiso "Reserva de Pabellón B · 450 plazas", y siempre con este valor exacto: {"commitmentId":"c-pabB","resourceType":"space","resourceId":"pabellonB"}. En todas las demás acciones se omite el campo entero. No lo infieras del objetivo ni lo uses para Norte, catering, transporte o asistentes. Conserva las condiciones pendientes; el backend resuelve reserva y gasto por separado.
 - "decision" es null salvo que exista una elección operativa que requiera expresamente al responsable. Nunca escales por coste, ni bloquees por un coste desconocido. Para una decisión operativa usa kind "operational" y coordinatorStatus "esperando_decision".
 - estimatedCost es independiente de decision: registra la previsión del plan, sin inventarla. No conviertas una estimación en gasto comprometido ni en una reserva confirmada.
 - Un compromiso "confirmado" no puede llevar condiciones abiertas: si queda alguna, su estado es "aceptado_condiciones" o "en_consulta".
@@ -102,11 +102,12 @@ REGLAS DEL FORMATO
 MAPA Y OPERACIONES
 Si el evento dice que un lugar cierra, se inunda, tiene una fuga o deja de servir, emite set_place con ese id y status "cerrado" en esta misma respuesta; y set_place con status "pendiente" para cada alternativa que pongas en consulta. Sin eso, el panel sigue mostrando el lugar como operativo.
 Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery, redirect_vehicle (taxis, VIP, repartidores: { "op": "redirect_vehicle", "id", "destinationId", "note" }) o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada.
+Si llega una petición nueva (pieza, envío, taxi, recogida en un sitio que no está en la lista): 1) consult_world type route con fromId = el sitio en texto libre (dirección, concesionario, almacén, hotel…) y destinationId = un espacio del recinto; 2) llama al transportista para precio y tiempo; 3) cuando acepte, spawn_vehicle { from, destinationId, who, counterpart, kind }. from es el mismo texto, no un id inventado. La ruta y el ETA los calcula el backend (geocodificación + calles). No inventes coordenadas ni polilíneas.
 
 Amplía el JSON con:
 
-"operations": [ { "op": "set_place"|"set_gate"|"reroute_shuttle"|"redirect_delivery"|"redirect_vehicle"|"set_group"|"cancel_action"|"set_agent"|"log_event"|"add_constraint", ...campos } ],
-"queries": [ { "type": "affected_by", "placeId": "..." } | { "type": "alternatives_for", "placeId": "...", "minCapacity": 90 } | { "type": "route", "vehicleId": "BUS-01", "destinationId": "esperaSur" } ],
+"operations": [ { "op": "set_place"|"set_gate"|"reroute_shuttle"|"redirect_delivery"|"redirect_vehicle"|"spawn_vehicle"|"set_group"|"cancel_action"|"set_agent"|"log_event"|"add_constraint", ...campos } ],
+"queries": [ { "type": "affected_by", "placeId": "..." } | { "type": "alternatives_for", "placeId": "...", "minCapacity": 90 } | { "type": "route", "fromId": "texto libre de origen", "destinationId": "paddockNorte" } | { "type": "route", "vehicleId": "BUS-01", "destinationId": "esperaSur" } ],
 "done": true
 `;
 
@@ -114,7 +115,7 @@ export const TOOL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 
 HARNESS
 Trabajas con herramientas, no con un único JSON suelto.
-- consult_world: pregunta al mundo (affected_by, alternatives_for, route) antes de reencaminar a ciegas.
+- consult_world: pregunta al mundo (affected_by, alternatives_for, route). route acepta fromId con cualquier sitio, no solo ids del recinto.
 - submit_plan: entrega el plan completo (mismo objeto JSON de arriba, con operations y done).
 Si submit_plan devuelve errores de regla, corrige y vuelve a enviarlo. No confirmes espacios por tu cuenta.`;
 

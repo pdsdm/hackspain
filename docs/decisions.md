@@ -51,6 +51,12 @@
 - **Por qué:** los vehículos circulan por calles reales y la ruta cambia sola cuando un evento cambia el destino (`destinationId` / `dockId`). Sin clave de API y sin servidor propio.
 - **Nota:** el servidor demo de OSRM no garantiza disponibilidad. La demo no depende de él: sin red, el mapa muestra las rutas rectas.
 
+### D16: orígenes libres con Nominatim + OSRM (amplía D8)
+
+- **Qué:** el coordinador no usa un diccionario de sitios. `consult_world` / `spawn_vehicle` resuelven `from` contra `world.json` por id o nombre; si no está, Nominatim (OpenStreetMap) geocodifica el texto y OSRM calcula calles y minutos. El mapa pide a OSRM solo origen y destino. Sin clave. Si Nominatim u OSRM fallan, queda la recta y un ETA por distancia.
+- **Por qué:** una llamada tipo «pieza en un concesionario» no cabe en paradas precargadas. HappyRobot negocia con el transportista; el trazado no se hardcodea.
+- **Descartado:** Google Directions (clave), API de DHL/SEUR (no hay cuenta ni encaja en 36 h), y una lista McLaren/DHL/Chamartín en código.
+
 ### D9: plano operativo y comparación de estados (amplía D5)
 
 - **Qué:** vista esquemática sin dependencias de red como entrada al dashboard; Leaflet sigue disponible como mapa. Se conserva el diseño Zhivel. La comparación usa una referencia fija de la sesión que el operador puede actualizar.
@@ -90,7 +96,20 @@
 - **Qué:** mientras se valida Cognition, el backend usa Helmcode con `deepseek-v4-flash` y harness JSON. Es independiente del modelo de voz, que se elige dentro de HappyRobot.
 - **Por qué:** prioriza latencia de replanificación y mantiene `rules` como respaldo. Descartado: confundir `COORDINATOR_MODEL` con el LLM de la llamada en tiempo real.
 
-### D16: costes informativos durante la crisis (T37, aprobada por Ventura)
+**Medición del 19/09/2026, `npm run coordinator -- --runs=4 --fixture=crisis`, cuatro ejecuciones por variante:**
+
+| `COORDINATOR_REASONING_EFFORT` | Latencias | Válidas | Invitados asignados |
+|---|---|---|---|
+| `low` (recomendado) | 12,4 / 18,4 / 19,9 / 22,1 s | 4/4 | 600 en las cuatro |
+| vacío (por defecto) | 18,2 / 20,2 / 27,9 / 31,5 s | 4/4 | 600 en las cuatro |
+| `none` (sin thinking) | 6,1 / 7,4 / 7,7 / 8,5 s | 4/4 | **90 / 90 / 450 / 0** |
+
+**No pongas `none`.** Va tres veces más rápido, pero los planes dejan a la mayoría de los
+600 invitados sin asignar, que es justo el criterio de la demo. En otras 15 llamadas
+aparecieron dos respuestas de ~100 s y ~120 s: el bucle corta a 120 s y ese evento se queda
+sin plan, con el respaldo determinista solo para giros.
+
+### D17: costes informativos durante la crisis (T38, aprobada por Ventura)
 
 - **Qué:** recuperar el servicio tiene prioridad. Se registran costes previstos y comprometidos, sin topes de contingencia, límites autónomos ni aprobaciones económicas. Sustituye la parte presupuestaria de D10 y de las specs anteriores.
 - **Se conserva:** validación de importes, aforo, accesos, evidencia, condiciones, idempotencia y control humano operativo. Los campos de límites quedan como legado del contrato, sin efecto. Descartados presupuestos artificialmente altos y aprobaciones humanas automáticas.

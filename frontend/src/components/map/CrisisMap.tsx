@@ -19,6 +19,7 @@ function VehicleTip({ v }: { v: VehicleView }) {
     <Tooltip direction="top" offset={[0, -12]} className="veh" sticky>
       <div className="row"><span className="tag">{v.name}</span><span>{v.load}</span></div>
       <div className="row"><span className={v.tone}>{v.status}</span></div>
+      <div className="row"><span className="muted">Origen</span><span>{v.originName ?? '—'}</span></div>
       <div className="row"><span className="muted">Destino</span><span>{v.destName}</span></div>
       <div className="row"><span className="muted">Llegada</span><b>{v.etaLabel}</b><span className="muted">· {v.pct}% del trayecto</span></div>
     </Tooltip>
@@ -87,6 +88,9 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
           const color = v.kind === 'truck' || v.kind === 'van' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
           return (
             <Fragment key={v.id}>
+              {v.originPos && (
+                <Marker position={v.originPos} icon={pinIcon(`Salida · ${v.originName ?? v.name}`, 'muted')} zIndexOffset={200} interactive={false} />
+              )}
               <Polyline positions={path} pathOptions={{ color, weight: lit ? 5 : 2.5, opacity: lit ? 1 : v.tone === 'amber' && v.kind === 'bus' ? 0.5 : 0.85, className: `route-hover ${v.done ? '' : 'route-anim'}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
                 <VehicleTip v={v} />
               </Polyline>
