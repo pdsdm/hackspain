@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
 import type { Area, CrisisState, EventKind } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { Glass } from './Glass'
@@ -56,11 +56,6 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
         const el = ref.current
         if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 64
       }}>
-        {items.length === 0 && <li className="chronology-empty">
-          <span className="chronology-empty-icon"><Activity size={22} strokeWidth={1.5} /></span>
-          <h3>Todo empieza aquí</h3>
-          <p>Los avisos, las acciones y las decisiones aparecerán en esta cronología.</p>
-        </li>}
         {items.map((e) => {
           const look = EVENT[e.kind] ?? EVENT.info
           const area = e.area ? AREA[e.area] : undefined
