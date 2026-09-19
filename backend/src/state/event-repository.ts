@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import type { DatabaseSync } from "node:sqlite";
 
+import { notifyRemote } from "./database.js";
+
 export type EventSource = "chat" | "happyrobot" | "jury" | "human" | "clock";
 export type CoordinatorRunMode = "llm" | "rules" | "none";
 
@@ -39,10 +41,12 @@ export class EventRepository {
         input.simSeconds,
         input.mode,
       );
+    notifyRemote(this.database);
     return { ...input, id, payload: input.payload };
   }
 
   setMode(id: string, mode: CoordinatorRunMode): void {
     this.database.prepare("UPDATE events SET mode = ? WHERE id = ?").run(mode, id);
+    notifyRemote(this.database);
   }
 }
