@@ -70,7 +70,11 @@ function readClockSpeed(value: string | undefined): number {
 
 function hasLlmKey(env: NodeJS.ProcessEnv): boolean {
   return Boolean(
-    env.OPENAI_API_KEY?.trim() || env.HELMCODE_API_KEY?.trim() || env.ANTHROPIC_API_KEY?.trim(),
+    env.COGNITION_API_KEY?.trim() ||
+      env.DEVIN_API_KEY?.trim() ||
+      env.OPENAI_API_KEY?.trim() ||
+      env.HELMCODE_API_KEY?.trim() ||
+      env.ANTHROPIC_API_KEY?.trim(),
   );
 }
 

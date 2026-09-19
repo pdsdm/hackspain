@@ -196,4 +196,24 @@ test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
   assert.equal(config.provider, "helmcode");
   assert.equal(config.model, "deepseek-v4-flash");
   assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
+  assert.equal(config.harness, "json");
+});
+
+test("Cognition/Devin es el proveedor por defecto y usa el harness de tools", () => {
+  const config = loadLlmConfig({
+    COGNITION_API_KEY: "cog_test",
+    OPENAI_API_KEY: "sk-openai",
+  });
+
+  assert.equal(config.provider, "cognition");
+  assert.equal(config.model, "swe-1.7");
+  assert.equal(config.harness, "tools");
+  assert.equal(config.baseUrl, "https://api.cognition.ai/v1");
+});
+
+test("el harness Devin cloud exige DEVIN_ORG_ID", () => {
+  assert.throws(
+    () => loadLlmConfig({ COGNITION_API_KEY: "cog_test", COORDINATOR_HARNESS: "devin" }),
+    /DEVIN_ORG_ID/,
+  );
 });
