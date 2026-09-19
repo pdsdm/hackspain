@@ -37,7 +37,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T46, PR #71:** `POST /workflow/happyrobot/events` acepta solo `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
 - **T50, PR #73:** el coordinador conoce seis personas de recepción, las coordina mediante Asistentes y permite que Catering dependa de la apertura del muelle.
 - **T51 parcial, PR #74:** Catering y Asistentes actualizan entregas, informados y `lastResult`; las necesidades de accesibilidad/dieta generan una tarea separada.
-- **T49, PR #75:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`.
+- **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
 - **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
 - **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
 
@@ -49,9 +49,8 @@ Los dos incidentes se probaron localmente contra T46: Principal cerró, Muelle E
 2. **Ejecutar una toma HappyRobot completa (T48/T52).** Falta rellenar `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` y correr el director con `--inputs=happyrobot`.
 3. **Completar Transporte (T13/T51).** La parte de Álvaro continúa `todo`; Catering y Asistentes ya están integrados.
 4. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
-5. **Revisión visual (T49).** Falta validar que el overlay no tapa KPIs, llamada, coordinador o resultado a 1920×1080.
-6. **Ensayo y grabación final (T52).** Falta repetir el recorrido desde `calm`, guardar una toma HappyRobot y otra con `--inputs=api`.
-7. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
+5. **Ensayo y grabación final (T52).** Falta repetir el recorrido desde `calm`, guardar una toma HappyRobot y otra con `--inputs=api`.
+6. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
 
 ## Bloqueos
 
@@ -59,7 +58,6 @@ Los dos incidentes se probaron localmente contra T46: Principal cerró, Muelle E
 |---|---|---|
 | Publicar workflow T47 | API key/usuario HappyRobot con permiso owner | Sí |
 | Cerrar T51 | Transporte de Álvaro | No |
-| Cerrar T49 | revisión visual de Carlos/equipo | No |
 | Cerrar T48/T52 | workflow T47 publicado y ensayo en el ordenador de grabación | Parcial |
 
 ## Ramas vivas sin mergear
