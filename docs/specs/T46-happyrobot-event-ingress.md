@@ -2,7 +2,7 @@
 
 ## Qué y para qué
 
-Recibir llamada y SMS reales como incidentes idempotentes y trazables. HappyRobot identifica el hecho; el backend aplica un efecto permitido y conserva la autoridad del estado.
+Recibir informes de llamada y SMS desde HappyRobot como incidentes idempotentes y trazables, tanto en un ensayo real como en la demo simulada. HappyRobot identifica el hecho; el backend aplica un efecto permitido y conserva la autoridad del estado.
 
 ## Criterios de aceptación
 
