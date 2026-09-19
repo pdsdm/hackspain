@@ -116,6 +116,7 @@ make check             # verifica lint + tests + build
 │   ├── specs/            # una spec corta por feature (copiar _plantilla.md)
 │   ├── decisions.md      # decisiones tomadas y su porqué
 │   ├── api-contract.md   # contrato backend ↔ frontend (fuente de verdad)
+│   ├── resumen-alcance-demo.md # estado, alcance de la demo y siguientes tareas
 │   └── guia_hackathon.md # horarios, sitios, tracks
 ├── escenario/
 │   └── escenario.md      # escenario MADRING: crisis, agentes, demo
