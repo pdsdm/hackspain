@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:45 |
-| **Commit de `main`** | `deafd54` (PR #24) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 11:50 |
+| **Commit de `main`** | `c371546` (PR #26) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, recuperación T6/T9 |
+| **Generado por** | Devin, cierre de recuperación T6/T9 |
 
 ## Salud
 
@@ -22,7 +22,7 @@
 | `make check` | ✅ OK |
 | Tests de backend | ✅ **102 de 102** |
 
-Ambos verificados en `feat/alvaro-integracion`, basada en `deafd54`, con Node 22.23.2.
+Ambos verificados sobre `c371546` con Node 22.23.2.
 
 ## Qué funciona
 
@@ -42,6 +42,7 @@ Todo lo de aquí está mergeado en `main`.
   Helmcode/Deepseek, OpenAI, Anthropic.
 - **Motor de eventos** (T24): `POST /events` con texto libre; reloj simulado que avanza.
 - **Trazabilidad de integración** (T17): logs de acciones/callbacks, prueba del payload HappyRobot y guía de pruebas mergeados en PR #24.
+- **Camino único de llamada** (T9, T28): «Avisar» crea `call_request`, el backend valida y despacha, el destino E.164 se inyecta desde entorno y el callback actualiza `/state` (PR #26).
 - **Replanificación tras giro** (T16, en `review`): invalidación determinista de acuerdos.
 - **Agente de Espacios** (T11): guion de conversación y extractor de resultados.
 - **Frontend** (T4, T8, T23): panel de 3 columnas, plano Norte/Sur, mapa Leaflet, KPIs con
@@ -50,15 +51,15 @@ Todo lo de aquí está mergeado en `main`.
 
 ## Qué falta, por riesgo para la demo
 
-### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`doing`)
+### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`review`)
 
 Es el **requisito obligatorio del enunciado** ("interacción de verdad") y lo único que no
 se resuelve con horas de código, porque depende del equipo de HappyRobot, que está en el
 evento.
 
-La rama `feat/alvaro-integracion` ya valida `call_request`, encola una llamada sin LLM,
-inyecta el destino E.164 desde entorno y porta «Avisar a…» sin secretos en el frontend.
-El recorrido Vite → backend → tarea → llamada simulada → callback está verificado.
+`main` ya valida `call_request`, encola una llamada sin LLM, inyecta el destino E.164
+desde entorno y muestra «Avisar a…» sin secretos en el frontend. El recorrido Vite →
+backend → tarea → llamada simulada → callback está verificado.
 
 **Lo que falta exactamente:** `HAPPYROBOT_HOOK_ESPACIOS`, `HAPPYROBOT_WEBHOOK_TOKEN`,
 `PUBLIC_BASE_URL` y la prueba contra una llamada saliente real. El Web call de la rama
@@ -84,13 +85,7 @@ es el sistema.**
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
 
-### 🟠 4. Camino de llamada pendiente de merge · T28 (`todo`)
-
-`feat/alvaro-integracion` deja un único camino: «Avisar» → `POST /events` → backend →
-HappyRobot → callback. No contiene la sala Twilio. Falta mergear el PR y probar el trigger
-real.
-
-### 🟡 5. Resto
+### 🟡 4. Resto
 
 - Agentes de Catering, Transporte y Asistentes (T12, T13, T14): sin guion ni extractor.
 - Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
@@ -113,7 +108,6 @@ real.
 
 | Rama | Qué tiene |
 |---|---|
-| `feat/alvaro-integracion` | T6/T9/T28: `call_request` determinista, destino por entorno y panel «Avisar a…»; dos commits locales pendientes de push/PR. |
 | `Prueba-de-plataforma-y-llamada-real` | Web call y sala Twilio de respaldo; no portar a `main` mientras HappyRobot siga disponible. |
 
 ## Decisiones pendientes que bloquean a otros
