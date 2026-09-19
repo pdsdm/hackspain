@@ -4,7 +4,7 @@ import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
 import { PIT_LANE, TRACK } from '../../domain/track'
 import { SPACE } from '../ui/status'
-import { pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
+import { gateIcon, pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'
 import { useOsrmRoutes } from './routing'
@@ -33,7 +33,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
 
   return (
     <div className="relative h-full w-full overflow-hidden border border-line bg-panel">
-      <MapContainer center={[40.4725, -3.6200]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
+      <MapContainer center={[40.4732, -3.6195]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.06, dashArray: '4 4' }} />
@@ -46,6 +46,16 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
         <Polyline positions={[[40.4720, -3.6255], [40.4720, -3.6145]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6' }}>
           <Tooltip permanent direction="right" offset={[6, 0]}>Sin conexión interior Norte ↔ Sur</Tooltip>
         </Polyline>
+
+        {layers.accesos && s.gates.map((g) => (
+          <Marker key={g.id} position={g.pos} icon={gateIcon(g.name.split(' · ')[0], g.entered, g.waiting, g.status)} zIndexOffset={300}>
+            <Tooltip direction="top" offset={[0, -6]} className="veh">
+              <div className="row"><span className="tag">{g.name}</span><span className={g.status === 'saturado' ? 'amber' : g.status === 'cerrado' ? 'red' : 'green'}>{g.status}</span></div>
+              <div className="row"><span className="muted">Dentro</span><b>{Math.round(g.entered).toLocaleString('es-ES')}</b><span className="muted">de {g.capacity.toLocaleString('es-ES')}</span></div>
+              <div className="row"><span className="muted">En cola</span><b>{Math.round(g.waiting).toLocaleString('es-ES')}</b><span className="muted">· llegan {g.arrivalsPerMin}/min · pasan {g.throughputPerMin}/min</span></div>
+            </Tooltip>
+          </Marker>
+        ))}
 
         {s.spaces.map((sp) => {
           if (!layers.accesos && (sp.kind === 'acceso' || sp.kind === 'muelle')) return null
@@ -100,6 +110,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
         <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-amber" /> Ruta proveedores</div>
         <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-red" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#e5484d 0 4px,transparent 4px 8px)', background: 'none' }} /> Sin conexión / bloqueado</div>
         <div className="flex items-center gap-2"><span className="w-2 h-2 bg-red" /> Cerrado <span className="w-2 h-2 bg-amber ml-1" /> Pendiente <span className="w-2 h-2 bg-green ml-1" /> Confirmado</div>
+        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-ink" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%)' }} /> Puerta de público · dentro / cola</div>
       </div>
 
       <MapLayersControl layers={layers} onChange={setLayers} />
