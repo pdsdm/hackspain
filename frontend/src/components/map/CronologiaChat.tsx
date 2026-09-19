@@ -1,33 +1,65 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import type { CrisisState } from '../../domain/types'
+import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
+import type { Area, CrisisState, EventKind } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
-import { EVENT_DOT } from '../ui/status'
 import { Glass } from './Glass'
 
-const BORDER: Record<string, string> = { 'bg-red': '#e5484d', 'bg-amber': '#c47a00', 'bg-green': '#1f9d55', 'bg-ink': '#1a1d24', 'bg-line-2': '#b8b8b2', 'bg-muted': '#6b7079' }
+const EVENT: Record<EventKind, { label: string; tone: string; icon: LucideIcon }> = {
+  incidencia: { label: 'Incidencia', tone: 'rose', icon: AlertTriangle },
+  fallo: { label: 'Atención', tone: 'rose', icon: AlertTriangle },
+  accion: { label: 'Acción', tone: 'lilac', icon: ArrowUpRight },
+  acuerdo: { label: 'Acuerdo', tone: 'mint', icon: Check },
+  espera: { label: 'En espera', tone: 'sand', icon: Clock3 },
+  decision: { label: 'Decisión', tone: 'sand', icon: GitBranch },
+  intervencion: { label: 'Intervención', tone: 'white', icon: UserRound },
+  info: { label: 'Actualización', tone: 'white', icon: Activity },
+  mensaje: { label: 'Mensaje', tone: 'lilac', icon: MessageSquare },
+}
+const AREA: Record<Area, { label: string; icon: LucideIcon }> = {
+  espacios: { label: 'Espacios', icon: Building2 },
+  catering: { label: 'Catering', icon: Utensils },
+  transporte: { label: 'Transporte', icon: Bus },
+  asistentes: { label: 'Asistentes', icon: Users },
+}
 
 export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
+  const follow = useRef(true)
   const n = s.events.length
   useEffect(() => {
     const el = ref.current
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    if (el && follow.current) el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })
   }, [n])
   const items = s.events.slice(-40)
   return (
-    <Glass label="Cronología" className={className}>
-      <header className="flex items-center justify-between px-4 py-2 border-b border-line">
-        <h2 className="label">Cronología</h2>
-        <span className="text-[11px] text-muted num">{n} eventos</span>
+    <Glass label="Cronología" className={`chronology-panel ${className}`}>
+      <header className="chronology-heading">
+        <div><h2>Cronología</h2><p>La operación, paso a paso.</p></div>
+        <span className="chronology-count num">{n} {n === 1 ? 'evento' : 'eventos'}</span>
       </header>
-      <ul ref={ref} className="chat-log flex-1 min-h-0 overflow-y-auto px-3 pt-8 pb-2 flex flex-col">
-        {items.map((e, i) => {
-          const latest = i === items.length - 1
-          const dot = EVENT_DOT[e.kind] ?? 'bg-ink'
+      <ul ref={ref} className="chat-log" aria-label="Eventos de la operación" onScroll={() => {
+        const el = ref.current
+        if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 64
+      }}>
+        {items.length === 0 && <li className="chronology-empty">
+          <span className="chronology-empty-icon"><Activity size={22} strokeWidth={1.5} /></span>
+          <h3>Todo empieza aquí</h3>
+          <p>Los avisos, las acciones y las decisiones aparecerán en esta cronología.</p>
+        </li>}
+        {items.map((e) => {
+          const look = EVENT[e.kind] ?? EVENT.info
+          const area = e.area ? AREA[e.area] : undefined
+          const Icon = area?.icon ?? look.icon
+          const name = e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel')
           return (
-            <li key={e.id} className={`chat-msg ${latest ? 'fade-in' : ''}`} style={{ borderLeftColor: BORDER[dot] ?? '#1a1d24' }}>
-              <span className="text-[11px] text-muted num flex-none">{fmtClock(e.time)}</span>
-              <span className={`text-[12px] leading-snug ${e.kind === 'fallo' || e.kind === 'incidencia' ? 'text-red/90' : e.kind === 'intervencion' ? 'text-ink font-semibold' : e.kind === 'decision' || e.kind === 'espera' ? 'text-amber' : 'text-text'}`}>{e.text}</span>
+            <li key={e.id} className={`timeline-card timeline-card--${look.tone}`}>
+              <div className="timeline-card-heading">
+                <span className="timeline-avatar"><Icon size={16} strokeWidth={1.7} /></span>
+                <span className="timeline-author">{name}</span>
+                <time className="timeline-time num">{fmtClock(e.time)}</time>
+              </div>
+              <p className="timeline-text">{e.text}</p>
+              <span className="timeline-kind"><look.icon size={11} aria-hidden="true" />{look.label}</span>
             </li>
           )
         })}

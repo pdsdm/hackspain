@@ -189,3 +189,17 @@ El coordinador de referencia acertó 6 de 6 con mediana de 28,3 s. El piloto es 
 rápido y no produjo ningún falso positivo, pero **con el gate inicial su cobertura es cero**:
 no reconoció ningún caso, así que hoy no sustituye a nadie. No se activa en la demo y no
 toca la ruta de eventos reales. Detalle en [`T41`](specs/T41-jev-routing-pilot.md).
+
+## Retoque visual local de Carlos · 19 de septiembre de 2026
+
+En `fix/carlos-demo-ui`, pendiente de revisión humana y sin subir al remoto: se
+conserva solo Vista general; en anchos inferiores a 1024 px se muestra la cronología
+con cabecera compacta y formulario. La cronología comparte el cristal y las cabeceras del dashboard: tarjetas casi
+rectas, tinte tenue y acento semántico por tipo de evento, hora y área, sin máscara
+de difuminado. El formulario usa neutros y el botón circular negro de la marca. El ejemplo del formulario rellena
+el texto y el botón circular lo envía mediante la acción existente. No se han
+modificado backend, contratos ni lógica de escenario.
+
+Verificación: `make check` OK (301 tests correctos, 7 live omitidos, 10 fixtures);
+revisión visual en escritorio y marco móvil de 390 px, y envío desde el formulario.
+Se mantienen los avisos previos de lint del backend y de tamaño del bundle.
