@@ -20,7 +20,7 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
         <h2 className="label">Cronología</h2>
         <span className="text-[11px] text-muted num">{n} eventos</span>
       </header>
-      <ul ref={ref} className="chat-log flex-1 min-h-0 overflow-y-auto px-3 pt-6 pb-2">
+      <ul ref={ref} className="chat-log flex-1 min-h-0 overflow-y-auto px-3 pt-8 pb-2 flex flex-col">
         {items.map((e, i) => {
           const latest = i === items.length - 1
           const dot = EVENT_DOT[e.kind] ?? 'bg-ink'
