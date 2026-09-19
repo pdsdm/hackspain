@@ -5,8 +5,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 18:20 CEST |
-| **Commit de `main`** | `dd74178` (PR #56), tras recuperar los 38 commits que descartó el merge `585a5e3` |
+| **Foto tomada** | 19 de septiembre de 2026, 19:05 CEST |
+| **Commit de `main`** | `3450107` (PR #64) |
+| **Trabajo verificado** | T42 en Vercel y Railway de producción |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -14,11 +15,11 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la rama de rescate | OK |
-| Tests de backend | 306: **299 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en la rama T42 | OK |
+| Tests de backend | 297: **290 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node | 23.10.0 |
+| Node | 22.23.2 |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
@@ -36,6 +37,11 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
   económica ni doble cargo.
 - T18 local: frontend API, SQLite persistente, reset, reinicio y parada.
 - T39: mapa a pantalla completa, paneles flotantes y cronología tipo chat.
+- T42 (PR #64): cada deployment de Railway crea un run `calm` nuevo; reiniciar el mismo
+  deployment lo conserva y mantiene los anteriores inactivos en SQLite.
+- Producción validada: `simSeconds=43200` estable durante tres segundos, reloj pausado,
+  `planVersion=1`, coordinador estable y cero eventos, llamadas, decisiones o acciones.
+- README documenta frontend Vercel, backend Railway, healthcheck y volumen SQLite.
 
 ### En `fix/zhi-demo-readiness`, aún sin mergear
 
@@ -47,33 +53,6 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 - El prompt no presenta `verificationTarget` como campo genérico.
 - `set_place` sobre un id `gate-*` se normaliza a `set_gate`.
 - Hay regresiones para seed, reset, concurrencia, callbacks obsoletos, targets y puertas.
-
-### En `fix/ventura-cierre-demo` (T42, PR #62), aún sin mergear
-
-Medido corriendo la demo, no leyendo el código: `DEMO_COORDINATOR_MODE=llm
-DEMO_CALL_MODE=sim` con Helmcode, tres recorridos completos.
-
-- **La crisis termina.** `resolved`, `closureSummary` y `coordinatorStatus: "atascado"`.
-  Antes el panel se quedaba en `replanificando` indefinidamente (21 llamadas y `planVersion`
-  7 sin final) y `resolved` no se ponía a `true` en ningún sitio del backend. Ahora cierra
-  entre 75 s y 5 min según lo que conteste el mundo simulado.
-- **Los compromisos avanzan a `aceptado_condiciones`.** Se quedaban en `en_consulta` para
-  siempre: promocionarlos exige `result.data.commitmentId` y el adaptador `sim` no lo
-  devuelve. El despacho anota qué compromiso responde cada acción y el resultado lo usa.
-- **No quedan tareas zombi tras replanificar.** Una tarea `pending` del plan viejo no se
-  despachaba porque `claimNext` exige la versión vigente, pero seguía bloqueando el cierre.
-  Las válidas se arrastran; las supersedidas o con dependencias fallidas se cancelan.
-- **Un callback simulado obsoleto ya no tumba el backend.** Antes un resultado fuera de
-  contexto lanzaba `ContractError` desde el tick del reloj y terminaba el proceso. Ahora se
-  descarta y se registra el aviso.
-- **Las intervenciones humanas se aplican al instante**; solo la replanificación se encola.
-- **El KPI de invitados cuenta sede asignada**, no `confirmado`: con JEV apagado ningún
-  espacio llega a `confirmado` y el indicador marcaba 0/600 toda la demo.
-- Tarjeta de resultado en el mapa, y `log_event` sin texto ya no ensucia la cronología.
-- **`DEMO_TUNNEL=lhr`** y `./scripts/demo.sh doctor`. Ver el punto 2 de «Qué falta».
-
-No relanza el coordinador cuando el plan queda incompleto, a propósito: eso es lo que T33
-quitó. Lo dice en pantalla y espera al responsable.
 
 ## Qué falta, por riesgo para la demo
 
@@ -93,16 +72,6 @@ en esta foto el recorrido completo tras el fix.
 Se verificaron `/health` y `/state` públicos por Quick Tunnel, autenticación del callback,
 persistencia SQLite, seed y velocidad tras reinicio. Falta un ensayo completo que incluya
 T17 real y recuperación operativa.
-
-**La wifi de la ETSIT no sirve para Quick Tunnel.** Su DNS (`138.100.x.x`) devuelve SERVFAIL
-para todo `trycloudflare.com` y bloquea 8.8.8.8 y 1.1.1.1, así que el túnel de Cloudflare no
-arranca aunque `cloudflared` esté instalado (ya lo está: 2026.9.1 en `/usr/local/bin`).
-HappyRobot y Helmcode sí resuelven. Alternativa verificada en PR #62:
-`DEMO_TUNNEL=lhr ./scripts/demo.sh up` (localhost.run por SSH, sin cuenta).
-
-Con el `.env` al día y ese túnel, el camino de vuelta está comprobado sin llamar a nadie:
-`/health` público OK, callback sin token 401, con token 404 `Task not found`. Falta solo la
-llamada real, que depende de tener a alguien al teléfono. Solo hay hook de `espacios`.
 
 ### 3. Integraciones del equipo
 
@@ -138,9 +107,8 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 
 ## Ramas vivas sin mergear
 
-- `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
-- `fix/ventura-cierre-demo` (PR #62): T42, cierre de la crisis y túnel alternativo.
-  Toca `engine.ts`, `workflow-service.ts` y `App.tsx`, como `fix/zhi-demo-readiness`.
+- `backup/pre-demo-cleanup-20260919`: copia exacta de `4e63383` antes de T42.
+- `fix/ventura-cierre-demo`: cierre de crisis y túnel alternativo, tres commits sobre `main`.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
@@ -160,9 +128,29 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
   resultado todavía pertenece al `runId` y `planVersion` vigentes.
 - El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
   `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
+- Un deployment nuevo en Railway crea un run `calm` pausado; reiniciar el mismo deployment
+  conserva su run. Los callbacks de runs anteriores quedan como evidencia sin aplicarse.
 - Reiniciar conserva SQLite, pero pierde callbacks simulados programados en memoria.
 - Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
 - Haz `git fetch` antes de analizar: `main` se mueve rápido.
+
+## Cierre reproducible de la crisis (T43, PR #62 sin mergear)
+
+Verificado sobre `main` actualizado con T42. `make check`: **301 de 308 pasan, 0 fallan,
+7 live omitidos**.
+
+- Los compromisos avanzan a `aceptado_condiciones`; el despacho enlaza cada acción con su
+  compromiso cuando hay un ganador claro.
+- `resolved`, `closureSummary` y `coordinatorStatus: atascado` dan al recorrido un final
+  cerrado o una limitación explícita.
+- Las intervenciones humanas se reflejan inmediatamente; la replanificación sigue en cola.
+- Las tareas `pending` del plan anterior se arrastran si siguen vigentes y se cancelan si
+  están supersedidas o dependen de una acción fallida. Esto elimina la tarea zombi que
+  bloqueaba el cierre indefinidamente.
+- Un callback simulado fuera de contexto se descarta con log: antes la excepción escapaba
+  del tick del reloj y terminaba el backend.
+- `DEMO_TUNNEL=lhr` usa localhost.run cuando la wifi de la ETSIT no resuelve
+  `trycloudflare.com`; `/health` público y autenticación del callback verificados.
 
 ## Piloto de routing con JEV (T41, sin activar)
 

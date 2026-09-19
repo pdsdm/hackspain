@@ -50,7 +50,8 @@
 | T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen`, `feat/pep-chat-anclado` (PR #56) | - | review |
 | T40 | Persistir el estado de la crisis en Supabase (espejo Postgres) | Pep | `feat/pep-supabase` | - | descartada: el despliegue va en Railway |
 | T41 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` (PR #57) | [T41](docs/specs/T41-jev-routing-pilot.md) | review |
-| T42 | Cierre de la crisis: los acuerdos avanzan, el plan termina (cerrado o incompleto), la intervención humana no espera y el túnel funciona en la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | review |
+| T42 | Arranque limpio y pausado en cada despliegue | Zhi + Devin | `fix/zhi-clean-deploy-state` (PR #64, mergeada) | [T42](docs/specs/T42-arranque-limpio.md) | done |
+| T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**

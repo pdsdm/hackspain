@@ -129,6 +129,11 @@ sin plan, con el respaldo determinista solo para giros.
   (`bindRemote` / `notifyRemote`), que sin nada enganchado no hace nada. Es agnóstico del
   proveedor; si algún día hace falta un espejo, ahí está el punto de entrada.
 
+### D19: cada deployment empieza limpio y pausado
+
+- **Qué:** un `RAILWAY_DEPLOYMENT_ID` nuevo crea un run `calm` pausado, sin historial operativo; reiniciar el mismo deployment conserva el run y los anteriores quedan inactivos.
+- **Por qué:** evita que llamadas, tareas y reloj de un ensayo contaminen la siguiente versión sin borrar la auditoría SQLite. Descartado: vaciar la base o eliminar el simulador.
+
 ### Propuesta T35: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.

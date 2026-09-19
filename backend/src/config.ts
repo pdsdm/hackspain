@@ -37,6 +37,7 @@ export interface AppConfig {
   simIncidents?: boolean;
   simIncidentsMode?: "open" | "catalog";
   simSeed?: number;
+  deploymentId?: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -175,6 +176,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     simIncidents: (env.SIM_INCIDENTS?.trim().toLowerCase() ?? "off") === "on",
     simIncidentsMode: env.SIM_INCIDENTS_MODE?.trim().toLowerCase() === "catalog" ? "catalog" : "open",
     ...(seed !== undefined ? { simSeed: seed } : {}),
+    ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
   };
 }
 
