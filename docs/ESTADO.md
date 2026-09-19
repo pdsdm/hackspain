@@ -76,6 +76,13 @@ Hay `HELMCODE_API_KEY` en el `.env` local; Cognition y Devin siguen sin clave. E
 Helmcode no se ha probado en esta sesión con un evento real. `rules` mantiene el respaldo
 determinista para los giros.
 
+**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`):** Pep tiene un `.env` local
+con clave de Cognition. Verificado que `api.cognition.ai` **no resuelve en DNS**, así que el
+harness `tools` (el rápido, por defecto) devuelve `unavailable` siempre. Solo funciona
+`COORDINATOR_HARNESS=devin`: una sesión Devin por evento, **60-70 s** hasta el primer plan.
+Para la demo hace falta una clave OpenAI-compatible real (Helmcode, OpenAI o Anthropic) o
+asumir esa latencia.
+
 ### 🟠 3. El panel enseña la simulación, no el backend · T27 (`todo`)
 
 El frontend arranca con `VITE_DATA_SOURCE=sim` y ejecuta `frontend/src/domain/script.ts`,
@@ -84,6 +91,16 @@ es el sistema.**
 
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
+
+**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`, sin mergear):** el panel en
+modo `api` ya corre el cierre del Principal por `POST /events` con datos del backend:
+agentes, llamadas, cronología, KPIs, decisión y aprobación. Arreglado en la rama:
+`POST /interventions` y `/simulation/twists` esperaban a toda la cola del coordinador (más de
+2 min con `devin`) y el panel las daba por fallidas a los 4 s; ahora responden al encolar.
+Cada `call` lleva `simulated` para no etiquetar como «vía HappyRobot» una llamada del
+adaptador `sim`. Pendiente del coordinador (Ventura/Zhi): tras cada `call_result` replanifica
+y **duplica la decisión pendiente** (3 × 4.200 € en la misma ejecución) y acumula llamadas
+`en_curso` (20 llamadas, 12 vivas a los 2 min).
 
 ### 🟡 4. Resto
 

@@ -36,7 +36,7 @@
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` (PR #15, mergeada) | [T24](docs/specs/T24-motor-eventos.md) | done |
 | T25 | Robustez del motor: cola que no se envenena, reloj vivo tras reset, timeout de callbacks | Zhi | `fix/zhi-engine-robustez` (PR #16, mergeada) | - | done |
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
-| T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` | - | todo |
+| T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` | - | doing |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | `feat/alvaro-integracion` (PR #26, mergeada) | - | done |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
