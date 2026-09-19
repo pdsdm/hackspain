@@ -120,6 +120,9 @@ test("loadHappyRobotCoordinatorConfig exige la clave y el workflow y no se activ
   assert.equal(pilot.provider, "happyrobot");
   assert.equal(pilot.harness, "happyrobot");
   assert.equal(pilot.happyrobot?.apply, true);
+  assert.equal(pilot.textProvider?.provider, "helmcode");
+  assert.equal(pilot.textProvider?.harness, "json");
+  assert.equal(loadLlmConfig(ENV_BASE).textProvider, undefined);
 
   assert.equal(loadConfig({ HAPPYROBOT_API_KEY: "hr" }).coordinatorMode, "rules");
   assert.equal(loadConfig(ENV_BASE).coordinatorMode, "llm");

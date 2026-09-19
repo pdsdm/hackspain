@@ -39,6 +39,7 @@ export interface LlmConfig {
   devinMode: string;
   reasoningEffort?: string;
   happyrobot?: HappyRobotCoordinatorConfig;
+  textProvider?: LlmConfig;
 }
 
 export interface ToolCall {
@@ -93,6 +94,12 @@ function readHarness(value: string | undefined, provider: Provider): Coordinator
 export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
   if (env.COORDINATOR_HARNESS?.trim() === "happyrobot") {
     const happyrobot = loadHappyRobotCoordinatorConfig(env);
+    let textProvider: LlmConfig | undefined;
+    try {
+      textProvider = loadLlmConfig({ ...env, COORDINATOR_HARNESS: "json" });
+    } catch {
+      textProvider = undefined;
+    }
     return {
       provider: "happyrobot",
       apiKey: happyrobot.apiKey,
@@ -103,6 +110,7 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
       sessionApiUrl: "",
       devinMode: "",
       happyrobot,
+      ...(textProvider ? { textProvider } : {}),
     };
   }
   const cognition = cognitionKey(env);
@@ -549,7 +557,8 @@ export async function complete(
   }
 
   if (config.provider === "happyrobot") {
-    throw new Error("complete() no soporta el proveedor happyrobot; usa COORDINATOR_HARNESS=happyrobot");
+    if (config.textProvider) return complete(config.textProvider, system, user, options);
+    throw new Error("complete() no soporta el proveedor happyrobot sin proveedor de texto (HELMCODE_API_KEY u otro)");
   }
   const data = (await post(
     "https://api.anthropic.com/v1/messages",
