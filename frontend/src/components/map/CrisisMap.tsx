@@ -172,7 +172,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
           )
         })}
 
-        <Pane name="routes" style={{ zIndex: 470 }}>
+        <Pane name="routes" style={{ zIndex: 452 }}>
           {vehicles.map((v) => {
             if (!vehicleVisible(v, layers)) return null
             const path = routes[v.id]

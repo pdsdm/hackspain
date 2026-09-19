@@ -6,8 +6,9 @@ import { corridorOf, corridorRun, overlapMetres } from './geo'
 const OSRM = 'https://router.project-osrm.org/route/v1/driving/'
 const CORRIDOR = corridorOf([TRACK, PIT_LANE], 60)
 const CORRIDOR_WIDTH = 25
-const DETOUR_ABOVE_M = 150
-const DETOUR_OFFSET_M = 300
+const DETOUR_ABOVE_M = 100
+const DETOUR_GOOD_M = 60
+const DETOUR_OFFSETS_M = [300, 600, 900]
 const MAX_IN_FLIGHT = 2
 const GAP_MS = 150
 const cache = new Map<string, LatLng[]>()
@@ -66,8 +67,10 @@ function detourPoints(run: [LatLng, LatLng]): LatLng[] {
   const k = Math.cos((mid[0] * Math.PI) / 180)
   const dx = (q[1] - p[1]) * k, dy = q[0] - p[0]
   const len = Math.hypot(dx, dy) || 1
-  const off = DETOUR_OFFSET_M / 111320
-  return [1, -1].map((side) => [mid[0] - (dx / len) * off * side, mid[1] + ((dy / len) * off * side) / k] as LatLng)
+  return DETOUR_OFFSETS_M.flatMap((metres) => {
+    const off = metres / 111320
+    return [1, -1].map((side) => [mid[0] - (dx / len) * off * side, mid[1] + ((dy / len) * off * side) / k] as LatLng)
+  })
 }
 
 async function fetchRoute(key: string, waypoints: LatLng[]) {
@@ -78,6 +81,7 @@ async function fetchRoute(key: string, waypoints: LatLng[]) {
     for (const via of detourPoints(run)) {
       const alt = await osrm([waypoints[0], via, waypoints[1]]).catch(() => undefined)
       if (alt && alt.overlap < best.overlap) best = alt
+      if (best.overlap <= DETOUR_GOOD_M) break
     }
   }
   cache.set(key, best.line)
