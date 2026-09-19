@@ -115,18 +115,16 @@ En pantalla y narración se dice «llamada simulada vía HappyRobot» y «SMS si
 Toma principal, con runs HappyRobot:
 
 ```bash
-cd backend
-npm run demo:video -- --inputs=happyrobot
+npm --prefix backend run demo:video -- --inputs=happyrobot --rehearsals=3
 ```
 
 Respaldo, con el mismo contrato T46 sin HappyRobot:
 
 ```bash
-cd backend
-npm run demo:video -- --inputs=api
+npm --prefix backend run demo:video -- --inputs=api --rehearsals=3
 ```
 
-El director resetea a `calm`, espera cada efecto observable y muestra los cues del operador. No escribe SQLite ni aplica snapshots intermedios.
+El director crea cada ensayo desde `calm`, valida los checkpoints observables y actualiza evidencia en `.demo/`. No escribe SQLite directamente ni aplica snapshots intermedios. Que el comando pase no significa que se haya grabado una toma.
 
 ## Final principal
 
