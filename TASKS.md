@@ -45,9 +45,6 @@
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
 | T34 | Sala de conferencia con varios participantes en el agente demo de voz | Álvaro | `feat/alvaro-integracion` | - | review |
 | T35 | JEV verifica la evidencia del callback antes de confirmar (`evidence-v2`, efectos desactivados) | Ventura | `feat/ventura-jev-confirmacion` | [Contrato T35](docs/api-contract.md#verificación-opcional-jev-t35) | review |
-| T37 | Rutas dinámicas: origen libre (geocode) + spawn_vehicle + OSRM | Pep | `feat/pep-rutas-dinamicas` | - | doing |
-| T38 | Costes informativos: eliminar bloqueos presupuestarios durante la crisis | Ventura + Devin | `feat/ventura-costes-informativos` | [Política y contrato T38](docs/api-contract.md#costes-informativos-t38) | review |
-| T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen` | - | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**

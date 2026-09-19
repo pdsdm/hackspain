@@ -79,6 +79,9 @@ export function confirmationBlocker(state: CrisisStateDocument, task: DispatchTa
     !["propuesto", "pendiente", "confirmado"].includes(String(space.status))) return "recurso_no_disponible";
   if (payload.verificationSnapshot !== verificationSnapshot(state)) return "terminos_modificados";
   if (state.waitingForDecision || state.decisions.some((item) => item.status === "pendiente")) return "decision_pendiente";
+  const { forecast, authorized, committed } = state.budget;
+  if (typeof forecast !== "number" || !Number.isFinite(forecast) || forecast < 0 ||
+    forecast > authorized || committed > authorized) return "gasto_no_autorizado";
   const access = state.spaces.find((item) => item.id === "accesoSur");
   if (!access || !["operativo", "confirmado"].includes(String(access.status))) return "acceso_pendiente";
   if (!Array.isArray(commitment.conditions) || commitment.conditions.some((condition) =>

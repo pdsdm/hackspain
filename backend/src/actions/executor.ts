@@ -10,7 +10,6 @@ import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import { logAction, logActionError } from "../log.js";
 import { dispatchHappyRobot } from "./adapters/happyrobot.js";
 import { scheduleSimResult } from "./adapters/sim.js";
-import { counterpartReply } from "./adapters/sim-world.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -83,7 +82,7 @@ export class ActionExecutor {
 
   pump(): void {
     const run = this.states.ensureActiveRun();
-    if (run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
+    if (run.state.agentsPaused || run.state.waitingForDecision) return;
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
@@ -156,11 +155,8 @@ export class ActionExecutor {
     }
 
     this.tasks.markDispatchOutcome(task.id, "dispatched");
-    const seed = Number(state.clock.liveSeed ?? state.clock.attendanceSeed ?? this.config.simSeed ?? 1);
-    const reply = await counterpartReply(task, state, seed, this.engine?.llmDeps() ?? {});
     const delay = 20 + Math.floor(Math.random() * 21);
     const envelope = scheduleSimResult({
-      reply,
       task,
       runId: run.id,
       planVersion: task.planVersion,
@@ -170,9 +166,8 @@ export class ActionExecutor {
       deliveries: records(state, "deliveries"),
       spaces: records(state, "spaces"),
     });
-    const nowAfter = Number(this.states.ensureActiveRun().state.clock.simSeconds);
-    this.due.push({ at: nowAfter + delay, envelope });
-    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay, reply: reply.outcome });
+    this.due.push({ at: Number(state.clock.simSeconds) + delay, envelope });
+    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay });
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {

@@ -23,7 +23,7 @@ Nexo Events dispone de:
 - El programa del día de carrera y la lista de invitados del bloque de hospitalidad.
 - Los contratos, reservas y contactos de proveedores.
 - Los requisitos de aforo, accesibilidad, alimentación y equipamiento.
-- Un registro de costes previstos y comprometidos, sin bloqueo presupuestario durante la crisis.
+- Un presupuesto de contingencia y límites de actuación.
 - Un responsable humano con autoridad para aprobar cambios importantes.
 
 El sistema trabaja por cuenta de Nexo Events. Contacta con proveedores y responsables dentro de ese ámbito; la disponibilidad de un recurso externo debe comprobarse y acordarse con quien lo controla. No dirige la carrera ni sustituye a dirección de circuito, seguridad o FIA.
@@ -46,8 +46,8 @@ Nexo Events opera un programa de hospitalidad para **600 invitados** el domingo 
 | Salida de carrera (referencia) | 15:00 |
 | Invitados del bloque | 600 |
 | Ubicación inicial | Pabellón Principal (MADRING Sur), capacidad de 600 personas |
-| Política económica durante la crisis | Recuperar el servicio sin límites presupuestarios ni aprobaciones económicas |
-| Seguimiento de costes | Previsto y comprometido, con trazabilidad y sin inventar importes |
+| Presupuesto de contingencia | 5.000 € |
+| Límite autónomo inicial de gasto adicional | 1.500 € acumulados para esta crisis |
 | Supervisión | Responsable de operaciones de Nexo Events |
 
 En el momento del incidente:
@@ -106,9 +106,9 @@ Ejemplo de coste adicional previsto:
 | Conexión audiovisual entre espacios | 400 € |
 | **Total** | **3.200 €** |
 
-Los 3.200 € se registran como coste previsto, sin detener la recuperación ni solicitar aprobación económica. El coordinador presenta las condiciones pendientes y continúa consultando a los proveedores.
+El importe cabe en la contingencia de 5.000 €, pero supera la autonomía inicial de 1.500 €. El coordinador presenta la propuesta completa al responsable, con sus condiciones pendientes, para que autorice hasta 3.200 €.
 
-Una previsión de coste no confirma espacios ni se contabiliza automáticamente como gasto comprometido. Solo los acuerdos respaldados por evidencia registran costes comprometidos; las condiciones operativas siguen exigiendo verificación.
+La autorización de gasto no confirma por sí sola los espacios ni obliga a ejecutar el plan si una condición falla. Tampoco se puede eludir el límite dividiendo la misma operación entre varios agentes.
 
 Mover el bloque entero a Pabellón Norte C puede reunir a las 600 personas, pero introduce traslado, retraso respecto a las 13:00 y coordinación de shuttles entre zonas. Esa vía solo avanza si el organizador acepta el recorte de tiempo hasta la carrera.
 
@@ -119,8 +119,8 @@ El sistema intenta, por este orden:
 1. Respetar las condiciones de seguridad, aforo, zona de acceso y accesibilidad, y atender los incidentes que requieran respuesta inmediata.
 2. Conseguir una alternativa confirmada para los invitados y los servicios esenciales.
 3. Reducir retrasos y personas sin atención o sin instrucciones claras.
-4. Preservar tanto como sea posible el programa y la experiencia contratada (hospitalidad y visionado de carrera).
-5. Registrar los costes sin convertirlos en un límite operativo.
+4. Mantener el gasto dentro de lo autorizado.
+5. Preservar tanto como sea posible el programa y la experiencia contratada (hospitalidad y visionado de carrera).
 
 La recuperación requiere acuerdos que se puedan ejecutar. No basta con encontrar un pabellón o enviar muchos mensajes.
 
@@ -152,7 +152,7 @@ Sus responsabilidades son:
 - Separar hechos confirmados, hipótesis y datos pendientes.
 - Asignar tareas con un objetivo y un plazo.
 - Comparar alternativas y comprobar sus dependencias, incluida la zona Norte/Sur.
-- Registrar costes previstos y comprometidos sin bloquear la recuperación ni solicitar aprobaciones económicas.
+- Controlar el presupuesto acumulado y las autorizaciones.
 - Detectar compromisos invalidados por nueva información.
 - Escalar decisiones y explicar brevemente por qué propone una acción.
 
@@ -232,7 +232,7 @@ Una acción o compromiso debe permitir conocer:
 3. Catering comprueba si puede dividir el servicio y comunica su necesidad del muelle este de Sur.
 4. El coordinador asigna al responsable de recinto la verificación de ese acceso y a recepción la atención de la descarga.
 5. Transporte acuerda puntos de llegada compatibles con las nuevas ubicaciones en Sur.
-6. El responsable interviene si hay que aceptar un cambio operativo del programa; el coste se registra y no exige autorización económica.
+6. El responsable humano autoriza el gasto y la división del programa de hospitalidad.
 7. Los proveedores confirman los acuerdos; Asistentes comunica las asignaciones que ya son válidas.
 8. El sistema comprueba entregas, llegada de vehículos y preparación de los espacios.
 
@@ -292,7 +292,7 @@ El fallo del Pabellón Principal inicia el escenario. Los siguientes giros son o
 | La segunda entrega de catering se retrasa | 240 servicios no llegan a su hora | Negociar entrega o servicio alternativo y actualizar las previsiones afectadas |
 | Se bloquea el muelle de descarga previsto | El proveedor no puede cumplir las instrucciones | Verificar otro acceso y acordarlo con catering y recinto |
 | Un proveedor no responde | La alternativa sigue sin confirmar | Aplicar un plazo de espera, intentar otro canal o buscar otro proveedor |
-| El proveedor comunica un sobrecoste | Cambia la previsión económica, no la viabilidad por presupuesto | Registrar el importe y continuar verificando disponibilidad y condiciones operativas |
+| El organizador rechaza el gasto adicional | El plan propuesto no está autorizado | Recalcular alternativas dentro del límite o presentar el impacto de no ampliarlo |
 | El organizador rechaza dividir la hospitalidad | Hay que buscar un único espacio de 600 | Invalidar Pabellón B + Lounge y evaluar Norte C con su retraso |
 | Un invitado comunica una necesidad no registrada | Su asignación puede dejar de ser adecuada | Verificar el requisito, corregir su atención y revisar recursos afectados |
 
@@ -336,7 +336,7 @@ El panel no debe mezclar personas informadas con personas cuya solución está c
 
 ### Intervención humana
 
-El responsable puede aceptar o rechazar una propuesta operativa, fijar una restricción, corregir un dato, pausar nuevas acciones o hacerse cargo de una conversación. No se solicitan aprobaciones económicas. La intervención queda registrada y los agentes actualizan su trabajo.
+El responsable puede aprobar un gasto, rechazar una alternativa, fijar una restricción, corregir un dato, pausar nuevas acciones o hacerse cargo de una conversación. La intervención queda registrada y los agentes actualizan su trabajo.
 
 Ejemplo: «No aceptamos dividir la hospitalidad. Buscad una ubicación para los 600 invitados y presentad el retraso y el coste». Esa instrucción invalida la propuesta Pabellón B + Lounge Sur y cambia la búsqueda posterior, probablemente hacia Norte C.
 
@@ -366,8 +366,8 @@ Esta secuencia ilustra un resultado posible; no debe convertirse en una lista r�
 | 12:15 | Se confirma el cierre del Pabellón Principal | Abre la crisis, identifica las dependencias afectadas y asigna consultas |
 | 12:16 | Espacios obtiene disponibilidad inicial de Pabellón B y Lounge Sur | Prepara una alternativa en la misma zona y enumera sus condiciones pendientes |
 | 12:17 | Catering solicita otro muelle para descargar | Crea una tarea de verificación con el recinto y recepción |
-| 12:18 | El plan alternativo tiene un coste previsto de 3.200 € | Registra el coste y continúa las consultas, indicando qué sigue sin confirmar |
-| 12:19 | El organizador acepta la distribución de la hospitalidad | Avanza en reservas y acuerdos sujetos a validación final, sin aprobación económica |
+| 12:18 | El plan alternativo tiene un coste previsto de 3.200 € | Solicita autorización y explica qué sigue sin confirmar |
+| 12:19 | El organizador autoriza el gasto y la división de la hospitalidad | Avanza en reservas y acuerdos sujetos a validación final |
 | 12:20 | Lounge Sur comunica que solo estará preparado a las 13:15 | Revisa la apertura y la atención de las 150 personas afectadas |
 | 12:21 | El recinto confirma una espera adecuada en Sur y el organizador acepta apertura escalonada | Actualiza el programa y asigna recepción a ambos grupos |
 | 12:23 | Transporte y Catering aceptan sus nuevas instrucciones | Registra compromisos y publica comunicaciones coherentes (seguir en Sur) |
@@ -459,7 +459,7 @@ Para una ampliación posterior quedan la gestión de varios bloques simultáneos
 - [ ] Existe evidencia de una interacción real y una escritura persistente.
 - [ ] El cambio introducido en directo invalida el estado anterior y provoca adaptación.
 - [ ] Replanificar actualiza o cancela los compromisos que dejan de servir.
-- [ ] El sistema evita exceder aforos, mezclar zonas sin traslado y duplicar recursos. Registra costes sin límites presupuestarios ni aprobaciones económicas.
+- [ ] El sistema evita exceder aforos, mezclar zonas sin traslado, duplicar recursos o superar el gasto autorizado.
 - [ ] El responsable humano puede intervenir y los agentes respetan el cambio.
 - [ ] El panel separa lo confirmado, lo ejecutado y lo pendiente.
 - [ ] Los resultados y las limitaciones se explican sin dar por resueltas acciones incompletas.

@@ -21,7 +21,6 @@ const TOOLS: ChatTool[] = [
           placeId: { type: "string" },
           minCapacity: { type: "number" },
           vehicleId: { type: "string" },
-          fromId: { type: "string", description: "Origen libre: id del mundo, nombre o dirección. Se geocodifica si no está en el recinto." },
           destinationId: { type: "string" },
         },
         required: ["type"],
@@ -140,7 +139,7 @@ export async function runToolHarness(
       let toolContent: unknown;
       if (call.function.name === "consult_world") {
         const query = parseConsultArgs(payload);
-        toolContent = "error" in query ? query : await answerQuery(query, live.state, deps.world);
+        toolContent = "error" in query ? query : answerQuery(query, live.state, deps.world);
       } else if (call.function.name === "submit_plan") {
         const parsed = parseOutput(typeof payload === "string" ? payload : JSON.stringify(payload), input);
         if (!parsed.output) {

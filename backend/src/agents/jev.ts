@@ -42,7 +42,7 @@ export interface JevAcceptanceInput {
   objective: string;
   expectedRole: string;
   target: VerificationTarget;
-  terms: { spaceName: string; capacity: number; readyAt: number | null; planCost: number | null };
+  terms: { spaceName: string; capacity: number; readyAt: number | null; planCost: number };
   transcript: TranscriptLine[];
 }
 

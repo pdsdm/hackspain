@@ -1,15 +1,21 @@
 import type { Decision } from '../../domain/types'
+import { fmtEur } from '../../domain/time'
 
-export function DecisionCard({ d, onApprove, onReject, disabled, className = 'bg-panel border border-line' }: { d: Decision | null; disabled?: boolean; onApprove: () => void; onReject: () => void; className?: string }) {
-  if (!d || d.kind !== 'operational') return null
+export function DecisionCard({ d, authorized, onApprove, onReject, disabled }: { d: Decision | null; authorized: number; disabled?: boolean; onApprove: () => void; onReject: () => void }) {
+  if (!d) return null
+  const over = d.cost > authorized
   return (
-    <section className={`border-t-[3px] border-t-amber p-4 flex flex-col gap-2.5 fade-in ${className}`}>
+    <section className="bg-panel border border-line border-t-[3px] border-t-amber p-4 flex flex-col gap-2.5 fade-in">
       <div className="flex items-center gap-2.5">
         <h3 className="label text-amber">Decisión pendiente</h3>
         <span className="ml-auto text-[11px] text-muted">requiere responsable</span>
       </div>
       <p className="display font-bold text-[17px] leading-tight m-0">{d.title}</p>
       <p className="text-[12px] text-text/80 leading-relaxed m-0">{d.summary}</p>
+      <div className="flex items-baseline gap-2">
+        <span className={`display font-extrabold text-[26px] leading-none tracking-[-0.02em] num ${over ? 'text-red' : 'text-amber'}`}>{fmtEur(d.cost)}</span>
+        <span className="text-[11px] text-muted">límite autorizado {fmtEur(authorized)}{over ? ' · supera el límite' : ''}</span>
+      </div>
       {d.conditions.length > 0 && (
         <ul className="text-[11px] text-amber space-y-0.5">
           {d.conditions.map((c) => <li key={c}>› {c}</li>)}

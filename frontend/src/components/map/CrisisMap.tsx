@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'react-leaflet'
 import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
@@ -19,21 +19,20 @@ function VehicleTip({ v }: { v: VehicleView }) {
     <Tooltip direction="top" offset={[0, -12]} className="veh" sticky>
       <div className="row"><span className="tag">{v.name}</span><span>{v.load}</span></div>
       <div className="row"><span className={v.tone}>{v.status}</span></div>
-      <div className="row"><span className="muted">Origen</span><span>{v.originName ?? '—'}</span></div>
       <div className="row"><span className="muted">Destino</span><span>{v.destName}</span></div>
       <div className="row"><span className="muted">Llegada</span><b>{v.etaLabel}</b><span className="muted">· {v.pct}% del trayecto</span></div>
     </Tooltip>
   )
 }
 
-export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState; onSelect: (id: string) => void; selected: string | null; children?: ReactNode }) {
+export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect: (id: string) => void; selected: string | null }) {
   const [layers, setLayers] = useState<Layers>({ transporte: true, proveedores: true, accesos: true })
   const [hover, setHover] = useState<string | null>(null)
   const vehicles = useMemo(() => vehicleViews(s), [s])
   const routes = useOsrmRoutes(vehicles.map((v) => ({ id: v.id, waypoints: v.waypoints, fallback: v.fallback })))
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-panel">
+    <div className="relative h-full w-full overflow-hidden border border-line bg-panel">
       <MapContainer center={[40.4732, -3.6195]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
@@ -88,16 +87,9 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
           const color = v.kind === 'truck' || v.kind === 'van' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
           return (
             <Fragment key={v.id}>
-              {v.originPos && (
-                <Marker position={v.originPos} icon={pinIcon(`Salida · ${v.originName ?? v.name}`, 'idle ghost')} zIndexOffset={200} interactive={false} />
-              )}
-              <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 9 : 6.5, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing' }} />
-              <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color, weight: lit ? 5.5 : 3.5, opacity: lit ? 1 : v.tone === 'amber' && v.kind === 'bus' ? 0.6 : 0.9, lineCap: 'round', lineJoin: 'round', className: 'route-hover' }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
+              <Polyline positions={path} pathOptions={{ color, weight: lit ? 5 : 2.5, opacity: lit ? 1 : v.tone === 'amber' && v.kind === 'bus' ? 0.5 : 0.85, className: `route-hover ${v.done ? '' : 'route-anim'}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
                 <VehicleTip v={v} />
               </Polyline>
-              {v.pct > 0 && (
-                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 2.5 : 1.5, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing route-anim' }} />
-              )}
               {v.pct > 0 && (
                 <Marker position={pos} icon={vehicleIcon(v.kind, v.delayed, `${v.name} · ${v.etaLabel}`)} eventHandlers={{ click: () => onSelect(v.id), mouseover: () => setHover(v.id), mouseout: () => setHover(null) }} zIndexOffset={lit ? 900 : 500}>
                   <VehicleTip v={v} />
@@ -108,13 +100,21 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
         })}
       </MapContainer>
 
-      <div className="absolute top-3 left-3 z-[1000] glass px-3 py-2">
+      <div className="absolute top-3 left-3 z-[1000] border border-line bg-panel/90 backdrop-blur px-3 py-2">
         <div className="label">Mapa · MADRING</div>
         <div className="text-[12px]">Plan v{s.planVersion} · {vehicles.filter((v) => !v.done).length} vehículos en ruta · {s.twistsApplied.length} giro{s.twistsApplied.length === 1 ? '' : 's'}</div>
       </div>
 
+      <div className="absolute bottom-3 left-3 z-[1000] border border-line bg-panel/90 backdrop-blur px-3 py-2 text-[11px] text-muted space-y-1">
+        <div className="flex items-center gap-2"><span className="w-6 h-1 bg-ink" /> Circuito MADRING</div>
+        <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-ink" /> Ruta shuttles</div>
+        <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-amber" /> Ruta proveedores</div>
+        <div className="flex items-center gap-2"><span className="w-6 h-0.5 bg-red" style={{ backgroundImage: 'repeating-linear-gradient(90deg,#e5484d 0 4px,transparent 4px 8px)', background: 'none' }} /> Sin conexión / bloqueado</div>
+        <div className="flex items-center gap-2"><span className="w-2 h-2 bg-red" /> Cerrado <span className="w-2 h-2 bg-amber ml-1" /> Pendiente <span className="w-2 h-2 bg-green ml-1" /> Confirmado</div>
+        <div className="flex items-center gap-2"><span className="w-3 h-3 bg-ink" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%)' }} /> Puerta de público · dentro / cola</div>
+      </div>
+
       <MapLayersControl layers={layers} onChange={setLayers} />
-      {children}
     </div>
   )
 }

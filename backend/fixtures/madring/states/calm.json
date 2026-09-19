@@ -994,11 +994,12 @@
     "contingency": 5000,
     "autonomousLimit": 1500,
     "authorized": 1500,
-    "forecast": null,
+    "forecast": 0,
     "committed": 0
   },
   "constraints": [
-    "Norte y Sur sin conexión interior"
+    "Norte y Sur sin conexión interior",
+    "Gasto autónomo ≤ 1.500 €"
   ],
   "twistsApplied": [],
   "selectedId": "principal",

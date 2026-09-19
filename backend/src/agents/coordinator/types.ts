@@ -50,7 +50,7 @@ export interface InputBudget {
   contingency: number;
   autonomousLimit: number;
   authorized: number;
-  forecast: number | null;
+  forecast: number;
   committed: number;
 }
 
@@ -150,10 +150,9 @@ export interface CoordinatorAssignment {
 }
 
 export interface CoordinatorDecision {
-  kind?: "operational";
   title: string;
   summary: string;
-  cost: number | null;
+  cost: number;
   conditions: string[];
   effectApprove: string;
   effectReject: string;
@@ -168,7 +167,6 @@ export interface CoordinatorOutput {
   commitments: CoordinatorCommitment[];
   assignments: CoordinatorAssignment[];
   decision: CoordinatorDecision | null;
-  estimatedCost?: number | null;
   unverified: string[];
   operations?: CoordinatorOperation[];
   queries?: CoordinatorQuery[];
@@ -178,7 +176,7 @@ export interface CoordinatorOutput {
 export type CoordinatorQuery =
   | { type: "affected_by"; placeId: string }
   | { type: "alternatives_for"; placeId: string; minCapacity?: number }
-  | { type: "route"; vehicleId?: string; fromId?: string; destinationId: string };
+  | { type: "route"; vehicleId: string; destinationId: string };
 
 export type CoordinatorOperation =
   | { op: "set_place"; id: string; status: string; note?: string; capacity?: number; readyAt?: number }
@@ -186,18 +184,6 @@ export type CoordinatorOperation =
   | { op: "reroute_shuttle"; id: string; destinationId: string; delayMin?: number; status?: string; note?: string }
   | { op: "redirect_delivery"; id: string; dockId: string; delayMin?: number; status?: string; note?: string }
   | { op: "redirect_vehicle"; id: string; destinationId: string; delayMin?: number; status?: string; note?: string }
-  | {
-      op: "spawn_vehicle";
-      id?: string;
-      kind?: string;
-      who: string;
-      from: string;
-      destinationId: string;
-      counterpart?: string;
-      count?: number;
-      delayMin?: number;
-      note?: string;
-    }
   | { op: "set_group"; id: string; where?: string; assignedSpaceId?: string; needs?: string }
   | { op: "cancel_action"; taskId: string; reason: string }
   | { op: "set_agent"; area: Area; objective: string; reason: string; status: string }

@@ -40,7 +40,6 @@ export interface RouteEstimate {
 
 export interface VehicleLike {
   origin?: string;
-  from?: string;
   destinationId?: string;
   dockId?: string;
   departAt: number;
@@ -48,6 +47,13 @@ export interface VehicleLike {
 }
 
 const WORLD_URL = new URL("../../fixtures/madring/world.json", import.meta.url);
+
+const ORIGIN_STOPS: Record<string, string> = {
+  Chamartín: "chamartin",
+  "Plaza de Castilla": "castilla",
+  "Aeropuerto T4": "t4",
+  Coslada: "coslada",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -124,15 +130,19 @@ export function affectedBy(state: CrisisStateDocument, world: WorldModel, placeI
   return { shuttles, deliveries, guestGroups, gates, commitments };
 }
 
+function originStopId(origin: string | undefined, fallbackId: string): string {
+  if (!origin) return fallbackId;
+  return ORIGIN_STOPS[origin] ?? origin;
+}
+
 export function routeTo(
   world: WorldModel,
   fromId: string,
   toPlaceId: string,
 ): RouteEstimate {
-  const from = placeById(world, fromId) ?? world.places.find((place) => place.name.toLowerCase() === fromId.toLowerCase());
-  const resolvedFrom = from?.id ?? fromId;
+  const from = placeById(world, fromId);
   const to = placeById(world, toPlaceId);
-  const direct = world.links.find((link) => link.from === resolvedFrom && link.to === toPlaceId);
+  const direct = world.links.find((link) => link.from === fromId && link.to === toPlaceId);
   if (direct) {
     return {
       route: direct.route,
@@ -141,7 +151,7 @@ export function routeTo(
     };
   }
 
-  const viaAccess = world.links.find((link) => link.from === resolvedFrom && link.to === "accesoSur");
+  const viaAccess = world.links.find((link) => link.from === fromId && link.to === "accesoSur");
   const transfer = world.links.find((link) => link.from === "accesoSur" && link.to === toPlaceId);
   if (viaAccess && transfer) {
     return {
@@ -167,7 +177,8 @@ export function etaFor(
   toPlaceId: string,
   now: number,
 ): RouteEstimate & { arriveAt: number } {
-  const fromId = vehicle.from ?? vehicle.origin ?? vehicle.destinationId ?? vehicle.dockId ?? toPlaceId;
+  const fromId =
+    originStopId(vehicle.origin, vehicle.destinationId ?? vehicle.dockId ?? toPlaceId);
   const estimate = routeTo(world, fromId, toPlaceId);
   const delay = (vehicle.delayMin ?? 0) * 60;
   return {
@@ -184,7 +195,7 @@ export function worldSummary(world: WorldModel, state: CrisisStateDocument) {
       kind: place.kind,
       zone: place.zone,
       capacity: place.capacity,
-      status: liveStatus(state, place.id) ?? (place.kind === "parada" ? "origen" : "desconocido"),
+      status: liveStatus(state, place.id) ?? "desconocido",
     })),
     links: world.links.map((link) => ({
       from: link.from,
