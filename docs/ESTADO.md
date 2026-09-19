@@ -33,6 +33,10 @@ T37/D16 pasaron a T38/D17 porque main ya asignó esos identificadores a rutas.
 
 - La base `9969945` incluye panel API, motor persistente, callbacks HappyRobot,
   verificación opcional JEV, afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
+- **T39, rama `feat/pep-mapa-fullscreen`:** el mapa ocupa toda la vista; KPIs, aforo,
+  coordinador y cronología (chat, lo nuevo abajo) flotan sobre él con estilo cristal.
+  La llamada solo aparece mientras está `en_curso`. Sin tarjeta de coste ni panel de
+  operaciones. Velocidad ×1→×2→×5→×10→×20 en modo `sim`. Lo secundario va en un cajón lateral.
 - T6 tiene código integrado en `main`; la antigua indicación «sin mergear» no describe
   todo el trabajo entregado. No se han repetido llamadas reales en esta sesión.
 - **T38, solo en esta rama:** costes informativos sin límites ni aprobaciones económicas.
