@@ -203,3 +203,17 @@ modificado backend, contratos ni lógica de escenario.
 Verificación: `make check` OK (301 tests correctos, 7 live omitidos, 10 fixtures);
 revisión visual en escritorio y marco móvil de 390 px, y envío desde el formulario.
 Se mantienen los avisos previos de lint del backend y de tamaño del bundle.
+
+## Panel de agentes · revisión local de Carlos
+
+En `feat/carlos-panel-agentes`, creada desde `main` (`a869a7e`): el antiguo bloque
+lateral Coordinador se sustituye por una franja inferior con cinco tarjetas en
+paralelo: Coordinador, Espacios, Catering, Transporte y Asistentes. Cada especialista
+conserva estado, objetivo y último resultado; los detalles largos tienen scroll.
+El coordinador muestra su estado real y la versión del plan. La franja reserva
+espacio bajo el mapa, a la izquierda de la cronología, que llega hasta el borde
+inferior del dashboard; en móvil se conserva solo la cronología.
+
+Solo presentación, sin cambios de backend ni contratos. `make check` OK: 316
+tests pasan, 7 live omitidos y 10 fixtures verificadas. Revisión visual local en
+localhost:5178. Pendiente de revisión humana, sin commit ni push.

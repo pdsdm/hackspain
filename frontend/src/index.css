@@ -283,3 +283,31 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* A dedicated bottom row keeps all five agents visible without covering the map. */
+.agents-panel { flex: none; background: var(--color-bg); border-top: 1px solid var(--color-line); padding: 0 12px 12px; }
+.agents-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 3px; }
+.agents-panel-heading > span { font-size: 10px; color: var(--color-muted); }
+.agents-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--color-line); background: rgba(255,255,255,.65); }
+.agent-tile { min-width: 0; padding: 12px 14px; border-right: 1px solid var(--color-line); }
+.agent-tile:last-child { border-right: 0; }
+.agent-tile--coordinator { background: var(--color-panel-2); box-shadow: inset 0 2px 0 var(--color-ink); }
+.agent-tile-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.agent-tile-heading svg { flex: none; color: var(--color-muted); }
+.agent-tile-heading h3 { font-family: var(--font-display); font-weight: 700; font-size: 13px; }
+.agent-tile > span { font-size: 10px; letter-spacing: .04em; }
+.agent-tile-detail { height: 76px; overflow-y: auto; overscroll-behavior: contain; margin-top: 8px; padding-right: 5px; font-size: 11px; line-height: 1.55; color: var(--color-muted); overflow-wrap: anywhere; }
+.agent-tile-detail:focus-visible { outline: 1px solid var(--color-line-2); outline-offset: 3px; }
+.agent-result { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--color-line); color: var(--color-text); }
+.agent-result > span { display: block; margin-bottom: 3px; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-muted); }
+.agent-role { margin-top: 8px; font-size: 10px; }
+@media (max-height: 760px) and (min-width: 1024px) { .agent-tile-detail { height: 55px; } .agent-tile { padding-top: 9px; padding-bottom: 9px; } }
+
+.agents-beside-chronology { margin-right: 416px; }
+.agents-beside-chronology .agent-tile > span { white-space: normal; }
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .agents-beside-chronology .agent-tile { padding-left: 8px; padding-right: 8px; }
+  .agents-beside-chronology .agent-tile-heading { gap: 5px; }
+  .agents-beside-chronology .agent-tile-heading h3 { font-size: 11px; }
+  .agents-beside-chronology .agent-tile-heading svg { width: 13px; }
+}
