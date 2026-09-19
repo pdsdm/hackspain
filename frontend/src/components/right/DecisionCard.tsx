@@ -1,7 +1,7 @@
 import type { Decision } from '../../domain/types'
 import { fmtEur } from '../../domain/time'
 
-export function DecisionCard({ d, authorized, onApprove, onReject }: { d: Decision | null; authorized: number; onApprove: () => void; onReject: () => void }) {
+export function DecisionCard({ d, authorized, onApprove, onReject, disabled }: { d: Decision | null; authorized: number; disabled?: boolean; onApprove: () => void; onReject: () => void }) {
   if (!d) return null
   const over = d.cost > authorized
   return (
@@ -26,8 +26,8 @@ export function DecisionCard({ d, authorized, onApprove, onReject }: { d: Decisi
         <div><span className="text-red font-semibold">Si rechazas</span><br />{d.effectReject}</div>
       </div>
       <div className="mt-1 grid grid-cols-2 gap-2.5">
-        <button onClick={onApprove} className="chamfer-sm h-10 bg-ink text-bg display font-extrabold text-[12px] tracking-[0.06em] uppercase hover:bg-ink/90">Aprobar</button>
-        <button onClick={onReject} className="h-10 border border-line-2 text-ink display font-bold text-[12px] tracking-[0.06em] uppercase hover:bg-ink/5">Rechazar</button>
+        <button disabled={disabled} onClick={onApprove} className="chamfer-sm h-10 bg-ink text-bg display font-extrabold text-[12px] tracking-[0.06em] uppercase hover:bg-ink/90">Aprobar</button>
+        <button disabled={disabled} onClick={onReject} className="h-10 border border-line-2 text-ink display font-bold text-[12px] tracking-[0.06em] uppercase hover:bg-ink/5">Rechazar</button>
       </div>
     </section>
   )
