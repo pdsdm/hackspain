@@ -21,9 +21,9 @@
 | T9 | Adaptador HappyRobot y callbacks | Álvaro (apoyo: Zhi) | `feat/alvaro-integracion` (PR #26, mergeada), `fix/zhi-real-call-robustez` (PR #40) | [T9](docs/specs/T9-integracion.md) | review |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` (PR #14, mergeada) | [T10](docs/specs/T10-coordinador.md) | done |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
-| T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | review |
+| T12 | Agente de Catering | Ventura (relevo de Pep) | `feat/ventura-demo-specialists` | [T12](docs/specs/T12-catering.md) | review |
 | T13 | Agente de Transporte | Álvaro | `feat/alvaro-transporte` | [T13](docs/specs/T13-transporte.md) | todo |
-| T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | review |
+| T14 | Agente de Asistentes y avisos segmentados | Ventura (relevo de Pep) | `feat/ventura-demo-specialists` | [T14](docs/specs/T14-asistentes.md) | doing |
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
 | T17 | Integración y pruebas críticas | Zhi | `feat/zhi-demo-gaps` | [T17](docs/specs/T17-integracion-final.md) | doing |
@@ -54,12 +54,12 @@
 | T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62, mergeada) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | done |
 | T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
 | T45 | Congelar escenario y storyboard técnico de la demo | Carlos + Ventura | `docs/carlos-demo-scenario` | [T45](docs/specs/T45-video-scenario.md) | todo |
-| T46 | Entrada autenticada de incidentes reales desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | review |
+| T46 | Entrada autenticada de incidentes reales desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
 | T47 | Workflows HappyRobot reales de llamada y SMS entrantes | Álvaro | `feat/alvaro-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | todo |
 | T48 | Director reproducible del recorrido de vídeo | Carlos (revisión: Zhi) | `feat/carlos-demo-director` | [T48](docs/specs/T48-demo-director.md) | todo |
 | T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | doing |
-| T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | todo |
-| T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Pep + Álvaro | `feat/pep-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | todo |
+| T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |
+| T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Ventura (Catering + Asistentes) + Álvaro (Transporte) | `feat/ventura-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | doing |
 | T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | todo |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**

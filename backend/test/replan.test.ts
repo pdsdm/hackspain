@@ -75,7 +75,7 @@ test("lounge_unavailable invalidates Lounge Sur commitments and bumps planVersio
 
 test("lounge_unavailable lists only informed groups whose assigned space changes, with a channel", () => {
   const { output, state } = afterTwist("lounge_unavailable");
-  const notices = recontact(output);
+  const notices = recontact(output).filter((action) => action.id.startsWith("recontact-"));
   assert.ok(notices.length > 0);
   assert.ok(notices.every((action) => action.channel === "sms" || action.channel === "email"));
   assert.ok(notices.some((action) => action.objective.includes("g-propios") || action.counterpart.includes("Por sus medios")));
@@ -86,6 +86,16 @@ test("lounge_unavailable lists only informed groups whose assigned space changes
   const acceso = (state.guestGroups as Array<Record<string, unknown>>).find((group) => group.id === "g-acceso");
   assert.equal(acceso?.assignedSpaceId, "pabellonB");
   assert.ok(Number(acceso?.informedCount) > 0);
+});
+
+test("an affected group with registered needs gets a separate verification task", () => {
+  const { output } = afterTwist("lounge_unavailable");
+  const action = output.actions.find((item) => item.id === "verify-needs-g-propios");
+  assert.ok(action);
+  assert.equal(action.area, "asistentes");
+  assert.equal(action.channel, "sms");
+  assert.match(action.objective, /accesibilidad|dieta/);
+  assert.deepEqual(action.dependsOn, ["a-norte"]);
 });
 
 test("lounge_unavailable states the incomplete coverage with numbers and leaves resolved false", () => {

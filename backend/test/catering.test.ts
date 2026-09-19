@@ -128,9 +128,13 @@ test("a completed catering result moves the delivery in /state but never onto a 
     await new Promise((resolve) => setImmediate(resolve));
     executor.fireDue(Number(run.state.clock.simSeconds) + 60);
 
-    const after = (states.ensureActiveRun().state.deliveries as Array<Record<string, unknown>>).find((item) => item.id === "CAT-02")!;
+    const acceptedState = states.ensureActiveRun().state;
+    const after = (acceptedState.deliveries as Array<Record<string, unknown>>).find((item) => item.id === "CAT-02")!;
+    const cateringAgent = (acceptedState.agents as Array<Record<string, unknown>>).find((item) => item.id === "catering");
     assert.equal(after.status, "confirmada");
     assert.equal(after.dockId, "muelleEste");
+    assert.match(String(cateringAgent?.lastResult), /acepta/i);
+    assert.equal(acceptedState.events.some((event) => event.area === "catering"), true);
 
     const manual = tasks.enqueue({
       runId: run.id,
