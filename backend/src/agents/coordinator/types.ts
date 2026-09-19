@@ -20,6 +20,7 @@ export interface InputSpace {
   id: string;
   name: string;
   zone: Zone;
+  kind?: string;
   capacity?: number;
   status: string;
   readyAt?: number;

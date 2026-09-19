@@ -123,6 +123,93 @@
         40.4645,
         -3.615
       ]
+    },
+    {
+      "id": "accesoSur2",
+      "name": "Acceso Sur 2 · Puerta 7",
+      "kind": "acceso",
+      "zone": "sur",
+      "status": "operativo",
+      "note": "Alternativa si el Acceso Sur satura",
+      "pos": [
+        40.4668,
+        -3.6125
+      ]
+    },
+    {
+      "id": "accesoNorte2",
+      "name": "Acceso Norte 2",
+      "kind": "acceso",
+      "zone": "norte",
+      "status": "operativo",
+      "note": "Segunda puerta Norte · pase Norte",
+      "pos": [
+        40.4745,
+        -3.6192
+      ]
+    },
+    {
+      "id": "accesoPaddock",
+      "name": "Acceso Paddock",
+      "kind": "acceso",
+      "zone": "norte",
+      "status": "operativo",
+      "note": "Solo pase paddock",
+      "pos": [
+        40.4782,
+        -3.6254
+      ]
+    },
+    {
+      "id": "paddockNorte",
+      "name": "Paddock Club Norte",
+      "kind": "paddock",
+      "zone": "norte",
+      "capacity": 120,
+      "status": "operativo",
+      "note": "Directores de equipo y VIP · no es hospitalidad de invitados",
+      "pos": [
+        40.479,
+        -3.624
+      ]
+    },
+    {
+      "id": "parkingNorte",
+      "name": "Parking Norte",
+      "kind": "parking",
+      "zone": "norte",
+      "capacity": 400,
+      "status": "operativo",
+      "note": "Taxis y traslados VIP",
+      "pos": [
+        40.4808,
+        -3.6232
+      ]
+    },
+    {
+      "id": "parkingSur",
+      "name": "Parking Sur",
+      "kind": "parking",
+      "zone": "sur",
+      "capacity": 900,
+      "status": "operativo",
+      "note": "Taxis e invitados por sus medios",
+      "pos": [
+        40.4618,
+        -3.6135
+      ]
+    },
+    {
+      "id": "muelleNorte",
+      "name": "Muelle Norte",
+      "kind": "muelle",
+      "zone": "norte",
+      "status": "inactivo",
+      "note": "Descarga alternativa en Norte · requiere apertura",
+      "pos": [
+        40.4755,
+        -3.6246
+      ]
     }
   ],
   "commitments": [

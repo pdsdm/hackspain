@@ -64,6 +64,8 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 }
 ```
 
+`spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
+
 En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
 
 ### `POST /interventions`

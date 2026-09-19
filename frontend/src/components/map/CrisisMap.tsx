@@ -61,7 +61,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
           if (!layers.accesos && (sp.kind === 'acceso' || sp.kind === 'muelle')) return null
           if (sp.status === 'inactivo' && (sp.kind === 'espera')) return null
           const st = spaceLook(sp.status)
-          const sub = sp.capacity && sp.kind !== 'acceso' ? `${sp.capacity}` : undefined
+          const sub = sp.capacity && sp.kind !== 'acceso' ? `${sp.capacity}${sp.kind === 'parking' ? ' veh.' : ''}` : undefined
           const incoming = vehicles.filter((v) => v.destId === sp.id && !v.done)
           const isHover = hover === sp.id
           return (

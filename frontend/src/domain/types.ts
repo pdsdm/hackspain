@@ -3,7 +3,7 @@ export type Area = 'espacios' | 'catering' | 'transporte' | 'asistentes'
 export type LatLng = [number, number]
 
 export type SpaceStatus = 'cerrado' | 'operativo' | 'propuesto' | 'pendiente' | 'confirmado' | 'descartado' | 'inactivo'
-export type SpaceKind = 'pabellon' | 'lounge' | 'acceso' | 'muelle' | 'espera'
+export type SpaceKind = 'pabellon' | 'lounge' | 'acceso' | 'muelle' | 'espera' | 'paddock' | 'parking'
 
 export interface Space {
   id: string

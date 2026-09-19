@@ -164,6 +164,15 @@ test("rechaza asignar personas a un espacio cerrado o descartado", () => {
   assert.equal(issues[0]?.code, "espacio_no_utilizable");
 });
 
+test("rechaza asignar invitados a un parking, paddock, acceso o muelle", () => {
+  const plan = validPlan();
+  plan.assignments = [{ groupId: "g-acceso", spaceId: "parkingSur", count: 90 }];
+
+  const { issues } = validateOutput(plan, crisisInput());
+
+  assert.equal(issues[0]?.code, "espacio_no_hospitalidad");
+});
+
 test("carga los estados de demo de T5", () => {
   const crisis = crisisInput();
   const total = crisis.guestGroups.reduce((sum, group) => sum + group.count, 0);

@@ -18,6 +18,7 @@ export interface ValidationIssue {
 
 const AREAS: readonly Area[] = ["espacios", "catering", "transporte", "asistentes"];
 const CHANNELS = ["llamada", "sms", "email"] as const;
+const NON_GUEST_KINDS: ReadonlySet<string> = new Set(["acceso", "muelle", "parking", "paddock"]);
 const STATUSES: readonly CommitmentStatus[] = [
   "propuesto",
   "en_consulta",
@@ -290,6 +291,10 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
     }
     if (space.status === "cerrado" || space.status === "descartado") {
       add("espacio_no_utilizable", `${assignment.spaceId} está ${space.status}`);
+      continue;
+    }
+    if (NON_GUEST_KINDS.has(String(space.kind ?? ""))) {
+      add("espacio_no_hospitalidad", `${assignment.spaceId} es ${String(space.kind)}`);
       continue;
     }
     perSpace.set(assignment.spaceId, (perSpace.get(assignment.spaceId) ?? 0) + assignment.count);
