@@ -33,5 +33,6 @@
 | T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |
 | T22 | P2: transcripción en directo | Álvaro | `feat/alvaro-transcripcion` | [T22](docs/specs/T22-transcripcion.md) | todo |
 | T23 | Rediseño UI del panel: tema claro con estética Zhivel | Pep | `feat/pepe-ui-zhivel` | - | doing |
+| T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` | [T24](docs/specs/T24-motor-eventos.md) | doing |
 
 Plan, prioridades, estimaciones y dependencias: [`docs/plan-ejecucion.md`](docs/plan-ejecucion.md). T4 `done` significa documentación preparada y comprobada localmente, no mergeada ni implementada. T1 pasa a `review` porque el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.

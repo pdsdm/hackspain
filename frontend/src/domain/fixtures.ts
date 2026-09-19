@@ -1,4 +1,5 @@
 // Static states for UI development. They do not dispatch calls or advance the demo script.
+import calm from '../../../backend/fixtures/madring/states/calm.json';
 import normal from '../../../backend/fixtures/madring/states/normal.json';
 import crisis from '../../../backend/fixtures/madring/states/crisis.json';
 import proposal from '../../../backend/fixtures/madring/states/proposal.json';
@@ -7,7 +8,15 @@ import loungeUnavailable from '../../../backend/fixtures/madring/states/lounge_u
 import capacityReduced from '../../../backend/fixtures/madring/states/pabellon_b_400.json';
 import type { CrisisState } from './types';
 
-const fixtures = { normal, crisis, proposal, recovered, lounge_unavailable: loungeUnavailable, pabellon_b_400: capacityReduced };
+const fixtures = {
+  calm,
+  normal,
+  crisis,
+  proposal,
+  recovered,
+  lounge_unavailable: loungeUnavailable,
+  pabellon_b_400: capacityReduced,
+};
 export type FixtureName = keyof typeof fixtures;
 
 export function createFixtureState(name: FixtureName): CrisisState {
