@@ -98,6 +98,23 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
   const devinMode = env.DEVIN_MODE?.trim() || "fast";
   const reasoningEffort = env.COORDINATOR_REASONING_EFFORT?.trim() || undefined;
 
+  // Una OPENAI_API_KEY suelta en el entorno del sistema (no en .env: `--env-file` de Node
+  // NO sobreescribe lo que ya existe) ganaba a HELMCODE_API_KEY y mandaba la clave de
+  // OpenAI a api.helmcode.com. El proveedor respondía 401 «Invalid API key», el coordinador
+  // se marcaba caído y el Modo vivo quedaba mudo: media demo apagada por una variable de
+  // entorno ajena. Si la base apunta a otro proveedor y tenemos su clave, esa manda.
+  const baseHost = (() => {
+    if (!openaiBase) return "";
+    try {
+      return new URL(openaiBase).hostname.toLowerCase();
+    } catch {
+      return "";
+    }
+  })();
+  const baseBelongsTo = (provider: keyof typeof DEFAULT_BASE_URLS): boolean =>
+    baseHost !== "" && baseHost === new URL(DEFAULT_BASE_URLS[provider]).hostname;
+  const openaiUsable = Boolean(openai) && !(helmcode && baseBelongsTo("helmcode"));
+
   const withHarness = (config: Omit<LlmConfig, "harness">): LlmConfig => {
     const harness = readHarness(env.COORDINATOR_HARNESS, config.provider);
     if (harness === "devin" && !orgId) {
@@ -117,10 +134,10 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
       devinMode,
     });
   }
-  if (openai) {
+  if (openaiUsable) {
     return withHarness({
       provider: "openai",
-      apiKey: openai,
+      apiKey: openai!,
       model: model || DEFAULT_MODELS.openai,
       baseUrl: trimSlash(openaiBase || DEFAULT_BASE_URLS.openai),
       jsonObject: jsonFlag === undefined || jsonFlag === "" ? true : jsonObject,
