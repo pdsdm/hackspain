@@ -23,6 +23,10 @@ interface RunRow {
   state_json: string;
 }
 
+interface MetadataRow {
+  value: string;
+}
+
 export interface DemoRun {
   id: string;
   scenarioId: string;
@@ -41,6 +45,45 @@ export class StateRepository {
 
   ensureActiveRun(): DemoRun {
     return this.getActiveRun() ?? this.createRun(this.loadFixture());
+  }
+
+  initializeDeployment(deploymentId: string): DemoRun {
+    const previous = this.database
+      .prepare("SELECT value FROM app_metadata WHERE key = 'deployment_id'")
+      .get() as MetadataRow | undefined;
+    const active = this.getActiveRun();
+    if (previous?.value === deploymentId && active) return active;
+
+    const state = this.loadFixture();
+    state.events = [];
+    state.calls = [];
+    state.decisions = [];
+    state.incidentsApplied = [];
+    state.incidentTexts = [];
+    state.twistsApplied = [];
+    state.waitingForDecision = null;
+    state.agentsPaused = false;
+    state.coordinatorStatus = "estable";
+    state.clock.live = false;
+    delete state.clock.liveSeed;
+    delete state.clock.liveMode;
+    delete state.clock.liveIndex;
+    delete state.clock.liveLastAt;
+    delete state.coordinatorBusy;
+
+    const run = this.createRun(state);
+    run.state.clock.paused = true;
+    this.saveState(run.id, run.state);
+    this.database
+      .prepare(`
+        INSERT INTO app_metadata (key, value)
+        VALUES ('deployment_id', ?)
+        ON CONFLICT (key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = CURRENT_TIMESTAMP
+      `)
+      .run(deploymentId);
+    return run;
   }
 
   getActiveRun(): DemoRun | undefined {

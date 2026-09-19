@@ -3,7 +3,7 @@
   "clock": {
     "simSeconds": 43200,
     "speed": 1,
-    "paused": false,
+    "paused": true,
     "openingAt": 46800,
     "lunchAt": 48600,
     "raceAt": 54000
@@ -982,14 +982,7 @@
   ],
   "decisions": [],
   "calls": [],
-  "events": [
-    {
-      "id": "calm-ready",
-      "time": 43200,
-      "kind": "info",
-      "text": "Operación estable una hora antes de la apertura · datos sintéticos"
-    }
-  ],
+  "events": [],
   "budget": {
     "contingency": 5000,
     "autonomousLimit": 1500,

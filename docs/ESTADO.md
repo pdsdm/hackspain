@@ -5,8 +5,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 18:20 CEST |
-| **Commit de `main`** | `dd74178` (PR #56), tras recuperar los 38 commits que descartó el merge `585a5e3` |
+| **Foto tomada** | 19 de septiembre de 2026, 19:01 CEST |
+| **Commit de `main`** | `4e63383` (PR #63) |
+| **Trabajo verificado** | `fix/zhi-clean-deploy-state`, T42, sobre ese commit |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -14,11 +15,11 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la rama de rescate | OK |
-| Tests de backend | 271: **264 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en la rama T42 | OK |
+| Tests de backend | 297: **290 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node | 23.10.0 |
+| Node | 22.23.2 |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
@@ -37,6 +38,14 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 - T18 local: frontend API, SQLite persistente, reset, reinicio y parada.
 - T39: mapa a pantalla completa, paneles flotantes y cronología tipo chat.
 
+### En `fix/zhi-clean-deploy-state`, pendiente de revisión
+
+- T42 usa `RAILWAY_DEPLOYMENT_ID` para crear una ejecución `calm` nueva por deployment.
+- El run empieza a las 12:00, pausado, sin eventos, llamadas, decisiones ni tareas abiertas.
+- Reiniciar el mismo deployment conserva el run; los anteriores quedan inactivos en SQLite.
+- La prueba de proceso mantuvo `simSeconds=43200` durante tres segundos y `/actions` vacío.
+- README documenta frontend Vercel, backend Railway, healthcheck y volumen SQLite.
+
 ### En `fix/zhi-demo-readiness`, aún sin mergear
 
 - `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
@@ -50,7 +59,12 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
 ## Qué falta, por riesgo para la demo
 
-### 1. T17 con servicios reales — Zhi (`doing`)
+### 1. Validar T42 en Railway
+
+Mergear la rama y comprobar que el nuevo deployment deja `/state` en `planVersion=1`,
+`clock.paused=true`, `simSeconds=43200` y cero eventos, llamadas, decisiones y acciones.
+
+### 2. T17 con servicios reales — Zhi (`doing`)
 
 El recorrido automatizado pasa. Helmcode real aplicó la política nueva en una instancia
 aislada: cero decisiones económicas y despacho inmediato. Esa prueba detectó callbacks
@@ -61,13 +75,13 @@ Para cerrar T17 falta repetir el recorrido completo con actor HappyRobot control
 callback y giro. El usuario informó de una primera llamada real previa, pero no se verificó
 en esta foto el recorrido completo tras el fix.
 
-### 2. T18 ensayo completo — Zhi (`doing`)
+### 3. T18 ensayo completo — Zhi (`doing`)
 
 Se verificaron `/health` y `/state` públicos por Quick Tunnel, autenticación del callback,
 persistencia SQLite, seed y velocidad tras reinicio. Falta un ensayo completo que incluya
 T17 real y recuperación operativa.
 
-### 3. Integraciones del equipo
+### 4. Integraciones del equipo
 
 - El prompt y extractor desplegados en HappyRobot deben reflejar costes informativos y
   `result.data.committedCost` (sin verificar).
@@ -101,7 +115,9 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 
 ## Ramas vivas sin mergear
 
-- `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
+- `fix/zhi-clean-deploy-state`: T42 implementada y verificada, pendiente de revisión.
+- `backup/pre-demo-cleanup-20260919`: copia exacta de `4e63383` antes de T42.
+- `fix/ventura-cierre-demo`: cierre de crisis y túnel alternativo, dos commits sobre `main`.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 

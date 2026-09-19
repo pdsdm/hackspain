@@ -76,6 +76,8 @@ export function createApp(
   const config = options.config ?? defaultConfig(options.workflowToken);
   const app = express();
   const stateRepository = new StateRepository(database.connection, config.initialFixture);
+  if (config.deploymentId) stateRepository.initializeDeployment(config.deploymentId);
+  else stateRepository.ensureActiveRun();
   const taskRepository = new TaskRepository(database.connection);
   const eventRepository = new EventRepository(database.connection);
   const controlService = new ControlService(stateRepository, config.simSeed, config.clockSpeed);
@@ -142,7 +144,6 @@ export function createApp(
   app.locals.taskRepository = taskRepository;
   app.locals.engine = engine;
   app.locals.executor = executor;
-  stateRepository.ensureActiveRun();
   engine.recoverInterruptedCoordinator();
 
   app.use((_request, response, next) => {

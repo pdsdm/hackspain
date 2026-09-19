@@ -23,3 +23,8 @@ test("a real HappyRobot hook requires a test destination", () => {
     /HAPPYROBOT_TEST_PHONE/,
   );
 });
+
+test("Railway deployment id is optional and trimmed", () => {
+  assert.equal(loadConfig({ RAILWAY_DEPLOYMENT_ID: " deploy-42 " }).deploymentId, "deploy-42");
+  assert.equal(loadConfig({}).deploymentId, undefined);
+});

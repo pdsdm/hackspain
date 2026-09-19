@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import type { ActionExecutor } from "../src/actions/executor.js";
+import { SimulationClock } from "../src/domain/clock.js";
 import { openDatabase } from "../src/state/database.js";
 import { StateRepository } from "../src/state/state-repository.js";
 
@@ -37,6 +39,47 @@ test("CrisisState survives restart without dropping future contract fields", () 
     assert.equal(state.nextScriptAt, null);
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("a Railway deployment creates one clean paused run and preserves it across restarts", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const repository = new StateRepository(database.connection);
+    const previous = repository.ensureActiveRun();
+    previous.state.events = [{ id: "old-event" }];
+    previous.state.calls = [{ id: "old-call" }];
+    previous.state.decisions.push({ id: "old-decision" });
+    repository.saveState(previous.id, previous.state);
+
+    const first = repository.initializeDeployment("deploy-1");
+    assert.notEqual(first.id, previous.id);
+    assert.equal(first.state.clock.paused, true);
+    assert.deepEqual(first.state.events, []);
+    assert.deepEqual(first.state.calls, []);
+    assert.deepEqual(first.state.decisions, []);
+    assert.equal(first.state.coordinatorStatus, "estable");
+    const simSeconds = first.state.clock.simSeconds;
+    const executor = { fireDue() {}, pump() {} } as unknown as ActionExecutor;
+    new SimulationClock(repository, executor).tick();
+    assert.equal(repository.ensureActiveRun().state.clock.simSeconds, simSeconds);
+
+    first.state.events = [{ id: "kept-on-restart" }];
+    repository.saveState(first.id, first.state);
+    const restarted = repository.initializeDeployment("deploy-1");
+    assert.equal(restarted.id, first.id);
+    assert.deepEqual(restarted.state.events, [{ id: "kept-on-restart" }]);
+
+    const next = repository.initializeDeployment("deploy-2");
+    assert.notEqual(next.id, first.id);
+    assert.equal(next.state.clock.paused, true);
+    assert.deepEqual(next.state.events, []);
+    const active = database.connection
+      .prepare("SELECT id FROM demo_runs WHERE active = 1")
+      .get() as { id: string };
+    assert.equal(active.id, next.id);
+  } finally {
+    database.close();
   }
 });
 
