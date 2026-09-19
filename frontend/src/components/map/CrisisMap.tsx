@@ -80,7 +80,8 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
           if (v.kind === 'bus' && !layers.transporte) return null
           if (v.kind === 'truck' && !layers.proveedores) return null
           if (v.done) return null
-          const path = routes[v.id]
+          const path = routes[v.id] ?? v.fallback
+          if (!path || path.length < 2) return null
           const pos = pointAlong(path, v.pct / 100)
           const lit = hover === v.id || hover === v.destId || selected === v.id
           const color = v.kind === 'truck' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]

@@ -38,7 +38,7 @@ function shuttleView(s: CrisisState, sh: Shuttle, now: number): VehicleView {
   return {
     id: sh.id, kind: 'bus', name: sh.name, load: `${sh.passengers} pax`, destId: sh.destinationId, destName: spaceName(s, sh.destinationId),
     eta: sh.arriveAt, etaLabel: fmtClock(sh.arriveAt), pct: Math.round(progress(sh.departAt, sh.arriveAt, now) * 100),
-    status, tone, delayed, done: sh.status === 'llegado', waypoints: viaPoints(s, sh.route), fallback: sh.route,
+    status, tone, delayed, done: sh.status === 'llegado', waypoints: viaPoints(s, sh.route), fallback: sh.route?.length ? sh.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 

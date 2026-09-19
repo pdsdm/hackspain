@@ -46,6 +46,17 @@ export function hasNorthAccess(state: CrisisStateDocument): boolean {
   });
 }
 
+const SPACE_STATUSES = new Set(["cerrado", "operativo", "propuesto", "pendiente", "confirmado", "descartado", "inactivo"]);
+
+function coerceSpaceStatus(status: string): string {
+  if (SPACE_STATUSES.has(status)) return status;
+  if (/cerr|bloq|cort|inutil|caid|sin acceso/i.test(status)) return "cerrado";
+  if (/descart/i.test(status)) return "descartado";
+  if (/confirm/i.test(status)) return "confirmado";
+  if (/inactiv|sin usar/i.test(status)) return "inactivo";
+  return "pendiente";
+}
+
 export function applyOperation(
   draft: CrisisStateDocument,
   world: WorldModel,
