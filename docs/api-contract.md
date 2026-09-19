@@ -139,9 +139,10 @@ Además de `shuttles` y `deliveries`, `GET /state` puede traer `vehicles[]`: tax
 { "id": "REP-01", "kind": "repartidor", "name": "REP-01", "who": "Hielo y bebida · última hora", "count": 1, "from": "coslada", "origin": "Coslada", "destinationId": "muelleSur", "route": [[40.4405, -3.585], [40.4645, -3.6245]], "departAt": 44400, "arriveAt": 46500, "delayMin": 0, "status": "en_ruta", "counterpart": "Repartidor REP-01", "note": "Destino invalidado: Muelle Sur cerrado" }
 ```
 
-- `kind`: `taxi` | `vip` | `repartidor`. `status`: `en_ruta` | `retenido` | `desviado` | `llegado`. `from` es el id del lugar de origen en `world.json`; `origin` es su nombre.
+- `kind`: `taxi` | `vip` | `repartidor`. `status`: `en_ruta` | `retenido` | `desviado` | `llegado`. `from` es el id resuelto del origen (`world.json` o un id geocodificado); `origin` es el nombre mostrado; `originPos` opcional es `[lat, lng]` cuando el origen no es un espacio del recinto.
 - El reloj marca `llegado` al pasar `arriveAt` y lo anota en la cronología (`info`, área `transporte`). Un vehículo `retenido` no avanza.
-- El coordinador los ve en la sección VEHÍCULOS y los mueve con la operación `redirect_vehicle { id, destinationId, note?, delayMin?, status? }`, validada como `redirect_delivery`: destino existente y no `cerrado` ni `descartado`; la ruta y la hora nueva salen de `world.json` desde `from`.
+- El coordinador los mueve con `redirect_vehicle { id, destinationId, note?, delayMin?, status? }` y puede crear uno nuevo con `spawn_vehicle { from, destinationId, who, counterpart?, kind?, id? }`. `from` es texto libre (dirección, comercio, almacén). El backend geocodifica si hace falta y calcula la ruta; no hay lista fija de orígenes.
+- `consult_world` `type: route` admite `{ fromId, destinationId }` sin `vehicleId` para estimar minutos antes de llamar al transportista.
 
 ### `POST /events`
 
