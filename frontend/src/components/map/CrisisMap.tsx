@@ -116,8 +116,8 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
         <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#1a1d24', weight: 1.25, opacity: 0.4, fillColor: '#ffffff', fillOpacity: 0.26, dashArray: '5 4', interactive: false }} />
 
         <Pane name="circuit" style={{ zIndex: 455, pointerEvents: 'none' }}>
-          <Polyline positions={TRACK} pathOptions={{ color: '#ffffff', weight: 11, opacity: 1, lineJoin: 'round', interactive: false }} />
-          <Polyline positions={TRACK} pathOptions={{ color: TRACK_COLOR, weight: 6, opacity: 1, lineJoin: 'round', interactive: false }} />
+          <Polyline positions={TRACK} pathOptions={{ color: '#ffffff', weight: 8, opacity: 1, lineJoin: 'round', interactive: false }} />
+          <Polyline positions={TRACK} pathOptions={{ color: TRACK_COLOR, weight: 4.5, opacity: 1, lineJoin: 'round', interactive: false }} />
           <Polyline positions={PIT_LANE} pathOptions={{ color: TRACK_COLOR, weight: 2.5, opacity: 0.7, dashArray: '2 5', interactive: false }} />
         </Pane>
 
@@ -181,8 +181,8 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
             const color = v.delayed ? COLOR.red : KIND_COLOR[v.kind]
             return (
               <Fragment key={v.id}>
-                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 7 : 4.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing' }} />
-                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color, weight: lit ? 4 : 2.5, opacity: lit ? 1 : 0.9, lineCap: 'round', lineJoin: 'round', dashArray: '1 7', className: `route-hover route-dots${v.pct > 0 ? ' route-flow' : ''}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
+                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 9 : 7, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing' }} />
+                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color, weight: lit ? 6 : 4.5, opacity: lit ? 1 : 0.95, lineCap: 'round', lineJoin: 'round', dashArray: '1 9', className: `route-hover route-dots${v.pct > 0 ? ' route-flow' : ''}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
                   <VehicleTip v={v} />
                 </Polyline>
               </Fragment>

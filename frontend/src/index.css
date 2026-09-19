@@ -51,7 +51,7 @@ html, body, #root {
 .legend-barrier { width: 24px; height: 0; flex: none; border-top: 2px dotted #e5484d; }
 
 .route-flow { animation: dash 1.6s linear infinite; }
-@keyframes dash { to { stroke-dashoffset: -16; } }
+@keyframes dash { to { stroke-dashoffset: -20; } }
 .route-casing { pointer-events: none; }
 
 .glass {
