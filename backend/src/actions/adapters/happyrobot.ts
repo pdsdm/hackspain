@@ -39,11 +39,17 @@ export async function dispatchHappyRobot(input: {
   planVersion: number;
   callId: string;
   publicBaseUrl: string;
+  testPhone: string | undefined;
   state: CrisisStateDocument;
 }): Promise<"dispatched" | "unknown"> {
   const payload = typeof input.task.payload === "object" && input.task.payload !== null
     ? (input.task.payload as Record<string, unknown>)
     : {};
+  const data = typeof payload.data === "object" && payload.data !== null
+    ? (payload.data as Record<string, unknown>)
+    : {};
+  const seedContact = contactFor(input.task.area);
+  const contact = { ...seedContact, phone: input.testPhone ?? seedContact.phone };
   try {
     const response = await fetch(input.hookUrl, {
       method: "POST",
@@ -60,7 +66,9 @@ export async function dispatchHappyRobot(input: {
         counterpart: payload.counterpart ?? "",
         reason: payload.reason ?? "",
         callId: input.callId,
-        contact: contactFor(input.task.area),
+        phone_number: contact.phone,
+        contact,
+        data,
         situation: {
           simSeconds: input.state.clock.simSeconds,
           planVersion: input.state.planVersion,

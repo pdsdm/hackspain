@@ -119,6 +119,25 @@ Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre 
 - `kind`: texto no vacío (`free_text`, `call_result`, un giro, un tipo de intervención…).
 - `text`, `payload` y `actorId` son opcionales.
 
+Una solicitud manual de llamada usa un payload validado y encola una tarea aunque el coordinador esté en modo `rules`:
+
+```json
+{
+  "source": "human",
+  "kind": "call_request",
+  "actorId": "responsable",
+  "text": "Llamar al recinto para confirmar el Pabellón B",
+  "payload": {
+    "area": "espacios",
+    "counterpart": "Responsable de recinto - MADRING",
+    "objective": "Confirmar Pabellón B para 450 invitados",
+    "commitmentId": "c-pabB-v2"
+  }
+}
+```
+
+`area`, `counterpart` y `objective` son obligatorios. `commitmentId` es opcional y permite aplicar el resultado al compromiso correspondiente.
+
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
 Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
@@ -238,7 +257,9 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "counterpart": "Transportes Ibéricos",
   "reason": "El Acceso Sur está cerrado",
   "callId": "call-7a31…",
-  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": null, "email": null },
+  "phone_number": "+34600000000",
+  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": "+34600000000", "email": null },
+  "data": { "commitmentId": "c-transporte-v2" },
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
   "callbackUrl": "https://demo.example/workflow/results"
 }

@@ -137,6 +137,7 @@ export class ActionExecutor {
         planVersion: task.planVersion,
         callId,
         publicBaseUrl: this.config.publicBaseUrl,
+        testPhone: this.config.happyrobotTestPhone,
         state,
       });
       this.tasks.markDispatchOutcome(task.id, outcome);

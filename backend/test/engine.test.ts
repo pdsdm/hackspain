@@ -43,6 +43,36 @@ test("rules mode applies a jury twist without calling the LLM", async () => {
   }
 });
 
+test("human call_request enqueues one deterministic call without an LLM", async () => {
+  const { database, states, tasks, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    await instance.handle({
+      id: "manual-call-1",
+      source: "human",
+      kind: "call_request",
+      text: "Llamar al recinto",
+      payload: {
+        area: "espacios",
+        counterpart: "Responsable de recinto - MADRING",
+        objective: "Confirmar Pabellón B para 450 invitados",
+      },
+    });
+    const queued = tasks.listOpen(run.id);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0]?.area, "espacios");
+    assert.equal(queued[0]?.kind, "call");
+    assert.deepEqual(queued[0]?.payload, {
+      objective: "Confirmar Pabellón B para 450 invitados",
+      counterpart: "Responsable de recinto - MADRING",
+      reason: "Solicitud manual del responsable",
+      data: {},
+    });
+  } finally {
+    database.close();
+  }
+});
+
 test("human approve invokes the coordinator when a complete function is injected", async () => {
   let called = 0;
   const { database, states, instance } = engine(openDatabase(":memory:"), async () => {

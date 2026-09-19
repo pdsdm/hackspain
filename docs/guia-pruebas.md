@@ -101,6 +101,7 @@ El contrato completo, cuerpos y respuestas están en [`docs/api-contract.md`](ap
 ```dotenv
 PUBLIC_BASE_URL=https://URL-PUBLICA-DEL-BACKEND
 HAPPYROBOT_API_KEY=
+HAPPYROBOT_TEST_PHONE=+34600000000
 HAPPYROBOT_WEBHOOK_TOKEN=
 HAPPYROBOT_HOOK_ESPACIOS=
 HAPPYROBOT_HOOK_CATERING=
@@ -108,7 +109,7 @@ HAPPYROBOT_HOOK_TRANSPORTE=
 HAPPYROBOT_HOOK_ASISTENTES=
 ```
 
-Solo hace falta configurar el hook de las áreas que se prueben. `PUBLIC_BASE_URL` debe ser HTTPS y accesible desde HappyRobot. `HAPPYROBOT_WEBHOOK_TOKEN` es un secreto elegido por el equipo para autenticar los callbacks; no es la API key de HappyRobot.
+Solo hace falta configurar el hook de las áreas que se prueben. Con un hook y `HAPPYROBOT_API_KEY`, `HAPPYROBOT_TEST_PHONE` es obligatorio y debe usar E.164. `PUBLIC_BASE_URL` debe ser HTTPS y accesible desde HappyRobot. `HAPPYROBOT_WEBHOOK_TOKEN` es un secreto elegido por el equipo para autenticar los callbacks; no es la API key de HappyRobot.
 
 ### Flujo en HappyRobot
 
@@ -125,7 +126,7 @@ Resultado esperado: el backend registra `[actions]`, HappyRobot realiza la llama
 - Verificado localmente: Vite en modo `api` llega a `/health`, `/state`, `/events` y `/simulation/*`; el backend registra el evento.
 - Probado por tests: despacho al hook, timeout sin callback, autenticación e idempotencia de `/workflow/results`.
 - Pendiente real: URL de trigger Webhook, API key de HappyRobot, número de prueba y backend público HTTPS.
-- Los contactos del seed tienen `phone: null`; T9 debe inyectar el número de prueba desde entorno o el workflow debe proporcionar un destino de pruebas antes de hacer una llamada telefónica real.
+- Los contactos del seed mantienen `phone: null`; el backend inyecta `HAPPYROBOT_TEST_PHONE` solo al payload externo.
 - El Web call de la rama `Prueba-de-plataforma-y-llamada-real` es un respaldo por navegador, no el camino backend → llamada telefónica.
 
 Antes de cerrar cualquier cambio:

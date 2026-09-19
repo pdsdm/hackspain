@@ -286,14 +286,35 @@ export interface IntakeEvent {
   actorId?: string;
 }
 
+export interface CallRequest {
+  area: Area;
+  counterpart: string;
+  objective: string;
+  commitmentId?: string;
+}
+
+export function parseCallRequest(value: unknown): CallRequest {
+  const input = record(value, "payload");
+  const commitmentId = optionalString(input.commitmentId, "payload.commitmentId");
+  return {
+    area: enumValue(input.area, "payload.area", AREAS),
+    counterpart: string(input.counterpart, "payload.counterpart"),
+    objective: string(input.objective, "payload.objective"),
+    ...(commitmentId ? { commitmentId } : {}),
+  };
+}
+
 export function parseEvent(value: unknown): IntakeEvent {
   const input = record(value, "body");
   const payload = input.payload === undefined ? {} : record(input.payload, "payload");
   const text = optionalString(input.text, "text");
   const actorId = optionalString(input.actorId, "actorId");
+  const source = enumValue(input.source, "source", EVENT_SOURCES);
+  const kind = string(input.kind, "kind");
+  if (source === "human" && kind === "call_request") parseCallRequest(payload);
   return {
-    source: enumValue(input.source, "source", EVENT_SOURCES),
-    kind: string(input.kind, "kind"),
+    source,
+    kind,
     payload,
     ...(text ? { text } : {}),
     ...(actorId ? { actorId } : {}),

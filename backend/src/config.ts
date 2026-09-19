@@ -21,6 +21,7 @@ export interface AppConfig {
   port: number;
   workflowToken: string | undefined;
   happyrobotApiKey: string | undefined;
+  happyrobotTestPhone: string | undefined;
   initialFixture: InitialFixture;
   clockSpeed: number;
   coordinatorMode: CoordinatorMode;
@@ -90,6 +91,15 @@ function readHook(value: string | undefined): string | undefined {
   return url || undefined;
 }
 
+function readPhone(value: string | undefined): string | undefined {
+  const phone = value?.trim();
+  if (!phone) return undefined;
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+    throw new Error("HAPPYROBOT_TEST_PHONE must use E.164, for example +34600000000");
+  }
+  return phone;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
   const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
@@ -100,13 +110,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (catering) hooks.catering = catering;
   if (transporte) hooks.transporte = transporte;
   if (asistentes) hooks.asistentes = asistentes;
+  const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
+  const happyrobotTestPhone = readPhone(env.HAPPYROBOT_TEST_PHONE);
+  if (happyrobotApiKey && Object.keys(hooks).length > 0 && !happyrobotTestPhone) {
+    throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
+  }
 
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
     port: readPort(env.PORT),
     workflowToken: env.HAPPYROBOT_WEBHOOK_TOKEN?.trim() || undefined,
-    happyrobotApiKey: env.HAPPYROBOT_API_KEY?.trim() || undefined,
+    happyrobotApiKey,
+    happyrobotTestPhone,
     initialFixture: readFixture(env.INITIAL_FIXTURE),
     clockSpeed: readClockSpeed(env.CLOCK_SPEED),
     coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
