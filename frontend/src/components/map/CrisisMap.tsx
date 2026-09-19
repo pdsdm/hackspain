@@ -1,27 +1,42 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'react-leaflet'
 import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
-import { fmtClock } from '../../domain/time'
 import { SPACE } from '../ui/status'
 import { pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
-import { pointAlong, progress } from './geo'
+import { pointAlong } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'
+import { useOsrmRoutes } from './routing'
+import { vehicleViews, vehicleRowsHtml, type VehicleView } from './vehicles'
 
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+const COLOR = { ink: '#1a1d24', amber: '#c47a00', red: '#e5484d', green: '#1f9d55', muted: '#b8b8b2' }
+
+function VehicleTip({ v }: { v: VehicleView }) {
+  return (
+    <Tooltip direction="top" offset={[0, -12]} className="veh" sticky>
+      <div className="row"><span className="tag">{v.name}</span><span>{v.load}</span></div>
+      <div className="row"><span className={v.tone}>{v.status}</span></div>
+      <div className="row"><span className="muted">Destino</span><span>{v.destName}</span></div>
+      <div className="row"><span className="muted">Llegada</span><b>{v.etaLabel}</b><span className="muted">· {v.pct}% del trayecto</span></div>
+    </Tooltip>
+  )
+}
 
 export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect: (id: string) => void; selected: string | null }) {
   const [layers, setLayers] = useState<Layers>({ transporte: true, proveedores: true, accesos: true })
-  const now = s.clock.simSeconds
+  const [hover, setHover] = useState<string | null>(null)
+  const vehicles = useMemo(() => vehicleViews(s), [s])
+  const routes = useOsrmRoutes(vehicles.map((v) => ({ id: v.id, waypoints: v.waypoints, fallback: v.fallback })))
 
   return (
     <div className="relative h-full w-full overflow-hidden border border-line bg-panel">
-      <MapContainer center={[40.4712, -3.6215]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
+      <MapContainer center={[40.4712, -3.6215]} zoom={14} zoomControl={false} attributionControl className="h-full w-full">
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.06, dashArray: '4 4' }} />
-        <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#a78bfa', weight: 1.5, fillColor: '#a78bfa', fillOpacity: 0.06, dashArray: '4 4' }} />
+        <Polygon positions={ZONE_NORTE} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.04, dashArray: '4 4' }} />
         <Marker position={[40.4602, -3.6190]} icon={zoneLabelIcon('MADRING Sur')} interactive={false} />
         <Marker position={[40.4826, -3.6145]} icon={zoneLabelIcon('MADRING Norte')} interactive={false} />
         <Polyline positions={[[40.4715, -3.6190], [40.4720, -3.6150]]} pathOptions={{ color: '#e5484d', weight: 3, dashArray: '6 6' }}>
@@ -33,44 +48,36 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
           if (sp.status === 'inactivo' && (sp.kind === 'espera')) return null
           const st = SPACE[sp.status]
           const sub = sp.capacity && sp.kind !== 'acceso' ? `${sp.capacity}` : undefined
+          const incoming = vehicles.filter((v) => v.destId === sp.id && !v.done)
+          const isHover = hover === sp.id
           return (
-            <Marker key={sp.id} position={sp.pos} icon={pinIcon(sp.name, `${st.cls}${selected === sp.id ? ' ring' : ''}`, sub)} eventHandlers={{ click: () => onSelect(sp.id) }}>
-              <Tooltip direction="top" offset={[40, -8]}>
-                <b>{sp.name}</b> · {st.label}{sp.note ? ` · ${sp.note}` : ''}
+            <Marker key={sp.id} position={sp.pos} icon={pinIcon(sp.name, `${st.cls}${selected === sp.id || isHover ? ' ring' : ''}`, sub)} eventHandlers={{ click: () => onSelect(sp.id), mouseover: () => setHover(sp.id), mouseout: () => setHover(null) }}>
+              <Tooltip direction="top" offset={[40, -8]} className="veh">
+                <div className="row"><span className="tag">{sp.name}</span><span className={st.tone}>{st.label}</span></div>
+                {sp.note && <div className="row"><span className="muted">{sp.note}</span></div>}
+                {incoming.length > 0 && <div className="row" style={{ marginTop: 6 }}><span className="tag muted">Vehículos en camino · {incoming.length}</span></div>}
+                {incoming.length > 0 && <div dangerouslySetInnerHTML={{ __html: vehicleRowsHtml(incoming) }} />}
               </Tooltip>
             </Marker>
           )
         })}
 
-        {layers.transporte && s.shuttles.map((sh) => {
-          const t = progress(sh.departAt, sh.arriveAt, now)
-          const pos = pointAlong(sh.route, t)
-          const color = sh.status === 'retrasado' ? '#c47a00' : sh.accepted ? '#1a1d24' : '#1a1d24'
+        {vehicles.map((v) => {
+          if (v.kind === 'bus' && !layers.transporte) return null
+          if (v.kind === 'truck' && !layers.proveedores) return null
+          if (v.done) return null
+          const path = routes[v.id]
+          const pos = pointAlong(path, v.pct / 100)
+          const lit = hover === v.id || hover === v.destId || selected === v.id
+          const color = v.kind === 'truck' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
           return (
-            <Fragment key={sh.id}>
-              <Polyline positions={sh.route} pathOptions={{ color, weight: 2.5, opacity: sh.accepted ? 0.9 : 0.45, className: sh.status === 'llegado' ? '' : 'route-anim' }} />
-              {sh.status !== 'llegado' && (
-                <Marker position={pos} icon={vehicleIcon('bus', sh.status === 'retrasado')} eventHandlers={{ click: () => onSelect(sh.id) }} zIndexOffset={500}>
-                  <Tooltip direction="top" offset={[0, -12]}>
-                    <b>{sh.name}</b> · {sh.passengers} pax · llega {fmtClock(sh.arriveAt)}{sh.delayMin ? ` (+${sh.delayMin} min)` : ''}{sh.accepted ? ' · ruta aceptada' : ' · instrucción pendiente'}
-                  </Tooltip>
-                </Marker>
-              )}
-            </Fragment>
-          )
-        })}
-
-        {layers.proveedores && s.deliveries.map((d) => {
-          const t = progress(d.departAt, d.arriveAt, now)
-          const pos = pointAlong(d.route, t)
-          const bad = d.status === 'bloqueada' || d.status === 'retrasada'
-          if (d.status === 'entregada') return null
-          return (
-            <Fragment key={d.id}>
-              <Polyline positions={d.route} pathOptions={{ color: bad ? '#e5484d' : '#c47a00', weight: 2.5, opacity: 0.8, className: 'route-anim' }} />
-              {t > 0 && (
-                <Marker position={pos} icon={vehicleIcon('truck')} eventHandlers={{ click: () => onSelect(d.id) }} zIndexOffset={500}>
-                  <Tooltip direction="top" offset={[0, -12]}><b>{d.name}</b> · {d.status} · llega {fmtClock(d.arriveAt)}</Tooltip>
+            <Fragment key={v.id}>
+              <Polyline positions={path} pathOptions={{ color, weight: lit ? 5 : 2.5, opacity: lit ? 1 : v.tone === 'amber' && v.kind === 'bus' ? 0.5 : 0.85, className: `route-hover ${v.done ? '' : 'route-anim'}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
+                <VehicleTip v={v} />
+              </Polyline>
+              {v.pct > 0 && (
+                <Marker position={pos} icon={vehicleIcon(v.kind, v.delayed, `${v.name} · ${v.etaLabel}`)} eventHandlers={{ click: () => onSelect(v.id), mouseover: () => setHover(v.id), mouseout: () => setHover(null) }} zIndexOffset={lit ? 900 : 500}>
+                  <VehicleTip v={v} />
                 </Marker>
               )}
             </Fragment>
@@ -80,7 +87,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
 
       <div className="absolute top-3 left-3 z-[1000] border border-line bg-panel/90 backdrop-blur px-3 py-2">
         <div className="label">Mapa · MADRING</div>
-        <div className="text-[12px]">Plan v{s.planVersion} · {s.twistsApplied.length} giro{s.twistsApplied.length === 1 ? '' : 's'} aplicado{s.twistsApplied.length === 1 ? '' : 's'}</div>
+        <div className="text-[12px]">Plan v{s.planVersion} · {vehicles.filter((v) => !v.done).length} vehículos en ruta · {s.twistsApplied.length} giro{s.twistsApplied.length === 1 ? '' : 's'}</div>
       </div>
 
       <div className="absolute bottom-3 left-3 z-[1000] border border-line bg-panel/90 backdrop-blur px-3 py-2 text-[11px] text-muted space-y-1">
