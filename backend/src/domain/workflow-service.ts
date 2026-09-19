@@ -11,7 +11,7 @@ import { confirmationBlocker, decideAcceptance, readVerificationTarget, resolved
 import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
-import type { TaskRepository } from "../state/task-repository.js";
+import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import type { WorkflowEventRepository } from "../state/workflow-event-repository.js";
 
 export interface CoordinatorResponse extends Record<string, unknown> {
@@ -80,10 +80,21 @@ function applyCoordinatorState(
 function applySpecialistState(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
-  area: string,
+  task: DispatchTask,
   verification?: CallAcceptanceVerification,
 ): CrisisStateDocument {
+  const area = task.area;
   const next = structuredClone(state);
+  const cost = envelope.result.data.committedCost;
+  if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0 &&
+    ["dispatching", "dispatched", "unknown"].includes(task.status) && envelope.status === "completed" &&
+    envelope.result.outcome === "accepted" && envelope.result.conditions.length === 0 &&
+    envelope.result.evidence.callId === `call-${task.id}` &&
+    envelope.result.evidence.transcript?.some((line) => line.who === "humano" && line.text.trim())) {
+    const total = Math.round((next.budget.committed + cost) * 100) / 100;
+    if (!Number.isFinite(total)) throw new ContractError("Invalid committed cost total");
+    next.budget.committed = total;
+  }
   const agents = records(next, "agents");
   const agent = agents.find((item) => item.id === area);
   if (agent) {
@@ -300,7 +311,7 @@ export class WorkflowService {
         }
         if (checked && target) checked = { ...checked, target };
         else if (checked) checked = { decision: "keep_conditional", reason: "target_no_admitido" };
-        return applySpecialistState(state, envelope, currentTask.area, checked);
+        return applySpecialistState(state, envelope, currentTask, checked);
       },
       envelope.status === "completed" ? "completed" : "failed",
     );

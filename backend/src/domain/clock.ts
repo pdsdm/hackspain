@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { ActionExecutor } from "../actions/executor.js";
 import { advanceAttendance } from "./attendance.js";
+import { nextAutoTwist, TWIST_LABELS } from "./auto-twists.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { Engine } from "./engine.js";
 import { LIVE_INTERVAL_SECONDS, incidentAt } from "./incidents.js";
@@ -158,9 +159,20 @@ export class SimulationClock {
       }
     }
     if (incident) {
-      void this.engine
-        ?.handle({ source: "clock", kind: incident.kind, text: incident.text, payload: { incident: incident.id, index: incident.index } })
-        .catch((error) => console.error("[live] handle", error));
+      if (incident.kind === "twist") {
+        void this.engine
+          ?.handle({
+            source: "clock",
+            kind: "twist",
+            text: incident.text,
+            payload: { twist: incident.id },
+          })
+          .catch((error) => console.error("[live] twist", error));
+      } else {
+        void this.engine
+          ?.handle({ source: "clock", kind: incident.kind, text: incident.text, payload: { incident: incident.id, index: incident.index } })
+          .catch((error) => console.error("[live] handle", error));
+      }
     }
   }
 
@@ -180,17 +192,26 @@ export class SimulationClock {
   private dueIncident(
     state: CrisisStateDocument,
     now: number,
-  ): { kind: "incident" | "incident_open"; id: string; text: string; index: number } | undefined {
+  ): { kind: "incident" | "incident_open" | "twist"; id: string; text: string; index: number } | undefined {
     if (state.clock.live !== true || !this.coordinatorFree(state)) return undefined;
     if (now - Number(state.clock.liveLastAt ?? 0) < LIVE_INTERVAL_SECONDS) return undefined;
     const index = Number(state.clock.liveIndex ?? 0);
+    const seed = Number(state.clock.liveSeed ?? 1);
+    if (index % 2 === 1) {
+      const twist = nextAutoTwist(state, seed);
+      if (twist) {
+        state.clock.liveLastAt = now;
+        state.clock.liveIndex = index + 1;
+        return { kind: "twist", id: twist, text: `Giro automático: ${TWIST_LABELS[twist]}`, index };
+      }
+    }
     const open = state.clock.liveMode !== "catalog" && this.engine?.hasLlm() === true;
     if (open) {
       state.clock.liveLastAt = now;
       state.clock.liveIndex = index + 1;
       return { kind: "incident_open", id: `gen-${index}`, text: "", index };
     }
-    const incident = incidentAt(Number(state.clock.liveSeed ?? 1), index);
+    const incident = incidentAt(seed, index);
     if (!incident) return undefined;
     state.clock.liveLastAt = now;
     state.clock.liveIndex = index + 1;

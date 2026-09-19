@@ -125,25 +125,22 @@ test("rechaza asignar más personas de las que tiene un grupo", () => {
   assert.equal(issues[0]?.code, "grupo_sobreasignado");
 });
 
-test("exige escalado cuando el coste previsto supera lo autorizado", () => {
+test("un coste superior al antiguo límite no exige escalado", () => {
   const input = crisisInput();
-  input.budget.forecast = 3200;
+  input.budget.forecast = 6000;
   const plan = validPlan();
   plan.decision = null;
+  plan.estimatedCost = 6000;
   plan.coordinatorStatus = "replanificando";
-
-  const { issues } = validateOutput(plan, input);
-
-  assert.equal(issues[0]?.code, "falta_escalado");
+  assert.deepEqual(validateOutput(plan, input).issues, []);
 });
 
-test("rechaza escalar un gasto que cabe en el límite autónomo", () => {
+test("las decisiones operativas no dependen del coste", () => {
   const plan = validPlan();
-  plan.decision = { ...validPlan().decision!, cost: 900 };
-
-  const { issues } = validateOutput(plan, crisisInput());
-
-  assert.equal(issues[0]?.code, "escalado_innecesario");
+  plan.decision = { ...validPlan().decision!, kind: "operational", cost: 0 };
+  const { output, issues } = validateOutput(plan, crisisInput());
+  assert.deepEqual(issues, []);
+  assert.equal(output?.decision?.kind, "operational");
 });
 
 test("exige un porqué en cada acción", () => {
@@ -240,6 +237,20 @@ test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
   assert.equal(config.model, "deepseek-v4-flash");
   assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
   assert.equal(config.harness, "json");
+  assert.equal(config.reasoningEffort, "low");
+});
+
+test("el effort de Helmcode se puede sobrescribir y no se impone a otros proveedores", () => {
+  assert.equal(
+    loadLlmConfig({ HELMCODE_API_KEY: "sk-test", COORDINATOR_REASONING_EFFORT: "none" }).reasoningEffort,
+    "none",
+  );
+  assert.equal(loadLlmConfig({ OPENAI_API_KEY: "sk-test" }).reasoningEffort, undefined);
+  assert.equal(loadLlmConfig({ COGNITION_API_KEY: "sk-test" }).reasoningEffort, undefined);
+  assert.equal(
+    loadLlmConfig({ COGNITION_API_KEY: "sk-test", COORDINATOR_REASONING_EFFORT: "high" }).reasoningEffort,
+    "high",
+  );
 });
 
 test("el parser SSE del chat deja el trozo incompleto en rest", () => {

@@ -100,9 +100,10 @@ async function runJsonLoop(
 
     const output: CoordinatorOutput = parsed.output;
     const queries = output.queries ?? [];
-    queryAnswers = queries.map((query) =>
-      answerQuery(query, deps.states.ensureActiveRun().state, deps.world),
-    );
+    queryAnswers = [];
+    for (const query of queries) {
+      queryAnswers.push(await answerQuery(query, deps.states.ensureActiveRun().state, deps.world));
+    }
     const run = deps.states.ensureActiveRun();
     const openTaskIds = new Set(deps.tasks.listOpen(run.id).map((task) => task.id));
     const dryErrors = applyOperations(

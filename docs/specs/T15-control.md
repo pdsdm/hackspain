@@ -1,5 +1,7 @@
 # T15: aprobaciones, pausa y control de incidentes
 
+> T38 sustituye las aprobaciones económicas de esta spec histórica: `approve_spend`/`reject_spend` devuelven 409. `approve_plan`/`reject_plan` resuelven únicamente decisiones operativas, sin modificar dinero. `reject_split` ya no requiere una decisión pendiente. El análisis histórico de abajo se conserva; el contrato vigente está en `docs/api-contract.md`.
+
 ## Qué y para qué
 
 Que el humano pueda intervenir de verdad sobre la operación y que se note en lo que hace
