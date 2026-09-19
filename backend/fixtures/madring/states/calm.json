@@ -896,9 +896,9 @@
       ],
       "capacity": 38000,
       "entered": 16800,
-      "waiting": 1900,
+      "waiting": 400,
       "arrivalsPerMin": 520,
-      "throughputPerMin": 560,
+      "throughputPerMin": 760,
       "status": "abierto"
     },
     {
@@ -911,10 +911,10 @@
       ],
       "capacity": 42000,
       "entered": 19600,
-      "waiting": 4300,
+      "waiting": 600,
       "arrivalsPerMin": 640,
-      "throughputPerMin": 480,
-      "status": "saturado"
+      "throughputPerMin": 960,
+      "status": "abierto"
     },
     {
       "id": "gate-este",
@@ -926,9 +926,9 @@
       ],
       "capacity": 18000,
       "entered": 7200,
-      "waiting": 650,
+      "waiting": 150,
       "arrivalsPerMin": 230,
-      "throughputPerMin": 260,
+      "throughputPerMin": 340,
       "status": "abierto"
     },
     {
@@ -941,9 +941,9 @@
       ],
       "capacity": 12000,
       "entered": 4100,
-      "waiting": 300,
+      "waiting": 80,
       "arrivalsPerMin": 150,
-      "throughputPerMin": 180,
+      "throughputPerMin": 230,
       "status": "abierto"
     }
   ],
