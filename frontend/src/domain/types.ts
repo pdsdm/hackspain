@@ -137,6 +137,7 @@ export interface Call {
   startedAt: number
   endsAfter: number
   status: CallStatus
+  simulated?: boolean
   transcript: TranscriptLine[]
 }
 

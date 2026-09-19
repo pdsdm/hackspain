@@ -163,8 +163,8 @@ export function createApp(
           kind: intervention.type,
           payload: intervention.payload ?? {},
         })
-        .then(() => response.status(200).json({ ok: true }))
-        .catch(next);
+        .catch((error) => console.error("[interventions] handle", error));
+      response.status(200).json({ ok: true });
     } catch (error) {
       next(error);
     }
@@ -175,8 +175,8 @@ export function createApp(
       const twist = parseTwist(request.body);
       void engine
         .handle({ source: "jury", kind: twist, payload: { twist } })
-        .then(() => response.status(200).json({ ok: true }))
-        .catch(next);
+        .catch((error) => console.error("[twists] handle", error));
+      response.status(200).json({ ok: true });
     } catch (error) {
       next(error);
     }
