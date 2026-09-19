@@ -100,6 +100,26 @@ function applySpecialistState(
     next.calls = calls;
   }
 
+  const groupUpdates = envelope.result.data.guestGroups;
+  if (envelope.status === "completed" && Array.isArray(groupUpdates)) {
+    const groups = records(next, "guestGroups");
+    for (const raw of groupUpdates) {
+      if (typeof raw !== "object" || raw === null) continue;
+      const update = raw as Record<string, unknown>;
+      const group = groups.find((item) => item.id === update.id);
+      if (!group) continue;
+      const total = typeof group.count === "number" ? group.count : Number.POSITIVE_INFINITY;
+      if (typeof update.informedCount === "number") {
+        group.informedCount = Math.min(total, Math.max(Number(group.informedCount ?? 0), update.informedCount));
+      }
+      if (typeof update.acceptedCount === "number") {
+        group.acceptedCount = Math.min(total, Math.max(Number(group.acceptedCount ?? 0), update.acceptedCount));
+      }
+      if (typeof update.needs === "string" && update.needs.trim() !== "") group.needs = update.needs;
+    }
+    next.guestGroups = groups;
+  }
+
   const commitmentId = envelope.result.data.commitmentId;
   if (typeof commitmentId === "string") {
     const commitment = next.commitments.find((item) => item.id === commitmentId);

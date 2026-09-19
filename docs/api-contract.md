@@ -140,7 +140,7 @@ Una solicitud manual de llamada usa un payload validado y encola una tarea aunqu
 
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `COORDINATOR_REASONING_EFFORT=medium`: unos 30-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `COORDINATOR_REASONING_EFFORT=low`: unos 20-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
 
 ### `GET /actions`
 
@@ -242,6 +242,12 @@ Callback común al que T9 traduce el payload de HappyRobot:
 ```
 
 Si `applied` es true, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador.
+
+Campos de `result.data` que el backend aplica al estado:
+
+- `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
+- `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
+- El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot.
 
 ### Salida del backend hacia HappyRobot
 
