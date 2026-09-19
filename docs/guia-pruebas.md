@@ -187,7 +187,22 @@ cd backend
 E2E_TARGET_URL=https://hackspain-production.up.railway.app npm run demo:e2e-real -- --confirm-real-happyrobot
 ```
 
-En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend. En ambos modos, el reset E2E autenticado crea una ejecución `calm` aislada, fuerza los cuatro especialistas al adaptador `sim`, ejecuta los dos inputs mediante runs reales de HappyRobot y valida los checkpoints M0–M4. Nunca usa los hooks de llamadas, SMS o email reales. La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
+En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend. En ambos modos, el reset E2E autenticado crea una ejecución `calm` aislada y fuerza los cuatro especialistas al adaptador `sim`. Nunca usa los hooks de llamadas, SMS o email reales.
+
+Un resultado `OK` exige:
+
+- mismo run aislado durante toda la prueba; un redeploy aborta con diagnóstico explícito;
+- runs y nodos HappyRobot de llamada, SMS y coordinador completados sin errores;
+- dos informes distintos, aceptados y aplicados a la versión correcta sin reintentos de validación;
+- reparto exacto B 450 + Lounge 150 y acciones de Espacios, Catering, Transporte y Asistentes en ambos ciclos;
+- Principal y Muelle Este cerrados, entregas bloqueadas en M3 y cuatro shuttles coherentes en Sur;
+- objetivos, motivos y últimos resultados visibles, solo comunicaciones `sim`, sin tareas ni llamadas abiertas;
+- cierre resuelto o limitación explícita;
+- tercer run real con el mismo `eventId`, `duplicate: true` y estado inmutable.
+
+Con `HELMCODE_API_KEY`, el runner congela los snapshots M1 y M3 y pide a Helmcode un plan shadow sobre exactamente el mismo prompt y estado que recibió HappyRobot. Registra por ciclo `inputToEffectMs`, `effectToCoordinatorMs`, latencia interna del coordinador, tiempo hasta asentarse y total. La evidencia resume media, mediana, delta y ratio HappyRobot/Helmcode. Son dos muestras del recorrido, útiles para la demo pero no un benchmark estadístico.
+
+La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
 
 ## 8. Estado y limitaciones conocidas
 
