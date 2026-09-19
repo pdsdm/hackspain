@@ -278,7 +278,41 @@ puerta traducida de abajo.
 { "ok": true, "duplicate": false, "applied": true }
 ```
 
-Si `applied` es true, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador.
+Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
+
+#### Verificación opcional JEV (T35)
+
+No cambia el JSON del callback ni su autenticación. El handler evalúa antes de persistir, fuera de SQLite, con límite de 1.500 ms, sin reintentos y fallback conservador. El simulador no utiliza JEV.
+
+- `JEV_ENABLED=false` por defecto. `true` habilita evaluación con `TYPESAFE_API_KEY` y `JEV_MODEL=jev-1.13.0`; **no habilita efectos**. `JEV_APPLY_CONFIRMATIONS=true` es una activación adicional, solo después de validar el modelo con evidencia en español.
+- La primera demo admite únicamente `payload.verificationTarget = { "commitmentId": "c-pabB", "resourceType": "space", "resourceId": "pabellonB" }` en una acción de llamada de Espacios. El compromiso debe titularse `Reserva de Pabellón B · 450 plazas`. El backend valida ese vínculo y guarda una huella interna de términos al encolar; no infiere targets del objetivo ni acepta un efecto devuelto por HappyRobot.
+- El callback debe corresponder a `taskId`, `runId`, `planVersion` y `callId = call-<taskId>`, con sesión, transcripción con hablantes y resultado `completed/accepted` sin condiciones nuevas.
+- Se revalidan tarea, versión, vínculo, términos, gasto autorizado, decisiones, acceso Sur y dependencias dentro de la transacción. No se reactivan compromisos invalidados. Solo se resuelven las condiciones explícitas `Confirmar reserva` / `Confirmación de reserva` mediante evidencia, y `Autorización de gasto` mediante presupuesto ya autorizado. Cualquier otra condición bloquea.
+- Se envían términos estructurados, nombre del recurso y turnos, no el objetivo libre, contraparte nominal, teléfono, sesión ni estado completo. Por defecto, el texto fuera del vocabulario revisado queda localmente como `privacidad revision necesaria`. Una transcripción completa revisada y sin datos personales puede aprobarse previamente mediante `JEV_REVIEWED_TRANSCRIPT_HASHES` (SHA-256 separados por comas, solo configuración del servidor). La huella se calcula con `transcriptPrivacyHash`: JSON de todos los turnos `{who,text}` en orden, sin alterar palabras; los tiempos se validan por separado. El callback no puede autorizar su propio envío. No se elimina texto para hacer pasar el filtro, ni se añade una cola de revisión/reaplicación de callbacks ya consumidos. **Es revisión previa, no anonimización automática ni autenticación del hablante.** Los logs solo incluyen modelo, versión de preguntas, latencia, resultado y probabilidades; nunca texto ni errores crudos del proveedor.
+- La cronología existente muestra target, decisión y motivo; distingue evidencia insuficiente, verificación no disponible y solo evaluación. Confirmar la reserva no demuestra preparación física ni incrementa `guestGroups.confirmedCount`, gasto comprometido o permisos Norte.
+
+Validación offline: `make check`. Prueba real opt-in, desde `backend/`, únicamente con corpus sintético: `JEV_LIVE_EVAL=true node --env-file=../.env --import tsx --test test/jev-spanish.test.ts`. Los siete casos cubren aceptación, «sí, pero», recurso equivocado, retractación, negación dudosa, negación explícita y aceptación solo del agente. No sustituyen la validación de transcripciones reales anonimizadas ni calibran automáticamente los umbrales. No activar efectos mientras esa revisión siga pendiente.
+
+**Ensayo inicial del 19/09/2026, `jev-1.13.0`, anterior a `evidence-v2`:** siete peticiones del corpus inicial y 96 del benchmark (24 casos sintéticos, 7 positivos y 17 negativos, dos repeticiones por variante). El cliente anterior falló en la aceptación explícita; se conserva el mismo test para comprobar las revisiones.
+
+| Variante | Positivos confirmados | Falsas confirmaciones | Mediana / p95 / máximo |
+|---|---|---|---|
+| Cliente anterior | 0/14 | 0/34 | 423 / 764 / 1494 ms |
+| Experimental fija (pre-v2) | 12/14 | 0/34 | 281 / 592 / 902 ms |
+
+Ambas variantes mantuvieron los umbrales 0,95 / 0,95 / 0,10. No hubo errores de API en esas 96 peticiones. Dos positivos de la experimental oscilaron entre 0,94 y 0,95. El filtro de vocabulario solo admitía 7/24 casos. Es un corpus sintético de calibración, no 48 casos independientes ni transcripciones de HappyRobot.
+
+**Candidato actual: `evidence-v2`.** Preguntas consolidadas en `backend/src/agents/jev.ts`, referidas a `terms.spaceName`, `capacity`, `planCost` y `readyAt`, sin cifras del benchmark en las instrucciones. Presupuesto, permisos y vigencia siguen fuera del clasificador. Los umbrales no han cambiado. Se congeló la huella `aad3851c7b4298f5f289fe30463357f813c44915e24eb4c7a10a36bc6a4dbe86` antes de escribir los 30 casos nuevos de `backend/test/jev-holdout-data.ts`.
+
+Ensayo del candidato: 30 casos sintéticos no utilizados para ajustar sus preguntas, dos repeticiones, 60 peticiones reales. **20/20 positivos confirmados, 0/40 falsas confirmaciones, sin errores de API ni cambios de veredicto.** Latencia mediana 273 ms, p95 387 ms, máximo 815 ms. Son 10 positivos y 20 negativos distintos; fueron redactados y etiquetados por el agente, no por un evaluador externo. No se ha retocado el prompt a partir de sus resultados.
+
+Regresión real adicional sobre los siete casos iniciales: cinco respuestas correctas y **dos timeouts de 1.500 ms** (negación dudosa y solo agente). La repetición manual de esos dos casos respondió correctamente en 822 y 611 ms; no se borran los fallos iniciales ni se incorporan reintentos al callback. Total de esta iteración: 69 peticiones, 67 respuestas y dos timeouts. `make check` offline pasa con Node 22.14: 158 tests pasan y siete pruebas live se omiten por defecto.
+
+El vocabulario por defecto admite 0/30 de estos diálogos naturales; la revisión previa de los textos sintéticos permite 30/30 sin alterar su contenido. Esto demuestra la vía de aprobación local, **no anonimización automática de llamadas**. Ninguna huella del corpus se carga automáticamente en la configuración de la demo. El benchmark sigue midiendo el cliente, no un recorrido real de llamada y callback. `happyrobotBaseline.pairedCases=0`: falta el corpus de callbacks reales anonimizados y etiquetados para medir valor añadido frente al extractor de HappyRobot.
+
+Reproducir desde `backend/`, con `TYPESAFE_API_KEY` en el entorno: `JEV_LIVE_EVAL=true node --import tsx test/jev-benchmark.mts --holdout`. El runner rechaza cambios en el prompt congelado. Sin `--holdout` ejecuta el corpus de calibración con el cliente vigente; `JEV_EVAL_VARIANT=evidence_only` conserva la variante experimental fija, no el cliente anterior. Las pruebas nunca cambian estado ni activan confirmaciones.
+
+**Criterio para avanzar:** mantener `JEV_APPLY_CONFIRMATIONS` vacío/false hasta tener revisión humana del corpus y privacidad, comparación emparejada contra HappyRobot que demuestre mejora, ausencia de falsas confirmaciones en los casos críticos y latencia/fallback aceptados por el flujo del sponsor. El éxito en este corpus sintético no autoriza efectos.
 
 Campos de `result.data` que el backend aplica al estado:
 

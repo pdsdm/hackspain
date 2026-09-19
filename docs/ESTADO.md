@@ -60,6 +60,12 @@ No se ha verificado una llamada saliente real que termine con el callback y un c
 visible en `/state`. Faltan, como mínimo, trigger, API key, teléfono E.164 y token de
 callback válidos en el `.env` del portátil de demo.
 
+> **Aviso del ensayo del sábado por la tarde (rama `feat/ventura-jev-confirmacion`).** La
+> ruta `POST /workflow/happyrobot/results`, que es la que viaja en `callbackUrl`, no estaba
+> registrada en `app.ts`: cualquier callback real habría recibido un 404, con el test de
+> contrato de `main` en rojo. Está arreglada y verificada por HTTP en esa rama, todavía sin
+> mergear. Hasta que se mergee, no se puede cerrar T6 aunque las credenciales estén bien.
+
 El equipo informó de un Quick Tunnel anterior, pero no se verificó en esta sesión. En este
 entorno `cloudflared` no está en `PATH` y no hay proceso activo. El modo `up` falla de forma
 explícita antes de arrancar nada si falta el binario.

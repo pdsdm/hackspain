@@ -292,7 +292,9 @@ export function persistCoordinatorOutput(input: {
         dueAt: Math.min(86_399, Math.max(0, action.dueAt)),
         reason: action.reason,
         dependsOn: action.dependsOn,
-        payload: {},
+        payload: action.verificationTarget
+          ? { verificationTarget: action.verificationTarget }
+          : {},
       })),
       unverified: input.output.unverified,
     };
