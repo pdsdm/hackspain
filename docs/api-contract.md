@@ -433,4 +433,4 @@ El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin ho
 
 Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
 
-`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). El formato se valida al arrancar: un número mal formado, o su ausencia habiendo hooks configurados, impide el arranque en vez de fallar en mitad de la demo.
+`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). Un número mal formado impide el arranque. Falta el teléfono no bloquea el arranque (webhooks del coordinador y simulación); las llamadas reales irían sin destino E.164.

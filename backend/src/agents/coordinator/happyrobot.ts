@@ -51,7 +51,7 @@ export function loadHappyRobotCoordinatorConfig(
     apiBase: (env.HAPPYROBOT_COORDINATOR_API_BASE?.trim() || DEFAULT_API_BASE).replace(/\/+$/, ""),
     workflowId,
     environment: env.HAPPYROBOT_COORDINATOR_ENVIRONMENT?.trim() || "development",
-    model: env.COORDINATOR_MODEL?.trim() || HAPPYROBOT_COORDINATOR_MODEL,
+    model: HAPPYROBOT_COORDINATOR_MODEL,
     apply: readApplyFlag(env.HAPPYROBOT_COORDINATOR_APPLY),
     timeoutMs,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",

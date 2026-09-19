@@ -33,7 +33,7 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `PUBLIC_BASE_URL` | URL pública del backend (túnel). Los webhooks la usan. |
 | `HAPPYROBOT_WEBHOOK_TOKEN` | Bearer de los webhooks y del endpoint shadow. |
 
-`COORDINATOR_MODEL` sobrescribe el modelo mostrado en el informe. El modelo real se elige dentro del workflow.
+El modelo se elige dentro del workflow. El informe muestra siempre `gpt-5.6-luna-low`; `COORDINATOR_MODEL` no le afecta.
 
 ## Configurar el workflow (manual)
 
