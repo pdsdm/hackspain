@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
 import type { Area, CrisisState, EventKind } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
@@ -34,8 +34,6 @@ const RAW: Array<[RegExp, string]> = [
   [/^happyrobot:(\w+)$/i, 'Evento de HappyRobot'],
 ]
 
-const block = (t: number) => fmtClock(Math.floor(t / 600) * 600).slice(0, 5)
-
 function renderText(text: string) {
   const hit = RAW.find(([re]) => re.test(text.trim()))
   if (!hit) return text
@@ -53,11 +51,7 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
   const items = s.events.slice(-40)
   const lastId = items[items.length - 1]?.id
   return (
-    <Glass label="Cronología" className={`chronology-panel ${className}`}>
-      <header className="chronology-heading">
-        <div><h2>Cronología</h2><p>La operación, paso a paso.</p></div>
-        <span className="chronology-count num">{n} {n === 1 ? 'evento' : 'eventos'}</span>
-      </header>
+    <Glass label={`Cronología · ${n} ${n === 1 ? 'evento' : 'eventos'}`} className={`chronology-panel ${className}`}>
       <ul ref={ref} className="chat-log" aria-label="Eventos de la operación" onScroll={() => {
         const el = ref.current
         if (el) follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 64
@@ -67,21 +61,16 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
           <h3>Todo empieza aquí</h3>
           <p>Los avisos, las acciones y las decisiones aparecerán en esta cronología.</p>
         </li>}
-        {items.map((e, i) => {
+        {items.map((e) => {
           const look = EVENT[e.kind] ?? EVENT.info
           const area = e.area ? AREA[e.area] : undefined
           const source = e.channel ? CHANNEL[e.channel] : undefined
           const Icon = area?.icon ?? look.icon
           const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
           const simulated = e.simulated || e.actor?.startsWith('SIMULACIÓN')
-          const hour = block(e.time)
-          const prevHour = i > 0 ? block(items[i - 1].time) : null
           const tone = e.kind === 'intervencion' ? 'intervencion' : look.tone
           return (
-            <Fragment key={e.id}>
-              {hour !== prevHour && <li className="timeline-hour num" aria-hidden="true">{hour}</li>}
-              <li className={`timeline-item timeline-item--${tone}${e.id === lastId ? ' is-new' : ''}`}>
-                <span className="timeline-node" aria-hidden="true"><look.icon strokeWidth={2.5} /></span>
+              <li key={e.id} className={`timeline-item timeline-item--${tone}${e.id === lastId ? ' is-new' : ''}`}>
                 <div className="timeline-card">
                   <div className="timeline-card-heading">
                     <span className="timeline-avatar"><Icon size={13} strokeWidth={1.8} /></span>
@@ -98,7 +87,6 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
                   )}
                 </div>
               </li>
-            </Fragment>
           )
         })}
       </ul>
