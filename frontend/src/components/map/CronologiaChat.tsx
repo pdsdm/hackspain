@@ -22,7 +22,7 @@ const AREA: Record<Area, { label: string; icon: LucideIcon }> = {
   asistentes: { label: 'Asistentes', icon: Users },
 }
 const CHANNEL = {
-  voice: { label: 'Voz', icon: Phone },
+  call: { label: 'Llamada', icon: Phone },
   webcall: { label: 'Web Call', icon: Radio },
   sms: { label: 'SMS', icon: MessageSquare },
   api: { label: 'API', icon: Radio },
@@ -58,7 +58,8 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
           const source = e.channel ? CHANNEL[e.channel] : undefined
           const Icon = source?.icon ?? area?.icon ?? look.icon
           const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
-          const sourceLabel = source ? `${source.label}${e.simulated ? ' · simulado' : ''}` : undefined
+          const simulated = e.simulated || e.actor?.startsWith('SIMULACIÓN')
+          const sourceLabel = source ? `${source.label}${simulated ? ' · simulado' : ''}` : undefined
           return (
             <li key={e.id} className={`timeline-card timeline-card--${look.tone}`}>
               <div className="timeline-card-heading">
