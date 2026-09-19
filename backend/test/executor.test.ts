@@ -128,6 +128,9 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(payload.phone_number, "+34600000000");
     assert.equal((payload.contact as Record<string, unknown>).phone, "+34600000000");
     assert.deepEqual(payload.data, {});
+    // Los mismos valores en plano, por si el workflow extrae "contact.phone" como clave.
+    assert.equal(payload["contact.phone"], "+34600000000");
+    assert.equal(payload["situation.simSeconds"], run.state.clock.simSeconds);
     // El workflow contesta por la puerta traducida (T9), no por la estricta del contrato.
     assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
     const now = Number(run.state.clock.simSeconds);

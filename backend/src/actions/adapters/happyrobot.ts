@@ -84,6 +84,13 @@ export async function dispatchHappyRobot(input: {
           planVersion: input.state.planVersion,
           coordinatorStatus: input.state.coordinatorStatus,
         },
+        // El workflow declara sus parámetros con punto ("contact.phone"). Si los extrae
+        // como claves planas en vez de recorrer el objeto, sin esto el primer run sale
+        // vacío. Mandar las dos formas cuesta nada y ahorra una iteración a ciegas.
+        "contact.phone": contact.phone,
+        "contact.role": contact.role,
+        "situation.simSeconds": input.state.clock.simSeconds,
+        "situation.coordinatorStatus": input.state.coordinatorStatus,
         callbackUrl: `${input.publicBaseUrl}/workflow/happyrobot/results`,
       }),
       signal: AbortSignal.timeout(10_000),

@@ -288,10 +288,14 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": "+34600000000", "email": null },
   "data": { "commitmentId": "c-transporte-v2" },
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
+  "contact.phone": "+34600000000",
+  "situation.simSeconds": 43200,
   "callbackUrl": "https://demo.example/workflow/happyrobot/results"
 }
 ```
 
 El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+
+Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
 
 `contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). El formato se valida al arrancar: un número mal formado, o su ausencia habiendo hooks configurados, impide el arranque en vez de fallar en mitad de la demo.
