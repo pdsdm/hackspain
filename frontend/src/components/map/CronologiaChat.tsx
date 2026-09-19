@@ -37,7 +37,7 @@ const RAW: Array<[RegExp, string]> = [
 function renderText(text: string) {
   const hit = RAW.find(([re]) => re.test(text.trim()))
   if (!hit) return text
-  return <><code>{text.trim()}</code> {hit[1]}</>
+  return hit[1]
 }
 
 export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {

@@ -32,7 +32,7 @@ El frontend usa estos endpoints con `VITE_DATA_SOURCE=api`. El tipo público es 
 
 ### `GET /state`
 
-Devuelve el estado completo de la ejecución activa; el frontend hace polling cada dos segundos.
+Devuelve el estado completo de la ejecución activa; el frontend hace polling cada segundo.
 
 ```json
 {
