@@ -77,7 +77,7 @@ ${buildUserPrompt(input)}
 
 Usa el harness de Devin. Actualiza el structured output con el JSON del coordinador (operations + done true) en cuanto tengas un plan válido. No clones repos ni edites código: solo razona el plan de crisis.`;
 
-  logCoord("creando sesión Devin", config.devinMode, config.sessionApiUrl);
+  logCoord("creando sesión Devin", config.devinMode);
   const created = (await fetch(`${config.sessionApiUrl}/organizations/${orgId}/sessions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
@@ -100,7 +100,7 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
     logCoordError("Devin no devolvió session_id", created);
     return "unavailable";
   }
-  logCoord("sesión", sessionId);
+  logCoord("sesión", sessionId, `https://app.devin.ai/sessions/${sessionId}`);
 
   let lastFingerprint = "";
   while (!signal.aborted) {
@@ -121,6 +121,13 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
         const parsed = parseOutput(fingerprint, input);
         if (!parsed.output) {
           logCoordError("JSON rechazado", parsed.issues);
+          await sendDevinMessage(
+            config,
+            orgId,
+            sessionId,
+            `El backend rechazó el structured output:\n${parsed.issues.map((issue) => `- ${issue.detail}`).join("\n")}\n\nCorrige operations. redirect_delivery necesita id (CAT-01 o CAT-02) y dockId (muelleSur o muelleEste). reroute_shuttle: id (BUS-01…) y destinationId. set_place: id y status. Actualiza el structured output.`,
+            signal,
+          );
         } else {
           const persistErrors = persistCoordinatorOutput({
             runId: deps.states.ensureActiveRun().id,
@@ -136,6 +143,13 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
             return "ok";
           }
           logCoordError("reglas T7", persistErrors);
+          await sendDevinMessage(
+            config,
+            orgId,
+            sessionId,
+            `El backend aplicó el JSON pero las reglas T7 lo rechazaron:\n${persistErrors.map((item) => `- ${item}`).join("\n")}\nCorrige operations y actualiza el structured output.`,
+            signal,
+          );
         }
       }
     }
@@ -151,4 +165,28 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
     }
   }
   return "unavailable";
+}
+
+async function sendDevinMessage(
+  config: { sessionApiUrl: string; apiKey: string },
+  orgId: string,
+  sessionId: string,
+  message: string,
+  signal: AbortSignal,
+): Promise<void> {
+  try {
+    const response = await fetch(`${config.sessionApiUrl}/organizations/${orgId}/sessions/${sessionId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal,
+    });
+    if (!response.ok) {
+      logCoordError("no pude escribir en la sesión Devin", response.status, await response.text());
+      return;
+    }
+    logCoord("feedback enviado a Devin");
+  } catch (error) {
+    logCoordError("no pude escribir en la sesión Devin", error);
+  }
 }

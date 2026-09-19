@@ -231,6 +231,8 @@ test("acepta operations de Devin con placeId/estado/vehicleId", () => {
     operations: [
       { op: "set_place", placeId: "accesoSur", estado: "cerrado" },
       { op: "reroute_shuttle", vehicleId: "BUS-01", destinationId: "esperaSur" },
+      { op: "redirect_delivery", deliveryId: "CAT-01", muelleId: "muelleEste" },
+      { op: "redirect_delivery", destino: "sin-muelle" },
       { op: "log_event", message: "Acceso Sur cortado" },
     ],
     done: true,
@@ -243,4 +245,9 @@ test("acepta operations de Devin con placeId/estado/vehicleId", () => {
   assert.equal(first?.op, "set_place");
   assert.equal(first && "id" in first ? first.id : undefined, "accesoSur");
   assert.equal(second && "id" in second ? second.id : undefined, "BUS-01");
+  const delivery = output.operations?.[2];
+  assert.equal(delivery && "op" in delivery ? delivery.op : undefined, "redirect_delivery");
+  assert.equal(delivery && "id" in delivery ? delivery.id : undefined, "CAT-01");
+  assert.equal(delivery && "dockId" in delivery ? delivery.dockId : undefined, "muelleEste");
+  assert.equal(output.operations?.length, 4);
 });

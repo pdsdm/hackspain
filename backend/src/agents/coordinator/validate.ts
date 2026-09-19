@@ -46,7 +46,15 @@ function pickString(...values: unknown[]): string | undefined {
 
 function normalizeOperation(raw: unknown): unknown {
   if (!isRecord(raw)) return raw;
-  const id = pickString(raw.id, raw.placeId, raw.vehicleId, raw.gateId, raw.groupId);
+  const id = pickString(
+    raw.id,
+    raw.placeId,
+    raw.vehicleId,
+    raw.gateId,
+    raw.groupId,
+    raw.deliveryId,
+    raw.shipmentId,
+  );
   const status = pickString(raw.status, raw.estado);
   const text = pickString(raw.text, raw.message, raw.constraint);
   const next: Record<string, unknown> = { ...raw };
@@ -63,13 +71,31 @@ function normalizeOperation(raw: unknown): unknown {
     if (where !== undefined) next.where = where;
     if (assigned !== undefined) next.assignedSpaceId = assigned;
   }
+  if (raw.op === "redirect_delivery") {
+    const dockId = pickString(raw.dockId, raw.dock, raw.muelleId, raw.muelle, raw.destinationDock);
+    if (dockId !== undefined) next.dockId = dockId;
+  }
   return next;
+}
+
+function operationReady(raw: unknown): boolean {
+  if (!isRecord(raw) || typeof raw.op !== "string") return false;
+  if (raw.op === "set_place") return typeof raw.id === "string" && typeof raw.status === "string";
+  if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
+  if (raw.op === "redirect_delivery") return typeof raw.id === "string" && typeof raw.dockId === "string";
+  if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
+  if (raw.op === "set_group") return typeof raw.id === "string";
+  if (raw.op === "set_gate") return typeof raw.id === "string";
+  if (raw.op === "log_event") return typeof raw.text === "string";
+  if (raw.op === "add_constraint") return typeof raw.text === "string";
+  if (raw.op === "set_agent") return true;
+  return true;
 }
 
 function normalizePayload(value: unknown): unknown {
   if (!isRecord(value)) return value;
   if (!Array.isArray(value.operations)) return value;
-  return { ...value, operations: value.operations.map(normalizeOperation) };
+  return { ...value, operations: value.operations.map(normalizeOperation).filter(operationReady) };
 }
 
 function isStringArray(value: unknown): value is string[] {
