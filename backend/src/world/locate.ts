@@ -118,10 +118,53 @@ export async function geocode(query: string): Promise<ResolvedLocation | undefin
   }
 }
 
-export async function resolveLocation(world: WorldModel, query: string): Promise<ResolvedLocation | undefined> {
+export function resolveLocationSync(world: WorldModel, query: string): ResolvedLocation | undefined {
   const known = findPlaceInWorld(world, query);
   if (known) return { id: known.id, name: known.name, pos: known.pos, source: "world" };
-  return geocode(query);
+  const cached = geoCache.get(fold(query));
+  return cached ?? undefined;
+}
+
+export function planTripCached(world: WorldModel, fromQuery: string, toPlaceId: string): TripPlan | undefined {
+  const from = resolveLocationSync(world, fromQuery);
+  const to = placeById(world, toPlaceId);
+  if (!from || !to) return undefined;
+  if (from.source === "world") {
+    const direct = world.links.find((link) => link.from === from.id && link.to === to.id);
+    if (direct) {
+      return {
+        route: direct.route,
+        minutes: direct.minutes,
+        crossesZone: direct.kind === "external_transfer",
+        from,
+        toName: to.name,
+        source: "world-link",
+      };
+    }
+    const viaAccess = world.links.find((link) => link.from === from.id && link.to === "accesoSur");
+    const transfer = world.links.find((link) => link.from === "accesoSur" && link.to === to.id);
+    if (viaAccess && transfer) {
+      return {
+        route: [...viaAccess.route.slice(0, -1), ...transfer.route],
+        minutes: viaAccess.minutes + transfer.minutes,
+        crossesZone: true,
+        from,
+        toName: to.name,
+        source: "world-link",
+      };
+    }
+  }
+  const osrm = osrmCache.get(`${from.pos[0].toFixed(5)},${from.pos[1].toFixed(5)};${to.pos[0].toFixed(5)},${to.pos[1].toFixed(5)}`);
+  if (osrm) return { ...osrm, from, toName: to.name, source: "osrm" };
+  const originZone = from.source === "world" ? placeById(world, from.id)?.zone : null;
+  return {
+    from,
+    toName: to.name,
+    route: [from.pos, to.pos],
+    minutes: haversineMinutes(from.pos, to.pos),
+    crossesZone: Boolean(originZone && to.zone && originZone !== to.zone),
+    source: "straight",
+  };
 }
 
 function haversineMinutes(a: LatLng, b: LatLng): number {
@@ -160,6 +203,10 @@ export async function drivingRoute(from: LatLng, to: LatLng): Promise<RouteEstim
     osrmCache.set(key, null);
     return undefined;
   }
+}
+
+export async function resolveLocation(world: WorldModel, query: string): Promise<ResolvedLocation | undefined> {
+  return resolveLocationSync(world, query) ?? geocode(query);
 }
 
 export async function planTrip(world: WorldModel, fromQuery: string, toPlaceId: string): Promise<TripPlan | undefined> {

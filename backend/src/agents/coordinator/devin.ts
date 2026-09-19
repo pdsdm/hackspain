@@ -129,7 +129,7 @@ Usa el harness de Devin. Actualiza el structured output con el JSON del coordina
             signal,
           );
         } else {
-          const persistErrors = await persistCoordinatorOutput({
+          const persistErrors = persistCoordinatorOutput({
             runId: deps.states.ensureActiveRun().id,
             planVersion: deps.states.ensureActiveRun().state.planVersion,
             output: parsed.output,

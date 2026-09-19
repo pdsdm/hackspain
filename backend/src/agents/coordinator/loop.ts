@@ -106,12 +106,12 @@ async function runJsonLoop(
     }
     const run = deps.states.ensureActiveRun();
     const openTaskIds = new Set(deps.tasks.listOpen(run.id).map((task) => task.id));
-    const dryErrors = (await applyOperations(
+    const dryErrors = applyOperations(
       structuredClone(run.state),
       deps.world,
       output.operations ?? [],
       openTaskIds,
-    )).errors;
+    ).errors;
     if (dryErrors.length > 0) {
       previousErrors = dryErrors;
       logCoordError(`ronda ${round + 1} operaciones`, dryErrors.join("; "));
@@ -126,7 +126,7 @@ async function runJsonLoop(
       logCoord("aviso", `ronda ${round + 1}: done true con ${queries.length} queries; persisto el plan`);
     }
     try {
-      const persistErrors = await persistCoordinatorOutput({
+      const persistErrors = persistCoordinatorOutput({
         runId: run.id,
         planVersion: run.state.planVersion,
         output,
