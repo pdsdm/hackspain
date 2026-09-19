@@ -6,6 +6,7 @@ import { runCoordinatorLoop, type CompleteFn, type CoordinatorLoopDeps } from ".
 import { buildReplan } from "../agents/coordinator/replan.js";
 import { liveCoordinatorInput } from "../agents/coordinator/scenario.js";
 import { applyOperation } from "./apply-coordinator.js";
+import { applyClosure } from "./closure.js";
 import { generateIncident, type GeneratedIncident } from "./incident-generator.js";
 import { incidentAt } from "./incidents.js";
 import { validateOutput } from "../agents/coordinator/validate.js";
@@ -92,7 +93,15 @@ export class Engine {
 
   handle(event: IncomingEvent): Promise<string> {
     const eventId = event.id ?? randomUUID();
-    const result = this.queue.then(() => this.process({ ...event, id: eventId }));
+    // Una intervención del responsable no puede esperar a que acabe la pasada del
+    // coordinador: se aplica al estado ya y solo la replanificación va a la cola.
+    let applied = false;
+    try {
+      applied = this.applyHumanNow(event);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    const result = this.queue.then(() => this.process({ ...event, id: eventId, alreadyApplied: applied }));
     // Un evento rechazado solo falla para quien lo envió; la cola sigue viva.
     this.queue = result.then(
       () => undefined,
@@ -122,7 +131,15 @@ export class Engine {
     });
   }
 
-  private async process(event: IncomingEvent & { id: string }): Promise<void> {
+  /** Aplica ya la intervención humana. Devuelve si lo ha hecho, para no repetirla en la cola. */
+  private applyHumanNow(event: IncomingEvent): boolean {
+    if (event.source !== "human" || event.kind === "call_request") return false;
+    const intervention = parseIntervention({ type: event.kind, payload: event.payload });
+    this.control.applyIntervention(intervention);
+    return true;
+  }
+
+  private async process(event: IncomingEvent & { id: string; alreadyApplied?: boolean }): Promise<void> {
     const run = this.states.ensureActiveRun();
     logEvent("recibido", event.source, event.kind, event.text ?? "", {
       mode: this.options.mode,
@@ -140,7 +157,8 @@ export class Engine {
       simSeconds: Number(run.state.clock.simSeconds),
       mode: "none",
     });
-    if (event.source !== "clock") {
+    // La intervención ya se anotó a sí misma en la cronología con su texto de verdad.
+    if (event.source !== "clock" && !event.alreadyApplied) {
       this.appendTimeline(
         event.source === "jury" ? "incidencia" : "accion",
         event.text ?? `${event.source}:${event.kind}`,
@@ -157,7 +175,7 @@ export class Engine {
             type: event.kind,
             payload: event.payload,
           });
-          this.control.applyIntervention(intervention);
+          if (!event.alreadyApplied) this.control.applyIntervention(intervention);
           if (shouldCoordinateIntervention(intervention.type)) {
             mode = await this.runCoordinator(event);
           }
@@ -211,7 +229,19 @@ export class Engine {
       if (error instanceof ContractError) throw error;
       this.markCoordinatorDown();
     }
+    this.closeIfDone();
     this.events.setMode(event.id, mode);
+  }
+
+  /**
+   * Comprueba si la crisis ya está resuelta. Sin esto el panel se queda «replanificando»
+   * para siempre y la demo no tiene final.
+   */
+  private closeIfDone(): void {
+    const run = this.states.ensureActiveRun();
+    if (run.state.coordinatorBusy !== undefined) return;
+    const next = applyClosure(run.state, this.tasks.listOpen(run.id).length);
+    if (next) this.states.saveState(run.id, next);
   }
 
   private enqueueCallRequest(event: IncomingEvent & { id: string }): void {

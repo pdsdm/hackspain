@@ -22,6 +22,7 @@ Uso: ./scripts/demo.sh <comando>
   restart-backend    Reinicia el backend conservando SQLite y la URL pública
   reset [fixture]    Crea una ejecución limpia (calm por defecto)
   status             Comprueba procesos y endpoints
+  doctor             Dice qué falta para llamar de verdad, sin enseñar ningún valor
   down               Detiene los procesos arrancados por este script
 
 Variables: DEMO_COORDINATOR_MODE=rules|llm, DEMO_CALL_MODE=sim|real,
@@ -300,6 +301,27 @@ case "$command" in
         echo "health público: ERROR"
       fi
     fi
+    ;;
+  doctor)
+    # Solo dice si una variable está puesta o no. Nunca imprime su valor.
+    node --env-file-if-exists="$ROOT/.env" -e '
+      const show = (label, ok, hint) => console.log(`${ok ? "OK  " : "FALTA"} ${label}${ok || !hint ? "" : ` · ${hint}`}`);
+      const set = (key) => Boolean(process.env[key]?.trim());
+      const llm = ["COGNITION_API_KEY", "DEVIN_API_KEY", "OPENAI_API_KEY", "HELMCODE_API_KEY", "ANTHROPIC_API_KEY"];
+      console.log("Coordinador con LLM:");
+      show(`una clave de ${llm.join(", ")}`, llm.some(set));
+      console.log("Llamada real por HappyRobot:");
+      for (const key of ["HAPPYROBOT_API_KEY", "HAPPYROBOT_TEST_PHONE", "HAPPYROBOT_WEBHOOK_TOKEN"]) show(key, set(key));
+      const hooks = ["ESPACIOS", "CATERING", "TRANSPORTE", "ASISTENTES"].filter((area) => set(`HAPPYROBOT_HOOK_${area}`));
+      show("al menos un HAPPYROBOT_HOOK_*", hooks.length > 0, "pídeselo a quien administre los workflows");
+      if (hooks.length > 0) console.log(`      hooks configurados: ${hooks.join(", ").toLowerCase()}`);
+    '
+    if command -v cloudflared >/dev/null 2>&1; then
+      echo "OK   cloudflared en PATH"
+    else
+      echo "FALTA cloudflared en PATH · sin él solo funciona 'up-local' y el callback no vuelve"
+    fi
+    node -e 'const major = Number(process.versions.node.split(".")[0]); console.log(`${major >= 22 ? "OK  " : "FALTA"} Node ${process.versions.node} (mínimo 22)`)'
     ;;
   down)
     stop_one frontend

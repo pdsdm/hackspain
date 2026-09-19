@@ -1,10 +1,15 @@
 import type { CrisisState, Space } from './types'
 
+/** Un espacio donde de verdad se puede meter gente; mismo criterio que el cierre del backend. */
+const USABLE_SPACE = ['operativo', 'propuesto', 'pendiente', 'confirmado']
+
 export function kpis(s: CrisisState) {
   const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
+  // Sede asignada, no confirmada: un espacio solo pasa a "confirmado" cuando una llamada
+  // verificada lo cierra, y contar solo eso dejaba el indicador en 0 toda la crisis.
   const confirmed = s.guestGroups.reduce((a, g) => {
     const space = s.spaces.find((x) => x.id === g.assignedSpaceId)
-    return a + (space?.status === 'confirmado' ? Math.min(g.confirmedCount, g.count) : 0)
+    return a + (space && USABLE_SPACE.includes(space.status) ? g.count : 0)
   }, 0)
   const informed = s.guestGroups.reduce((a, g) => a + g.informedCount, 0)
   const accepted = s.guestGroups.reduce((a, g) => a + g.acceptedCount, 0)

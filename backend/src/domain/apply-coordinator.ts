@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 import type { CoordinatorOperation, CoordinatorOutput } from "../agents/coordinator/types.js";
 import type { CoordinatorProposalEnvelope } from "../contracts/api.js";
+import { commitmentIdForAction } from "./commitment-link.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { GuestAllocation } from "./plan-rules.js";
 import type { WorkflowService } from "./workflow-service.js";
@@ -226,6 +227,7 @@ export function applyOperation(
       return { ok: true };
     }
     case "log_event": {
+      if (operation.text.trim() === "") return { ok: true };
       const events = records(draft, "events");
       events.push({
         id: `coord-${randomUUID()}`,
@@ -408,6 +410,7 @@ export function persistReplan(input: {
   }
   const prefix = `replan-${next.planVersion}`;
   for (const action of input.output.actions) {
+    const commitmentId = commitmentIdForAction(next, action);
     input.tasks.enqueue({
       runId: input.runId,
       planVersion: next.planVersion,
@@ -419,6 +422,7 @@ export function persistReplan(input: {
         dueAt: Math.min(86_399, Math.max(0, action.dueAt)),
         reason: action.reason,
         dependsOnKeys: action.dependsOn.map((dependency) => `${prefix}:${dependency}`),
+        ...(commitmentId ? { data: { commitmentId } } : {}),
       },
       idempotencyKey: `${prefix}:${action.id}`,
     });

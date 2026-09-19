@@ -48,6 +48,7 @@
 | T37 | Rutas dinámicas: origen libre (geocode) + spawn_vehicle + OSRM | Pep | `feat/pep-rutas-dinamicas` | - | doing |
 | T38 | Costes informativos: eliminar bloqueos presupuestarios durante la crisis | Ventura + Devin | `feat/ventura-costes-informativos` | [Política y contrato T38](docs/api-contract.md#costes-informativos-t38) | review |
 | T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen` | - | review |
+| T40 | Cierre de la crisis: los acuerdos avanzan, el plan termina (cerrado o incompleto) y la intervención humana no espera a la cola | Ventura | `fix/ventura-cierre-demo` | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**

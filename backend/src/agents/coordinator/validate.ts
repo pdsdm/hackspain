@@ -105,8 +105,9 @@ export function operationReady(raw: unknown): boolean {
   if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
   if (raw.op === "set_group") return typeof raw.id === "string";
   if (raw.op === "set_gate") return typeof raw.id === "string";
-  if (raw.op === "log_event") return typeof raw.text === "string";
-  if (raw.op === "add_constraint") return typeof raw.text === "string";
+  // Sin texto no hay nada que contar: una línea vacía en la cronología es ruido en pantalla.
+  if (raw.op === "log_event") return typeof raw.text === "string" && raw.text.trim() !== "";
+  if (raw.op === "add_constraint") return typeof raw.text === "string" && raw.text.trim() !== "";
   if (raw.op === "set_agent") return true;
   return true;
 }

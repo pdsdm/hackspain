@@ -10,6 +10,7 @@ import { CrisisMap } from './components/map/CrisisMap'
 import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
 import { CronologiaChat } from './components/map/CronologiaChat'
+import { CierreCard } from './components/map/CierreCard'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
 import { LlamadaCard } from './components/right/LlamadaCard'
 import { AvisarPanel } from './components/right/AvisarPanel'
@@ -55,6 +56,7 @@ export default function App() {
           <div className="map-overlays">
             <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 max-w-[calc(100%-680px)]">
               <KpiOverlay s={s} />
+              <CierreCard s={s} className="w-[440px] max-w-full" />
               <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_plan', payload: { decisionId: decision!.id } })} />
             </div>
             <div className="absolute top-3 right-3 flex flex-col gap-3 w-[300px]">

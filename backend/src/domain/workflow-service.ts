@@ -8,6 +8,7 @@ import {
 } from "../contracts/api.js";
 import { PlanService } from "./plan-service.js";
 import { confirmationBlocker, decideAcceptance, readVerificationTarget, resolvedConditions, verificationSnapshot, type VerificationTarget } from "./acceptance-policy.js";
+import { commitmentIdForAction, commitmentIdFromTaskPayload } from "./commitment-link.js";
 import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
@@ -175,7 +176,12 @@ function applySpecialistState(
     next.deliveries = deliveries;
   }
 
-  const commitmentId = verification?.target?.commitmentId ?? envelope.result.data.commitmentId;
+  // El compromiso sale de la verificación, de lo que devuelva el workflow o, si ninguno lo
+  // dice, del que anotamos al despachar la acción.
+  const commitmentId =
+    verification?.target?.commitmentId ??
+    envelope.result.data.commitmentId ??
+    commitmentIdFromTaskPayload(task.payload);
   if (typeof commitmentId === "string") {
     const commitment = next.commitments.find((item) => item.id === commitmentId);
     if (commitment && commitment.planVersion === next.planVersion &&
@@ -241,6 +247,7 @@ export class WorkflowService {
 
       const queued = envelope.actions.map((action) => {
         const verificationTarget = verificationTargetFor(action, state);
+        const commitmentId = commitmentIdForAction(state, action);
         const task = this.tasks.enqueue({
           runId: envelope.runId,
           planVersion: state.planVersion,
@@ -255,7 +262,7 @@ export class WorkflowService {
               (dependency) => `${envelope.eventId}:${dependency}`,
             ),
             ...(verificationTarget ? { verificationTarget, verificationSnapshot: verificationSnapshot(state) } : {}),
-            data: action.payload,
+            data: { ...action.payload, ...(commitmentId ? { commitmentId } : {}) },
           },
           idempotencyKey: `${envelope.eventId}:${action.actionId}`,
         });
