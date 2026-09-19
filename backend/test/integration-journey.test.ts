@@ -61,7 +61,7 @@ function output(step: number): string {
       done: true,
     });
   }
-  if (step === 4) {
+  if (step === 3) {
     return JSON.stringify({
       reading: "El giro invalida el Lounge Sur; se consulta la contingencia Norte C.",
       planVersion: 3,
@@ -94,7 +94,7 @@ function output(step: number): string {
   }
   return JSON.stringify({
     reading: step === 2 ? "Gasto autorizado; se puede llamar." : "Resultado incorporado sin duplicar decisiones.",
-    planVersion: step < 4 ? 2 : 4,
+    planVersion: step < 3 ? 2 : 4,
     coordinatorStatus: "replanificando",
     actions: [],
     commitments: [],
@@ -211,12 +211,13 @@ test("event, approval, simulated callback and twist complete without duplicate d
     const firstResult = result(firstTask, "simulated-callback-1");
     let response = await post(base, "/workflow/results", firstResult, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
-    await waitFor(async () => (await state(base)).calls[0]?.status === "terminada" && coordinatorCalls === 3);
+    await waitFor(async () => (await state(base)).calls[0]?.status === "terminada");
+    assert.equal(coordinatorCalls, 2, "an accepted callback must not run the coordinator");
 
     response = await post(base, "/workflow/results", firstResult, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: true });
     await app.locals.engine.handle({ source: "human", kind: "resume" });
-    assert.equal(coordinatorCalls, 3, "a retried callback must not run the coordinator twice");
+    assert.equal(coordinatorCalls, 2, "a retried callback must not run the coordinator");
 
     current = await state(base);
     const versionBeforeTwist = current.planVersion as number;
@@ -235,7 +236,8 @@ test("event, approval, simulated callback and twist complete without duplicate d
     assert(secondTask);
     response = await post(base, "/workflow/results", result(secondTask, "simulated-callback-2"), TOKEN);
     assert.equal(response.status, 200);
-    await waitFor(async () => (await actions(base)).length === 0 && coordinatorCalls === 5);
+    await waitFor(async () => (await actions(base)).length === 0);
+    assert.equal(coordinatorCalls, 3);
 
     current = await state(base);
     assert.equal(current.planVersion > versionBeforeTwist, true);
