@@ -4325,7 +4325,7 @@
     "calm": {
       "file": "states/calm.json",
       "description": "12:00: hospitalidad original confirmada; reloj en marcha, sin incidente.",
-      "planVersion": 0,
+      "planVersion": 1,
       "allocations": [
         {
           "spaceId": "principal",
