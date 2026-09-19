@@ -7,6 +7,7 @@ import type { Engine } from "../domain/engine.js";
 import type { WorkflowService } from "../domain/workflow-service.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
+import { logAction, logActionError } from "../log.js";
 import { dispatchHappyRobot } from "./adapters/happyrobot.js";
 import { scheduleSimResult } from "./adapters/sim.js";
 
@@ -85,7 +86,11 @@ export class ActionExecutor {
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
-      this.dispatch(task).catch(() => {
+      this.dispatch(task).catch((error) => {
+        logActionError("dispatch failed", {
+          taskId: task.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
         this.tasks.markDispatchOutcome(task.id, "unknown");
       });
     }
@@ -114,6 +119,15 @@ export class ActionExecutor {
     this.states.saveState(run.id, state);
 
     const hook = this.config.hooks[task.area as AreaHook];
+    const adapter = hook && this.config.happyrobotApiKey ? "happyrobot" : "sim";
+    logAction("dispatch", {
+      taskId: task.id,
+      runId: run.id,
+      planVersion: task.planVersion,
+      area: task.area,
+      kind: task.kind,
+      adapter,
+    });
     if (hook && this.config.happyrobotApiKey) {
       const outcome = await dispatchHappyRobot({
         hookUrl: hook,
@@ -126,6 +140,7 @@ export class ActionExecutor {
         state,
       });
       this.tasks.markDispatchOutcome(task.id, outcome);
+      logAction("dispatch outcome", { taskId: task.id, adapter, outcome });
       if (outcome === "dispatched") {
         this.due.push({
           at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
@@ -146,10 +161,18 @@ export class ActionExecutor {
       eventId: `sim-${randomUUID()}`,
     });
     this.due.push({ at: Number(state.clock.simSeconds) + delay, envelope });
+    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay });
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {
     const recorded = this.workflows.recordSpecialistResult(envelope);
+    logAction("result", {
+      taskId: envelope.taskId,
+      eventId: envelope.eventId,
+      status: envelope.status,
+      applied: recorded.applied,
+      duplicate: recorded.duplicate,
+    });
     if (recorded.applied) {
       void this.engine?.handle({
         source: "happyrobot",
