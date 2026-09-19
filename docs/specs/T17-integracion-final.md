@@ -22,3 +22,22 @@ node --import tsx --test test/integration-journey.test.ts
 cd ..
 make check
 ```
+
+## Estado verificado — 19/09/2026
+
+Hecho en `fix/zhi-demo-readiness`:
+
+- El recorrido automatizado cumple los criterios locales y `make check` pasa.
+- Helmcode usa `reasoning_effort=low`, no crea aprobaciones económicas y despacha el plan.
+- Los callbacks aceptados son idempotentes; un callback adverso de una `planVersion`
+  obsoleta conserva evidencia pero no vuelve a lanzar el coordinador.
+- `verificationTarget` fuera de la demo no invalida el plan y las operaciones `set_place`
+  sobre ids `gate-*` se normalizan a `set_gate`.
+
+Pendiente para cerrar T17:
+
+- Repetir en una sola ejecución `evento → Helmcode → llamada HappyRobot real → callback →
+  lounge_unavailable → replan` con un actor controlado.
+- Conservar evidencia del callback y terminar con cero acciones abiertas y cero llamadas
+  `en_curso`. La primera llamada real informada por el equipo no cubre por sí sola este
+  recorrido completo tras los fixes.
