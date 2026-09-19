@@ -226,7 +226,7 @@ test("submit_plan devuelve errores estructurados y acepta el reintento corregido
         queueMicrotask(() => {
           results.push(registry.submit({ ...envelope, plan: "esto no es JSON" }));
           results.push(registry.submit({ ...envelope, plan: baseOutput({ planVersion: run.state.planVersion, operations: [{ op: "set_place", id: "noExiste", status: "cerrado" }] }) }));
-          results.push(registry.submit({ ...envelope, plan: baseOutput({ planVersion: run.state.planVersion }) }));
+          results.push(registry.submit({ ...envelope, coordinator_output: baseOutput({ planVersion: run.state.planVersion }) }));
         });
       },
     });
@@ -268,7 +268,7 @@ test("las herramientas rechazan sesiones inactivas, correlación ajena y runId/p
     assert.equal(wrongVersion.stale, true);
     const badQuery = await registry.consult({ ...good, query: { type: "route" } });
     assert.equal(badQuery.ok, false);
-    assert.equal(badQuery.stale, undefined);
+    assert.equal(badQuery.stale, false);
     assert.match(badQuery.error ?? "", /route requiere/);
 
     assert.throws(() => registry.start({ correlationId: "corr-2", runId: run.id, planVersion: 1, input: crisisInput("crisis"), apply: false, deps }), /activa/);

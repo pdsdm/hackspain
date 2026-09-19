@@ -98,15 +98,15 @@ interface Session {
 
 export interface ConsultResult {
   ok: boolean;
-  stale?: boolean;
-  error?: string;
-  answer?: unknown;
+  stale: boolean;
+  error: string | null;
+  answer: unknown;
 }
 
 export interface SubmitResult {
   accepted: boolean;
   retry: boolean;
-  stale?: boolean;
+  stale: boolean;
   errors: string[];
   plan_version: number | null;
 }
@@ -127,10 +127,10 @@ function readNumber(body: Record<string, unknown>, key: string): number | undefi
   return undefined;
 }
 
-const ENVELOPE_KEYS = new Set(["correlation_id", "run_id", "plan_version", "plan"]);
+const ENVELOPE_KEYS = new Set(["correlation_id", "run_id", "plan_version", "plan", "coordinator_output"]);
 
 export function extractPlanText(body: Record<string, unknown>): string {
-  const plan = body.plan;
+  const plan = body.plan ?? body.coordinator_output;
   if (typeof plan === "string") return plan;
   if (isRecord(plan)) return JSON.stringify(plan);
   const rest: Record<string, unknown> = {};
@@ -207,23 +207,23 @@ export class HappyRobotSessionRegistry {
   }
 
   async consult(rawBody: unknown): Promise<ConsultResult> {
-    if (!isRecord(rawBody)) return { ok: false, error: "cuerpo inválido" };
+    if (!isRecord(rawBody)) return { ok: false, stale: false, error: "cuerpo inválido", answer: null };
     const matched = this.match(rawBody);
-    if ("error" in matched) return { ok: false, stale: matched.stale, error: matched.error };
+    if ("error" in matched) return { ok: false, stale: matched.stale, error: matched.error, answer: null };
     const { session } = matched;
     session.consults += 1;
     const query = parseConsultArgs(isRecord(rawBody.query) ? rawBody.query : rawBody);
-    if ("error" in query) return { ok: false, error: query.error };
+    if ("error" in query) return { ok: false, stale: false, error: query.error, answer: null };
     const live = session.deps.states.ensureActiveRun();
     try {
-      return { ok: true, answer: await answerQuery(query, live.state, session.deps.world) };
+      return { ok: true, stale: false, error: null, answer: await answerQuery(query, live.state, session.deps.world) };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+      return { ok: false, stale: false, error: error instanceof Error ? error.message : String(error), answer: null };
     }
   }
 
   submit(rawBody: unknown): SubmitResult {
-    if (!isRecord(rawBody)) return { accepted: false, retry: false, errors: ["cuerpo inválido"], plan_version: null };
+    if (!isRecord(rawBody)) return { accepted: false, retry: false, stale: false, errors: ["cuerpo inválido"], plan_version: null };
     const matched = this.match(rawBody);
     if ("error" in matched) {
       return { accepted: false, retry: false, stale: matched.stale, errors: [matched.error], plan_version: null };
@@ -234,14 +234,14 @@ export class HappyRobotSessionRegistry {
     if (!parsed.output) {
       const errors = parsed.issues.map((issue) => `${issue.code}: ${issue.detail}`);
       session.validationErrors.push(...errors);
-      return { accepted: false, retry: true, errors, plan_version: session.planVersion };
+      return { accepted: false, retry: true, stale: false, errors, plan_version: session.planVersion };
     }
     const live = session.deps.states.ensureActiveRun();
     const openTaskIds = new Set(session.deps.tasks.listOpen(live.id).map((task) => task.id));
     const dry = applyOperations(structuredClone(live.state), session.deps.world, parsed.output.operations ?? [], openTaskIds).errors;
     if (dry.length > 0) {
       session.validationErrors.push(...dry);
-      return { accepted: false, retry: true, errors: dry, plan_version: session.planVersion };
+      return { accepted: false, retry: true, stale: false, errors: dry, plan_version: session.planVersion };
     }
     if (session.apply) {
       const persistErrors = persistCoordinatorOutput({
@@ -255,11 +255,11 @@ export class HappyRobotSessionRegistry {
       });
       if (persistErrors.length > 0) {
         session.validationErrors.push(...persistErrors);
-        return { accepted: false, retry: true, errors: persistErrors, plan_version: session.planVersion };
+        return { accepted: false, retry: true, stale: false, errors: persistErrors, plan_version: session.planVersion };
       }
     }
     session.resolve(parsed.output);
-    return { accepted: true, retry: false, errors: [], plan_version: session.planVersion };
+    return { accepted: true, retry: false, stale: false, errors: [], plan_version: session.planVersion };
   }
 }
 
