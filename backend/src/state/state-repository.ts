@@ -30,7 +30,7 @@ export interface DemoRun {
 export class StateRepository {
   constructor(
     private readonly database: DatabaseSync,
-    private readonly initialFixture: InitialFixture = "crisis",
+    private readonly initialFixture: InitialFixture = "calm",
   ) {}
 
   loadFixture(fixture: InitialFixture = this.initialFixture): CrisisStateDocument {
