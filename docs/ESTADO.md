@@ -81,8 +81,8 @@ T17 real y recuperación operativa.
 - **T39:** el mapa ocupa toda la vista; KPIs, aforo, coordinador y cronología tipo chat
   flotan sobre él. La llamada solo aparece mientras está `en_curso`. Velocidad
   ×1→×2→×5→×10→×20 en modo `sim`.
-- **T40:** el estado operativo se copia a Postgres cuando hay service role; SQLite sigue
-  siendo el motor y el panel no habla con Supabase directo.
+- **T40 descartada:** se retira la copia en Supabase; el despliegue va en Railway y SQLite
+  con disco persistente es el único almacén (D18).
 
 ### Aviso de integración
 
@@ -102,7 +102,6 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 ## Ramas vivas sin mergear
 
 - `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
-- `feat/pep-supabase`: T40 espejo Postgres; falta la clave de servicio en el `.env` local.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
