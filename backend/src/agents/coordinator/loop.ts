@@ -137,7 +137,7 @@ export async function runCoordinatorLoop(
     logCoordError("sin config LLM ni completeFn (¿COORDINATOR_MODE=llm sin clave, o loadLlmConfig falló?)");
     return "unavailable";
   }
-  const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 60_000;
+  const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 90_000;
   const timeout = AbortSignal.timeout(timeoutMs);
   logCoord("bucle", deps.config?.provider ?? "mock", deps.config?.harness ?? "json", `tope ${timeoutMs}ms`);
   if (deps.completeFn || !deps.config || deps.config.harness === "json" || deps.config.provider === "anthropic") {
