@@ -7,6 +7,7 @@ import { crisisInput, type FixtureName } from "./scenario.js";
 import { parseOutput } from "./validate.js";
 
 const FIXTURES: readonly FixtureName[] = [
+  "calm",
   "normal",
   "crisis",
   "proposal",

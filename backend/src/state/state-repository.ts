@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 import type { DatabaseSync } from "node:sqlite";
 
+import type { InitialFixture } from "../config.js";
 import {
   parseCrisisState,
   toPublicState,
@@ -10,7 +11,9 @@ import {
 } from "../domain/crisis-state.js";
 import type { GuestAllocation } from "../domain/plan-rules.js";
 
-const INITIAL_STATE_URL = new URL("../../fixtures/madring/states/crisis.json", import.meta.url);
+function stateUrl(fixture: string): URL {
+  return new URL(`../../fixtures/madring/states/${fixture}.json`, import.meta.url);
+}
 
 interface RunRow {
   id: string;
@@ -24,15 +27,18 @@ export interface DemoRun {
   state: CrisisStateDocument;
 }
 
-function initialState(): CrisisStateDocument {
-  return parseCrisisState(JSON.parse(readFileSync(INITIAL_STATE_URL, "utf8")));
-}
-
 export class StateRepository {
-  constructor(private readonly database: DatabaseSync) {}
+  constructor(
+    private readonly database: DatabaseSync,
+    private readonly initialFixture: InitialFixture = "calm",
+  ) {}
+
+  loadFixture(fixture: InitialFixture = this.initialFixture): CrisisStateDocument {
+    return parseCrisisState(JSON.parse(readFileSync(stateUrl(fixture), "utf8")));
+  }
 
   ensureActiveRun(): DemoRun {
-    return this.getActiveRun() ?? this.createRun(initialState());
+    return this.getActiveRun() ?? this.createRun(this.loadFixture());
   }
 
   getActiveRun(): DemoRun | undefined {
@@ -69,8 +75,8 @@ export class StateRepository {
     return { id, scenarioId, state: parsed };
   }
 
-  reset(): DemoRun {
-    return this.createRun(initialState());
+  reset(fixture?: InitialFixture): DemoRun {
+    return this.createRun(this.loadFixture(fixture ?? this.initialFixture));
   }
 
   saveState(runId: string, state: CrisisStateDocument): void {

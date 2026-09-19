@@ -1,0 +1,545 @@
+{
+  "simulated": true,
+  "clock": {
+    "simSeconds": 43200,
+    "speed": 1,
+    "paused": false,
+    "openingAt": 46800,
+    "lunchAt": 48600,
+    "raceAt": 54000
+  },
+  "planVersion": 1,
+  "coordinatorStatus": "estable",
+  "spaces": [
+    {
+      "id": "principal",
+      "name": "Pabellón Principal",
+      "kind": "pabellon",
+      "zone": "sur",
+      "capacity": 600,
+      "status": "confirmado",
+      "note": "Reserva original para 600 invitados en Sur",
+      "pos": [
+        40.4662,
+        -3.62
+      ]
+    },
+    {
+      "id": "pabellonB",
+      "name": "Pabellón B",
+      "kind": "pabellon",
+      "zone": "sur",
+      "capacity": 450,
+      "status": "inactivo",
+      "note": "Disponibilidad anunciada, sin confirmar",
+      "pos": [
+        40.4685,
+        -3.6195
+      ]
+    },
+    {
+      "id": "loungeSur",
+      "name": "Lounge Fan Zone Sur",
+      "kind": "lounge",
+      "zone": "sur",
+      "capacity": 150,
+      "status": "inactivo",
+      "note": "Visionado en pantalla",
+      "pos": [
+        40.4672,
+        -3.6228
+      ]
+    },
+    {
+      "id": "norteC",
+      "name": "Pabellón Norte C",
+      "kind": "pabellon",
+      "zone": "norte",
+      "capacity": 600,
+      "status": "inactivo",
+      "note": "Primera apertura posible 13:45",
+      "readyAt": 49500,
+      "pos": [
+        40.4765,
+        -3.6215
+      ]
+    },
+    {
+      "id": "accesoSur",
+      "name": "Acceso Sur",
+      "kind": "acceso",
+      "zone": "sur",
+      "status": "operativo",
+      "note": "Feria de Madrid · 90 invitados esperando",
+      "pos": [
+        40.464,
+        -3.6165
+      ]
+    },
+    {
+      "id": "accesoNorte",
+      "name": "Acceso Norte",
+      "kind": "acceso",
+      "zone": "norte",
+      "status": "operativo",
+      "note": "Valdebebas",
+      "pos": [
+        40.4815,
+        -3.618
+      ]
+    },
+    {
+      "id": "muelleSur",
+      "name": "Muelle Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "status": "operativo",
+      "note": "Descarga original autorizada",
+      "pos": [
+        40.4645,
+        -3.6245
+      ]
+    },
+    {
+      "id": "muelleEste",
+      "name": "Muelle Este Sur",
+      "kind": "muelle",
+      "zone": "sur",
+      "status": "inactivo",
+      "note": "Requiere apertura por recepción",
+      "pos": [
+        40.47,
+        -3.615
+      ]
+    },
+    {
+      "id": "esperaSur",
+      "name": "Zona de espera Sur",
+      "kind": "espera",
+      "zone": "sur",
+      "capacity": 150,
+      "status": "inactivo",
+      "pos": [
+        40.4645,
+        -3.615
+      ]
+    }
+  ],
+  "commitments": [
+    {
+      "id": "c-principal",
+      "title": "Recepción en Pabellón Principal",
+      "area": "espacios",
+      "status": "confirmado",
+      "counterpart": "Recinto",
+      "conditions": [],
+      "planVersion": 0,
+      "note": "Acuerdo original de demo",
+      "updatedAt": 43200
+    },
+    {
+      "id": "c-entrega1",
+      "title": "Entrega catering 1 · 360 servicios · Muelle Sur",
+      "area": "catering",
+      "status": "confirmado",
+      "counterpart": "Catering",
+      "conditions": [],
+      "planVersion": 0,
+      "note": "Acuerdo original de demo",
+      "updatedAt": 43200
+    },
+    {
+      "id": "c-entrega2",
+      "title": "Entrega catering 2 · 240 servicios · Muelle Sur",
+      "area": "catering",
+      "status": "confirmado",
+      "counterpart": "Catering",
+      "conditions": [],
+      "planVersion": 0,
+      "note": "Acuerdo original de demo",
+      "updatedAt": 43200
+    },
+    {
+      "id": "c-shuttles",
+      "title": "Llegada de 4 shuttles · Acceso Sur",
+      "area": "transporte",
+      "status": "confirmado",
+      "counterpart": "Transportes Ibéricos",
+      "conditions": [],
+      "planVersion": 0,
+      "updatedAt": 43200,
+      "note": "Acuerdo original de demo"
+    }
+  ],
+  "agents": [
+    {
+      "id": "espacios",
+      "name": "Espacios",
+      "objective": "Vigilar el plan original en Sur",
+      "status": "estable"
+    },
+    {
+      "id": "catering",
+      "name": "Catering",
+      "objective": "Vigilar el plan original en Sur",
+      "status": "estable"
+    },
+    {
+      "id": "transporte",
+      "name": "Transporte",
+      "objective": "Vigilar el plan original en Sur",
+      "status": "estable"
+    },
+    {
+      "id": "asistentes",
+      "name": "Asistentes",
+      "objective": "Vigilar el plan original en Sur",
+      "status": "estable"
+    }
+  ],
+  "shuttles": [
+    {
+      "id": "BUS-01",
+      "name": "BUS-01",
+      "passengers": 45,
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43200,
+      "arriveAt": 45600,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-02",
+      "name": "BUS-02",
+      "passengers": 45,
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.4665,
+          -3.626
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43680,
+      "arriveAt": 46200,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-03",
+      "name": "BUS-03",
+      "passengers": 45,
+      "origin": "Plaza de Castilla",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.469,
+          -3.629
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 46080,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    },
+    {
+      "id": "BUS-04",
+      "name": "BUS-04",
+      "passengers": 45,
+      "origin": "Aeropuerto T4",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.484,
+          -3.602
+        ],
+        [
+          40.476,
+          -3.605
+        ],
+        [
+          40.469,
+          -3.608
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43920,
+      "arriveAt": 45900,
+      "delayMin": 0,
+      "accepted": true,
+      "status": "en_ruta"
+    }
+  ],
+  "deliveries": [
+    {
+      "id": "CAT-01",
+      "name": "CAT-01 · 360 servicios",
+      "services": 360,
+      "dockId": "muelleSur",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.4645,
+          -3.6245
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 45600,
+      "status": "confirmada",
+      "note": "Muelle Sur confirmado"
+    },
+    {
+      "id": "CAT-02",
+      "name": "CAT-02 · 240 servicios",
+      "services": 240,
+      "dockId": "muelleSur",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.4645,
+          -3.6245
+        ]
+      ],
+      "departAt": 45000,
+      "arriveAt": 47100,
+      "status": "confirmada",
+      "note": "Muelle Sur confirmado"
+    }
+  ],
+  "attendanceExpected": 110000,
+  "gates": [
+    {
+      "id": "gate-norte",
+      "name": "Puerta Norte · Valdebebas",
+      "zone": "norte",
+      "pos": [
+        40.4829,
+        -3.616
+      ],
+      "capacity": 38000,
+      "entered": 16800,
+      "waiting": 1900,
+      "arrivalsPerMin": 520,
+      "throughputPerMin": 560,
+      "status": "abierto"
+    },
+    {
+      "id": "gate-sur",
+      "name": "Puerta Sur · Feria de Madrid",
+      "zone": "sur",
+      "pos": [
+        40.4631,
+        -3.6158
+      ],
+      "capacity": 42000,
+      "entered": 19600,
+      "waiting": 4300,
+      "arrivalsPerMin": 640,
+      "throughputPerMin": 480,
+      "status": "saturado"
+    },
+    {
+      "id": "gate-este",
+      "name": "Puerta Este · Campo de las Naciones",
+      "zone": "sur",
+      "pos": [
+        40.4625,
+        -3.6112
+      ],
+      "capacity": 18000,
+      "entered": 7200,
+      "waiting": 650,
+      "arrivalsPerMin": 230,
+      "throughputPerMin": 260,
+      "status": "abierto"
+    },
+    {
+      "id": "gate-oeste",
+      "name": "Puerta Oeste · Ribera del Sena",
+      "zone": "sur",
+      "pos": [
+        40.469,
+        -3.6262
+      ],
+      "capacity": 12000,
+      "entered": 4100,
+      "waiting": 300,
+      "arrivalsPerMin": 150,
+      "throughputPerMin": 180,
+      "status": "abierto"
+    }
+  ],
+  "guestGroups": [
+    {
+      "id": "g-acceso",
+      "name": "En control de acceso Sur",
+      "count": 90,
+      "where": "Acceso Sur",
+      "confirmedCount": 90,
+      "informedCount": 90,
+      "acceptedCount": 90,
+      "assignedSpaceId": "principal"
+    },
+    {
+      "id": "g-shuttles",
+      "name": "En shuttles (4 × 45)",
+      "count": 180,
+      "where": "En ruta",
+      "confirmedCount": 180,
+      "informedCount": 180,
+      "acceptedCount": 180,
+      "assignedSpaceId": "principal"
+    },
+    {
+      "id": "g-propios",
+      "name": "Por sus medios",
+      "count": 330,
+      "where": "Cercanías / L8 / taxi",
+      "confirmedCount": 330,
+      "informedCount": 330,
+      "acceptedCount": 330,
+      "needs": "12 accesibilidad · 38 dieta",
+      "assignedSpaceId": "principal"
+    }
+  ],
+  "decisions": [],
+  "calls": [],
+  "events": [
+    {
+      "id": "calm-ready",
+      "time": 43200,
+      "kind": "info",
+      "text": "Operación estable una hora antes de la apertura · datos sintéticos"
+    }
+  ],
+  "budget": {
+    "contingency": 5000,
+    "autonomousLimit": 1500,
+    "authorized": 1500,
+    "forecast": 0,
+    "committed": 0
+  },
+  "constraints": [
+    "Norte y Sur sin conexión interior",
+    "Gasto autónomo ≤ 1.500 €"
+  ],
+  "twistsApplied": [],
+  "selectedId": "principal",
+  "scriptId": "main",
+  "scriptCursor": 0,
+  "nextScriptAt": null,
+  "waitingForDecision": null,
+  "agentsPaused": false,
+  "resolved": false
+}

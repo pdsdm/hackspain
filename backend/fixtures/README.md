@@ -6,10 +6,12 @@ Datos **sintéticos y deterministas**, sin teléfonos, emails ni llamadas reales
 
 - `madring/seed.json`: 600 invitados identificados, pase Sur, necesidades individuales, recursos, cuatro shuttles ocupados (45 personas cada uno), dos entregas (360/240 servicios), seis recepcionistas, contactos de prueba y presupuesto.
 - `madring/manifest.json`: asignaciones individuales por estado, invitados sin ubicación confirmada y evidencia simulada de accesibilidad. `unassignedGuestIds` incluye también las propuestas todavía sin confirmar.
-- `madring/states/*.json`: seis objetos completos `CrisisState`, listos para cargar como ejemplos de `/state`. No hay que envolverlos en otro objeto.
+- `madring/world.json`: geografía estática (lugares, enlaces, polígonos Norte/Sur) para el motor T24.
+- `madring/states/*.json`: siete objetos completos `CrisisState`, listos para cargar como ejemplos de `/state`. No hay que envolverlos en otro objeto.
 
 | Archivo | Hora | Plazas confirmadas | Qué permite probar |
 | --- | --- | ---: | --- |
+| `calm.json` | 12:00 | 600 | Operación original estable; reloj en marcha para el motor T24 |
 | `normal.json` | 12:14:50 | 600 | Reserva original en Principal, antes del cierre |
 | `crisis.json` | 12:15 | 0 | Principal y Muelle Sur cerrados; acuerdos invalidados |
 | `proposal.json` | 12:18 | 0 | B 450 + Lounge 150 pendientes de autorización y condiciones |
@@ -17,7 +19,7 @@ Datos **sintéticos y deterministas**, sin teléfonos, emails ni llamadas reales
 | `lounge_unavailable.json` | 12:26 | 450 | Lounge retirado, 150 invitados sin ubicación; Norte solo propuesto |
 | `pabellon_b_400.json` | 12:26 | 550 | B baja a 400; 50 invitados sin ubicación |
 
-Los snapshots están pausados y sin próxima acción del guion. Son casos estáticos para desarrollo, no una reproducción de acciones de HappyRobot. `recovered` significa reservas recuperadas: los espacios aún no están abiertos, no se han entregado los menús y no todos los invitados han recibido el aviso (`resolved: false`). Las comunicaciones y aceptaciones se reinician al cambiar a la versión 3 del plan.
+Los snapshots (salvo `calm`) están pausados y sin próxima acción del guion. Son casos estáticos para desarrollo, no una reproducción de acciones de HappyRobot. `recovered` significa reservas recuperadas: los espacios aún no están abiertos, no se han entregado los menús y no todos los invitados han recibido el aviso (`resolved: false`). Las comunicaciones y aceptaciones se reinician al cambiar a la versión 3 del plan.
 
 Frontend puede usar el cargador que devuelve una copia independiente:
 

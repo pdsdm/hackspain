@@ -1,12 +1,31 @@
 import { resolve } from "node:path";
 
 const DEFAULT_PORT = 8000;
+const FIXTURES = [
+  "calm",
+  "normal",
+  "crisis",
+  "proposal",
+  "recovered",
+  "lounge_unavailable",
+  "pabellon_b_400",
+] as const;
+
+export type InitialFixture = (typeof FIXTURES)[number];
+export type CoordinatorMode = "llm" | "rules";
+export type AreaHook = "espacios" | "catering" | "transporte" | "asistentes";
 
 export interface AppConfig {
   databasePath: string;
   host: string;
   port: number;
   workflowToken: string | undefined;
+  happyrobotApiKey: string | undefined;
+  initialFixture: InitialFixture;
+  clockSpeed: number;
+  coordinatorMode: CoordinatorMode;
+  hooks: Partial<Record<AreaHook, string>>;
+  publicBaseUrl: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -31,11 +50,65 @@ function readDatabasePath(value: string | undefined): string {
   return path === ":memory:" ? path : resolve(path);
 }
 
+function readFixture(value: string | undefined): InitialFixture {
+  const fixture = value?.trim();
+  if (!fixture) return "calm";
+  if (!FIXTURES.includes(fixture as InitialFixture)) {
+    throw new Error(`INITIAL_FIXTURE must be one of ${FIXTURES.join(", ")}`);
+  }
+  return fixture as InitialFixture;
+}
+
+function readClockSpeed(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return 1;
+  const speed = Number(value);
+  if (!Number.isFinite(speed) || speed <= 0 || speed > 120) {
+    throw new Error(`CLOCK_SPEED must be a number between 0 and 120, received "${value}"`);
+  }
+  return speed;
+}
+
+function hasLlmKey(env: NodeJS.ProcessEnv): boolean {
+  return Boolean(
+    env.OPENAI_API_KEY?.trim() || env.HELMCODE_API_KEY?.trim() || env.ANTHROPIC_API_KEY?.trim(),
+  );
+}
+
+function readCoordinatorMode(value: string | undefined, env: NodeJS.ProcessEnv): CoordinatorMode {
+  const mode = value?.trim();
+  if (mode === "llm" || mode === "rules") return mode;
+  if (mode) throw new Error(`COORDINATOR_MODE must be llm or rules, received "${value}"`);
+  return hasLlmKey(env) ? "llm" : "rules";
+}
+
+function readHook(value: string | undefined): string | undefined {
+  const url = value?.trim();
+  return url || undefined;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const hooks: AppConfig["hooks"] = {};
+  const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
+  const catering = readHook(env.HAPPYROBOT_HOOK_CATERING);
+  const transporte = readHook(env.HAPPYROBOT_HOOK_TRANSPORTE);
+  const asistentes = readHook(env.HAPPYROBOT_HOOK_ASISTENTES);
+  if (espacios) hooks.espacios = espacios;
+  if (catering) hooks.catering = catering;
+  if (transporte) hooks.transporte = transporte;
+  if (asistentes) hooks.asistentes = asistentes;
+
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
     port: readPort(env.PORT),
     workflowToken: env.HAPPYROBOT_WEBHOOK_TOKEN?.trim() || undefined,
+    happyrobotApiKey: env.HAPPYROBOT_API_KEY?.trim() || undefined,
+    initialFixture: readFixture(env.INITIAL_FIXTURE),
+    clockSpeed: readClockSpeed(env.CLOCK_SPEED),
+    coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
+    hooks,
+    publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
   };
 }
+
+export const KNOWN_FIXTURES: readonly InitialFixture[] = FIXTURES;

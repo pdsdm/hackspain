@@ -61,3 +61,9 @@
 - **Qué:** `frontend/src/domain/types.ts` define el estado público compartido por panel, backend y agentes. Los tiempos son segundos desde medianoche y la replanificación usa `planVersion`; el coordinador propone y el backend valida aforo y presupuesto. SQLite puede mantener tablas operativas internas fuera de `/state`.
 - **Por qué:** el panel y los fixtures ya usan ese formato; conservar el objeto completo evita traductores y pérdida de campos durante la demo.
 - **Descartado:** un contrato público propio del backend, claves traducidas y confiar al coordinador reglas con efectos externos.
+
+### D11: coordinador en proceso con bucle JSON sobre `llm.ts`
+
+- **Qué:** el coordinador corre dentro del backend. Cada evento dispara un bucle de hasta 3 rondas: `complete()` de `llm.ts` (Helmcode/OpenAI/Anthropic, sin SDK) devuelve JSON con `operations[]`, `queries[]` y `done`. El backend responde las consultas del mundo, aplica las operaciones en un borrador y reintenta si hay errores de regla. HappyRobot solo ejecuta conversaciones (llamadas, SMS, email). `POST /workflow/coordinator/proposals` se mantiene para un coordinador externo.
+- **Por qué:** un evento de texto libre no cabe en reglas fijas; el bucle JSON permite consultar geografía y corregir rechazos sin bloquear el proveedor ni añadir dependencias.
+- **Descartado:** tool use con SDK (deps nuevas y atado a un proveedor) y solo reglas deterministas (no cubren el chat del jurado).

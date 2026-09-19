@@ -64,12 +64,19 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
   );
 }
 
-async function post(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
+async function post(
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const combined = signal ? AbortSignal.any([timeout, signal]) : timeout;
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: combined,
   });
 
   if (!response.ok) {
@@ -83,7 +90,7 @@ export async function complete(
   config: LlmConfig,
   system: string,
   user: string,
-  options: { temperature?: number; nonce?: string } = {},
+  options: { temperature?: number; nonce?: string; signal?: AbortSignal } = {},
 ): Promise<string> {
   if (config.provider === "openai" || config.provider === "helmcode") {
     const temperature = options.temperature ?? 0.7;
@@ -100,6 +107,7 @@ export async function complete(
           { role: "user", content: user },
         ],
       },
+      options.signal,
     )) as { choices?: { message?: { content?: string } }[] };
 
     const content = data.choices?.[0]?.message?.content;
@@ -116,6 +124,7 @@ export async function complete(
       system,
       messages: [{ role: "user", content: user }],
     },
+    options.signal,
   )) as { content?: { type?: string; text?: string }[] };
 
   const block = data.content?.find((item) => item.type === "text");

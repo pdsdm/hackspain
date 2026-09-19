@@ -50,10 +50,10 @@ export const ZONE_NORTE: LatLng[] = [
   [40.47260, -3.61931],
 ]
 
-const routeChamartin: LatLng[] = [POS.chamartin, [40.4745, -3.6700], [40.4760, -3.6480], [40.4720, -3.6330], [40.4665, -3.6260], POS.accesoSur]
-const routeCastilla: LatLng[] = [POS.castilla, [40.4690, -3.6760], [40.4745, -3.6560], [40.4735, -3.6400], [40.4690, -3.6290], POS.accesoSur]
-const routeT4: LatLng[] = [POS.t4, [40.4890, -3.6040], [40.4840, -3.6020], [40.4760, -3.6050], [40.4690, -3.6080], POS.accesoSur]
-const routeCoslada: LatLng[] = [POS.coslada, [40.4500, -3.6000], [40.4580, -3.6120], [40.4610, -3.6230], POS.muelleSur]
+export const ROUTE_CHAMARTIN: LatLng[] = [POS.chamartin, [40.4745, -3.6700], [40.4760, -3.6480], [40.4720, -3.6330], [40.4665, -3.6260], POS.accesoSur]
+export const ROUTE_CASTILLA: LatLng[] = [POS.castilla, [40.4690, -3.6760], [40.4745, -3.6560], [40.4735, -3.6400], [40.4690, -3.6290], POS.accesoSur]
+export const ROUTE_T4: LatLng[] = [POS.t4, [40.4890, -3.6040], [40.4840, -3.6020], [40.4760, -3.6050], [40.4690, -3.6080], POS.accesoSur]
+export const ROUTE_COSLADA: LatLng[] = [POS.coslada, [40.4500, -3.6000], [40.4580, -3.6120], [40.4610, -3.6230], POS.muelleSur]
 
 export const ROUTE_NORTE_FROM_SUR: LatLng[] = [POS.accesoSur, [40.4640, -3.6120], [40.4700, -3.6100], [40.4790, -3.6120], POS.accesoNorte]
 
@@ -87,14 +87,14 @@ export function createInitialState(): CrisisState {
       { id: 'asistentes', name: 'Asistentes', objective: 'Retener avisos hasta tener plan confirmado', status: 'esperando' },
     ],
     shuttles: [
-      { id: 'BUS-01', name: 'BUS-01', passengers: 45, origin: 'Chamartín', destinationId: 'accesoSur', route: routeChamartin, departAt: hm(12, 0), arriveAt: hm(12, 40), delayMin: 0, accepted: false, status: 'en_ruta' },
-      { id: 'BUS-02', name: 'BUS-02', passengers: 45, origin: 'Chamartín', destinationId: 'accesoSur', route: routeChamartin, departAt: hm(12, 8), arriveAt: hm(12, 50), delayMin: 0, accepted: false, status: 'en_ruta' },
-      { id: 'BUS-03', name: 'BUS-03', passengers: 45, origin: 'Plaza de Castilla', destinationId: 'accesoSur', route: routeCastilla, departAt: hm(12, 5), arriveAt: hm(12, 48), delayMin: 0, accepted: false, status: 'en_ruta' },
-      { id: 'BUS-04', name: 'BUS-04', passengers: 45, origin: 'Aeropuerto T4', destinationId: 'accesoSur', route: routeT4, departAt: hm(12, 12), arriveAt: hm(12, 45), delayMin: 0, accepted: false, status: 'en_ruta' },
+      { id: 'BUS-01', name: 'BUS-01', passengers: 45, origin: 'Chamartín', destinationId: 'accesoSur', route: ROUTE_CHAMARTIN, departAt: hm(12, 0), arriveAt: hm(12, 40), delayMin: 0, accepted: false, status: 'en_ruta' },
+      { id: 'BUS-02', name: 'BUS-02', passengers: 45, origin: 'Chamartín', destinationId: 'accesoSur', route: ROUTE_CHAMARTIN, departAt: hm(12, 8), arriveAt: hm(12, 50), delayMin: 0, accepted: false, status: 'en_ruta' },
+      { id: 'BUS-03', name: 'BUS-03', passengers: 45, origin: 'Plaza de Castilla', destinationId: 'accesoSur', route: ROUTE_CASTILLA, departAt: hm(12, 5), arriveAt: hm(12, 48), delayMin: 0, accepted: false, status: 'en_ruta' },
+      { id: 'BUS-04', name: 'BUS-04', passengers: 45, origin: 'Aeropuerto T4', destinationId: 'accesoSur', route: ROUTE_T4, departAt: hm(12, 12), arriveAt: hm(12, 45), delayMin: 0, accepted: false, status: 'en_ruta' },
     ],
     deliveries: [
-      { id: 'CAT-01', name: 'CAT-01 · 360 servicios', services: 360, dockId: 'muelleSur', route: routeCoslada, departAt: hm(12, 5), arriveAt: hm(12, 40), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
-      { id: 'CAT-02', name: 'CAT-02 · 240 servicios', services: 240, dockId: 'muelleSur', route: routeCoslada, departAt: hm(12, 30), arriveAt: hm(13, 5), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
+      { id: 'CAT-01', name: 'CAT-01 · 360 servicios', services: 360, dockId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 5), arriveAt: hm(12, 40), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
+      { id: 'CAT-02', name: 'CAT-02 · 240 servicios', services: 240, dockId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 30), arriveAt: hm(13, 5), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
     ],
     attendanceExpected: 110000,
     gates: [

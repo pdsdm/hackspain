@@ -45,7 +45,7 @@ const SCHEMA = `
     payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
     idempotency_key TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending'
-      CHECK (status IN ('pending', 'dispatching', 'dispatched', 'unknown', 'completed', 'failed')),
+      CHECK (status IN ('pending', 'dispatching', 'dispatched', 'unknown', 'completed', 'failed', 'cancelled')),
     attempts INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +71,19 @@ const SCHEMA = `
     received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT
   ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES demo_runs(id) ON DELETE CASCADE,
+    source TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    text TEXT,
+    payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
+    actor_id TEXT,
+    sim_seconds INTEGER NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('llm', 'rules', 'none')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) STRICT;
 `;
 
 export function openDatabase(path: string): CrisisDatabase {
@@ -87,7 +100,7 @@ export function openDatabase(path: string): CrisisDatabase {
   connection
     .prepare(`
       INSERT INTO app_metadata (key, value)
-      VALUES ('schema_version', '3')
+      VALUES ('schema_version', '4')
       ON CONFLICT (key) DO UPDATE SET
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP

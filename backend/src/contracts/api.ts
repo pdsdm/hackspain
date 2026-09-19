@@ -5,6 +5,7 @@ const ACTION_KINDS = ["call", "sms", "email", "manual"] as const;
 const COMMITMENT_STATUSES = ["propuesto", "en_consulta", "aceptado_condiciones"] as const;
 const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
 const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_spend", "reject_split", "guest_need"] as const;
+const EVENT_SOURCES = ["chat", "happyrobot", "jury", "human"] as const;
 const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
 
@@ -273,4 +274,47 @@ export function parseSpecialistResult(value: unknown): SpecialistResultEnvelope 
       data: record(rawResult.data, "result.data"),
     },
   };
+}
+
+export type EventSource = (typeof EVENT_SOURCES)[number];
+
+export interface IntakeEvent {
+  source: EventSource;
+  kind: string;
+  text?: string;
+  payload: Record<string, unknown>;
+  actorId?: string;
+}
+
+export function parseEvent(value: unknown): IntakeEvent {
+  const input = record(value, "body");
+  const payload = input.payload === undefined ? {} : record(input.payload, "payload");
+  const text = optionalString(input.text, "text");
+  const actorId = optionalString(input.actorId, "actorId");
+  return {
+    source: enumValue(input.source, "source", EVENT_SOURCES),
+    kind: string(input.kind, "kind"),
+    payload,
+    ...(text ? { text } : {}),
+    ...(actorId ? { actorId } : {}),
+  };
+}
+
+const FIXTURE_NAMES = [
+  "calm",
+  "normal",
+  "crisis",
+  "proposal",
+  "recovered",
+  "lounge_unavailable",
+  "pabellon_b_400",
+] as const;
+
+export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {
+  if (value === undefined || value === null || (isRecord(value) && Object.keys(value).length === 0)) {
+    return {};
+  }
+  const input = record(value, "body");
+  if (input.fixture === undefined) return {};
+  return { fixture: enumValue(input.fixture, "fixture", FIXTURE_NAMES) };
 }
