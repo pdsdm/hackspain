@@ -11,7 +11,7 @@
 
 - Lenguaje / framework: Node.js 22 + TypeScript + Express 5
 - LLM / agentes: workflows de HappyRobot detrás de un único adaptador
-- Persistencia: SQLite mediante `node:sqlite`; una instancia con disco persistente
+- Persistencia: SQLite (`node:sqlite`) como motor, con disco persistente. El despliegue va en Railway.
 
 ## Comandos
 
@@ -28,7 +28,7 @@
 - `src/app.ts`: middleware y composición de rutas HTTP.
 - `src/config.ts`: configuración validada desde variables de entorno.
 - `src/domain/`: reglas deterministas y aplicación de propuestas.
-- `src/state/`: conexión, esquema, estado y cola transaccional SQLite.
+- `src/state/`: conexión SQLite, esquema, estado y cola transaccional.
 - `src/server.ts`: arranque y apagado ordenado del proceso.
 - `test/`: pruebas con el runner integrado de Node.js.
 

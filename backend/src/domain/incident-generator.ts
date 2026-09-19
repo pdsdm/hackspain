@@ -33,12 +33,17 @@ export const WORLD_SYSTEM_PROMPT = `Eres el mundo real durante una crisis de hos
 
 Tu trabajo: inventar UNA incidencia nueva, concreta y verosímil, que todavía no haya ocurrido, sobre la entidad que se te indica o sobre algo cercano a ella. Debe ser algo que un centro de operaciones tendría que gestionar de verdad: un vehículo retenido, un acceso cerrado por seguridad, un proveedor que llega a otro muelle, un invitado con una necesidad nueva, una avería, un cambio de hora, una persona que no aparece, una queja, un pico de gente.
 
+RESPONDE DIRECTO. Esto es una frase, no un problema que resolver: no compares alternativas ni deliberes antes de escribir. Coge la primera opción verosímil y redáctala.
+
 REGLAS
 - Usa solo ids que aparezcan en el estado. No inventes lugares, vehículos ni grupos.
+- Los ids son para "operations". En "text" hablas como una persona: usa el NOMBRE que viene detrás del id en el estado («Pabellón Principal», «Puerta Sur · Feria de Madrid»), nunca el id crudo («principal», «g-shuttles», «esperaSur»). Un id en el texto es un fallo.
 - No repitas ninguna incidencia de la lista YA OCURRIDO ni un giro estándar (cierre del Lounge, aforo de B a 400, retraso de shuttle, retraso de entrega, muelle bloqueado, proveedor mudo, rechazo de gasto, rechazo de dividir).
 - La gravedad indicada manda: leve no cierra nada; media retiene o retrasa; grave cierra un lugar o deja a personas sin ubicación.
 - Norte y Sur no se conectan por el interior. Norte exige pase Norte.
-- Máximo 3 operaciones y solo de estas: set_place {id,status,note?,readyAt?,capacity?}, set_gate {id,status?,waiting?,arrivalsPerMin?}, redirect_vehicle {id,destinationId,status?,note?,delayMin?}, reroute_shuttle {id,destinationId,status?,note?,delayMin?}, redirect_delivery {id,dockId,status?,note?,delayMin?}, set_group {id,where?,needs?}. El estado de un lugar solo puede ser cerrado, pendiente, inactivo o descartado (nunca confirmado).
+- Esto es una crisis de HOSPITALIDAD, no de protección civil: nada de heridos, intoxicados, incendios, fugas de gas ni evacuaciones médicas. Lo que se rompe son espacios, horarios, comidas, transporte y accesos.
+- No inventes la hora. Si citas una, que cuadre con HORA.
+- Entre 1 y 3 operaciones, NUNCA cero: una incidencia sin operations no cambia el mundo, solo ensucia la cronología. Y solo de estas: set_place {id,status,note?,readyAt?,capacity?}, set_gate {id,status?,waiting?,arrivalsPerMin?}, redirect_vehicle {id,destinationId,status?,note?,delayMin?}, reroute_shuttle {id,destinationId,status?,note?,delayMin?}, redirect_delivery {id,dockId,status?,note?,delayMin?}, set_group {id,where?,needs?}. El estado de un lugar solo puede ser cerrado, pendiente, inactivo o descartado (nunca confirmado).
 - Eres el mundo, no el operador: cuenta HECHOS que ya han pasado ("Bomberos precinta el paddock", "TX-02 averiado bloquea el Acceso Sur"). Nunca escribas decisiones ni planes ("desvío", "cierro", "reubico", "pido"): eso lo decide el coordinador después. Las operations describen el daño ya hecho, no la solución.
 - Texto en español, una o dos frases, con nombres y números concretos, como lo diría alguien por radio.
 
@@ -78,18 +83,24 @@ export function buildWorldPrompt(state: CrisisStateDocument, hint: IncidentHint,
   const input = liveCoordinatorInput(state);
   const lines: string[] = [];
   lines.push(`HORA: ${Number(state.clock.simSeconds)} s desde medianoche (apertura ${String(state.clock.openingAt)}, carrera ${String(state.clock.raceAt)})`);
-  lines.push("", "LUGARES");
+  // El id va primero porque las operations lo necesitan, pero el NOMBRE tiene que estar:
+  // sin él el modelo no puede cumplir la regla de no soltar ids en el texto, y salían
+  // frases como «los 180 de g-shuttles quedan fuera».
+  lines.push("", "LUGARES  (id · nombre · …)");
   for (const space of input.spaces) {
-    lines.push(`- ${space.id} · ${String(space.kind ?? "")} · zona ${space.zone} · ${space.status} · cap ${String(space.capacity ?? "—")}${space.note ? ` · ${space.note}` : ""}`);
+    lines.push(`- ${space.id} · «${space.name}» · ${String(space.kind ?? "")} · zona ${space.zone} · ${space.status} · cap ${String(space.capacity ?? "—")}${space.note ? ` · ${space.note}` : ""}`);
   }
-  lines.push("", "PUERTAS");
-  for (const gate of input.gates ?? []) lines.push(`- ${gate.id} · ${gate.status} · cola ${gate.waiting}`);
+  lines.push("", "PUERTAS  (id · nombre · …)");
+  const gateNames = new Map(records(state, "gates").map((gate) => [String(gate.id), String(gate.name ?? gate.id)]));
+  for (const gate of input.gates ?? []) {
+    lines.push(`- ${gate.id} · «${gateNames.get(gate.id) ?? gate.id}» · ${gate.status} · cola ${gate.waiting}`);
+  }
   lines.push("", "VEHÍCULOS");
   for (const shuttle of input.shuttles ?? []) lines.push(`- shuttle ${shuttle.id} · ${shuttle.origin} → ${shuttle.destinationId} · ${shuttle.status} · ${shuttle.passengers} pax`);
   for (const delivery of input.deliveries ?? []) lines.push(`- entrega ${delivery.id} · muelle ${delivery.dockId} · ${delivery.status}`);
   for (const vehicle of input.vehicles ?? []) lines.push(`- ${vehicle.kind} ${vehicle.id} · ${vehicle.who} (${vehicle.count}) · ${vehicle.from} → ${vehicle.destinationId} · ${vehicle.status}`);
-  lines.push("", "GRUPOS DE INVITADOS");
-  for (const group of input.guestGroups) lines.push(`- ${group.id} · ${group.count} personas · en ${group.assignedSpaceId ?? "sin ubicación"}${group.needs ? ` · ${group.needs}` : ""}`);
+  lines.push("", "GRUPOS DE INVITADOS  (id · nombre · …)");
+  for (const group of input.guestGroups) lines.push(`- ${group.id} · «${group.name}» · ${group.count} personas · en ${group.assignedSpaceId ?? "sin ubicación"}${group.needs ? ` · ${group.needs}` : ""}`);
   lines.push("", "YA OCURRIDO");
   if (happened.length === 0) lines.push("- nada todavía");
   for (const text of happened.slice(-12)) lines.push(`- ${text}`);

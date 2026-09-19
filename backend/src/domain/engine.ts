@@ -220,7 +220,9 @@ export class Engine {
         this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
+        if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
+          mode = await this.runCoordinator(event);
+        }
       } else {
         mode = await this.runCoordinator(event);
       }
@@ -398,6 +400,14 @@ export class Engine {
     state.coordinatorStatus = "replanificando";
     this.states.saveState(run.id, state);
   }
+}
+
+function callResultMatchesPlan(
+  payload: Record<string, unknown> | undefined,
+  runId: string,
+  planVersion: number,
+): boolean {
+  return payload?.runId === runId && payload.planVersion === planVersion;
 }
 
 function callResultChangesPlan(payload: Record<string, unknown> | undefined): boolean {

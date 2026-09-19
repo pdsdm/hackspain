@@ -1,125 +1,174 @@
 # Estado del proyecto
 
 > Memoria del proyecto: contrastar esta foto con `origin/main` antes de trabajar.
+> Todo lo afirmado aquí sale de comandos ejecutados o se marca como información del equipo.
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 18:40 CEST |
-| **Commit de `main`** | `de7919c` (PR #53, mapa a pantalla completa) |
-| **Rama verificada** | `fix/ventura-cierre-demo` (T40) sobre `de7919c` |
+| **Foto tomada** | 19 de septiembre de 2026, 18:20 CEST |
+| **Commit de `main`** | `dd74178` (PR #56), tras recuperar los 38 commits que descartó el merge `585a5e3` |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, sobre un recorrido real con Helmcode y llamadas simuladas |
+| **Generado por** | Devin |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `main` (`de7919c`) | OK · 266 de 273 tests, 7 live omitidos |
-| `make check` en `fix/ventura-cierre-demo` | OK · 267 de 274 tests, 7 live omitidos |
+| `make check` en la rama de rescate | OK |
+| Tests de backend | 271: **264 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node de esta verificación | 23.10.0 |
+| Node | 23.10.0 |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
 ## Qué funciona
 
-- `main` incluye panel API, motor persistente, HappyRobot, JEV opcional, afluencia,
-  actores, incidencias, giros, rutas dinámicas, costes informativos (T38) y
-  `reasoning_effort` bajo en Helmcode (PR #52).
-- **T39 (PR #53):** el mapa ocupa toda la vista; KPIs, aforo,
-  coordinador y cronología (chat, lo nuevo abajo) flotan sobre él con estilo cristal.
-  La llamada solo aparece mientras está `en_curso`. Sin tarjeta de coste ni panel de
-  operaciones. Velocidad ×1→×2→×5→×10→×20 en modo `sim`. Lo secundario va en un cajón lateral.
-- T38 ya está en `main`: costes informativos, sin límites ni aprobaciones económicas.
-- T39 ya está en `main` (PR #53).
-- T6 tiene código integrado en `main`. No se han repetido llamadas reales en esta sesión.
-- **Recorrido de punta a punta medido tres veces** con `DEMO_COORDINATOR_MODE=llm
-  DEMO_CALL_MODE=sim` (Helmcode `deepseek-v4-flash`): texto libre → plan en 20-25 s →
-  invalidación del plan viejo → llamadas en paralelo con transcripción y condiciones →
-  `no_answer` gestionado → **plan cerrado entre 75 s y 5 min** de reloj real. Un giro
-  `lounge_unavailable` reabre la crisis y replanifica.
+### Mergeado en `main`
 
-### T40, rama `fix/ventura-cierre-demo` (sin mergear)
+- Panel API, motor SQLite, cola por `planVersion`, callbacks HappyRobot e idempotencia.
+- JEV opcional con efectos desactivados por defecto (T35).
+- Mundo dinámico: afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
+- Costes informativos (T38): no bloquean acciones ni crean aprobaciones económicas.
+- Decisiones operativas separadas del coste mediante `approve_plan` y `reject_plan`.
+- Helmcode usa `deepseek-v4-flash`, harness JSON y `reasoning_effort=low` por defecto.
+- T17 automatizado: evento → plan → llamada sim → callback → giro → replan, sin aprobación
+  económica ni doble cargo.
+- T18 local: frontend API, SQLite persistente, reset, reinicio y parada.
+- T39: mapa a pantalla completa, paneles flotantes y cronología tipo chat.
 
-Arregla lo que impedía grabar un recorrido con final:
+### En `fix/zhi-demo-readiness`, aún sin mergear
 
-- Los compromisos ya avanzan a `aceptado_condiciones`. Antes se quedaban en `en_consulta`
-  para siempre: el adaptador `sim` no devuelve `data.commitmentId` y nadie lo aportaba.
-  Ahora el despacho anota el compromiso de cada acción (contraparte y objetivo, con solape
-  de palabras y solo si hay ganador claro) y el resultado lo usa como respaldo.
-- Cierre explícito: `resolved`, `closureSummary` y `coordinatorStatus: "atascado"`.
-  Antes el panel se quedaba en `replanificando` indefinidamente (medido: 21 llamadas y
-  `planVersion` 7 sin final) y `resolved` no se ponía a `true` en ningún sitio del backend.
-- Las intervenciones humanas se aplican al estado al instante; solo la replanificación
-  espera en la cola. Antes una restricción podía tardar más de un minuto en aparecer.
-- El KPI de invitados cuenta sede asignada, no `confirmado`: solo el camino JEV pone un
-  espacio en `confirmado`, y con JEV apagado el indicador se quedaba en 0/600 toda la demo.
-- Tarjeta de resultado en el mapa con el desenlace, y `log_event` sin texto ya no ensucia
-  la cronología.
-- `./scripts/demo.sh doctor` dice qué falta para llamar de verdad sin imprimir ningún valor,
-  incluido si la red resuelve `trycloudflare.com`.
-- `DEMO_TUNNEL=cloudflared|lhr`: túnel alternativo por `localhost.run` para redes que
-  bloquean Cloudflare. Y el descubrimiento de la URL ya no confunde `api.trycloudflare.com`
-  (la que aparece en la línea de error) con la URL pública.
+- `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
+- `POST /simulation/reset` conserva `CLOCK_SPEED`.
+- El coordinador vuelve a `estable` tras el último resultado aceptado sin pisar otro ciclo.
+- Un callback adverso con `planVersion` obsoleta se registra, pero no vuelve a lanzar el
+  coordinador ni multiplica replans de una versión anterior.
+- El prompt no presenta `verificationTarget` como campo genérico.
+- `set_place` sobre un id `gate-*` se normaliza a `set_gate`.
+- Hay regresiones para seed, reset, concurrencia, callbacks obsoletos, targets y puertas.
+
+### En `fix/ventura-cierre-demo` (T42, PR #62), aún sin mergear
+
+Medido corriendo la demo, no leyendo el código: `DEMO_COORDINATOR_MODE=llm
+DEMO_CALL_MODE=sim` con Helmcode, tres recorridos completos.
+
+- **La crisis termina.** `resolved`, `closureSummary` y `coordinatorStatus: "atascado"`.
+  Antes el panel se quedaba en `replanificando` indefinidamente (21 llamadas y `planVersion`
+  7 sin final) y `resolved` no se ponía a `true` en ningún sitio del backend. Ahora cierra
+  entre 75 s y 5 min según lo que conteste el mundo simulado.
+- **Los compromisos avanzan a `aceptado_condiciones`.** Se quedaban en `en_consulta` para
+  siempre: promocionarlos exige `result.data.commitmentId` y el adaptador `sim` no lo
+  devuelve. El despacho anota qué compromiso responde cada acción y el resultado lo usa.
+- **Las intervenciones humanas se aplican al instante**; solo la replanificación se encola.
+- **El KPI de invitados cuenta sede asignada**, no `confirmado`: con JEV apagado ningún
+  espacio llega a `confirmado` y el indicador marcaba 0/600 toda la demo.
+- Tarjeta de resultado en el mapa, y `log_event` sin texto ya no ensucia la cronología.
+- **`DEMO_TUNNEL=lhr`** y `./scripts/demo.sh doctor`. Ver el punto 2 de «Qué falta».
+
+No relanza el coordinador cuando el plan queda incompleto, a propósito: eso es lo que T33
+quitó. Lo dice en pantalla y espera al responsable.
 
 ## Qué falta, por riesgo para la demo
 
-1. Revisar y mergear T40. Roza el trabajo de `fix/zhi-demo-readiness`, que también toca
-   `engine.ts` y `workflow-service.ts`: conviene mergear una y rebasar la otra, en ese orden.
-2. **Llamada real: falta `HAPPYROBOT_TEST_PHONE` en el `.env`.** El resto está puesto
-   (API key, webhook token, hook de Espacios con el host bueno de `workflows.platform.eu`,
-   y la configuración de Helmcode). Sin el teléfono el backend **no arranca**: lanza una
-   excepción en `config.ts` cuando hay hooks y API key sin número. Compruébalo con
-   `./scripts/demo.sh doctor`.
-   `cloudflared` ya está instalado (2026.9.1, binario oficial en `/usr/local/bin`), pero
-   **en la wifi de la ETSIT el Quick Tunnel es inútil**: el DNS `138.100.x.x` devuelve
-   SERVFAIL para todo `trycloudflare.com` y bloquea 8.8.8.8 y 1.1.1.1. Verificado que sí
-   funciona `DEMO_TUNNEL=lhr` (localhost.run por SSH): `/health` público OK y el backend
-   recibe la URL correcta. HappyRobot y Helmcode sí resuelven en esta red.
-3. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
-   comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
-4. Ensayar el recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por
-   pasar las pruebas simuladas.
-5. No existe `docs/specs/T19-demo.md` aunque `TASKS.md` lo enlaza: no hay guion de vídeo.
-6. Al integrar el trabajo local de recursos y T20, retirar sus límites presupuestarios
-   y recomendaciones `ask_budget`; esas ramas no se han modificado aquí.
+### 1. T17 con servicios reales — Zhi (`doing`)
+
+El recorrido automatizado pasa. Helmcode real aplicó la política nueva en una instancia
+aislada: cero decisiones económicas y despacho inmediato. Esa prueba detectó callbacks
+adversos de una versión antigua que podían relanzar replans; la rama lo corrige y añade una
+regresión. No se repitió el ensayo externo después del fix.
+
+Para cerrar T17 falta repetir el recorrido completo con actor HappyRobot controlado,
+callback y giro. El usuario informó de una primera llamada real previa, pero no se verificó
+en esta foto el recorrido completo tras el fix.
+
+### 2. T18 ensayo completo — Zhi (`doing`)
+
+Se verificaron `/health` y `/state` públicos por Quick Tunnel, autenticación del callback,
+persistencia SQLite, seed y velocidad tras reinicio. Falta un ensayo completo que incluya
+T17 real y recuperación operativa.
+
+**La wifi de la ETSIT no sirve para Quick Tunnel.** Su DNS (`138.100.x.x`) devuelve SERVFAIL
+para todo `trycloudflare.com` y bloquea 8.8.8.8 y 1.1.1.1, así que el túnel de Cloudflare no
+arranca aunque `cloudflared` esté instalado (ya lo está: 2026.9.1 en `/usr/local/bin`).
+HappyRobot y Helmcode sí resuelven. Alternativa verificada en PR #62:
+`DEMO_TUNNEL=lhr ./scripts/demo.sh up` (localhost.run por SSH, sin cuenta).
+
+Con el `.env` al día y ese túnel, el camino de vuelta está comprobado sin llamar a nadie:
+`/health` público OK, callback sin token 401, con token 404 `Task not found`. Falta solo la
+llamada real, que depende de tener a alguien al teléfono. Solo hay hook de `espacios`.
+
+### 3. Integraciones del equipo
+
+- El prompt y extractor desplegados en HappyRobot deben reflejar costes informativos y
+  `result.data.committedCost` (sin verificar).
+- T37 figura `doing` aunque PR #50 está mergeado; corresponde a Pep actualizar su fila.
+- T38 figura `review` aunque PR #51 está mergeado; corresponde a Ventura actualizar su fila.
+- T39 figura `review` aunque PR #53 está mergeado; corresponde a Pep actualizar su fila.
+- T13, T19, T20–T22 siguen `todo`; T1, T9, T12, T14–T16 y T33–T35 siguen `review`.
+
+### Añadido en PR #56 (T39 y T40)
+
+- **T39:** el mapa ocupa toda la vista; KPIs, aforo, coordinador y cronología tipo chat
+  flotan sobre él. La llamada solo aparece mientras está `en_curso`. Velocidad
+  ×1→×2→×5→×10→×20 en modo `sim`.
+- **T40 descartada:** se retira la copia en Supabase; el despliegue va en Railway y SQLite
+  con disco persistente es el único almacén (D18).
+
+### Aviso de integración
+
+El merge `585a5e3` descartó 38 commits de `main` (PR #51, #52, #53 y #54, `world/locate.ts`,
+el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir historia. Si
+`make check` baja de golpe el número de tests, sospechad de un merge resuelto a lo bruto.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Prompt y extractor de voz desplegados | Responsable de HappyRobot | Sí |
-| Ensayo con proveedores reales | Entorno y credenciales del portátil de demo | Sí |
-| Integración de recursos y aprendizaje | Sus ramas locales y revisión del equipo | No |
+| T17 aceptado | actor HappyRobot controlado, callback y giro en el mismo recorrido | Sí |
+| T18 aceptado | ensayo completo y recuperación con el entorno de demo | Parcial |
+| Prompt/extractor de voz | sincronizar workflow desplegado con T38 | Sí |
+| Simulación LLM estable | decidir si `sim-world` adversarial es ensayo o modo caos | No |
 
 ## Ramas vivas sin mergear
 
-- `fix/ventura-cierre-demo`: T40, cierre de la crisis. Sobre `de7919c`, `make check` OK.
-- `fix/zhi-demo-readiness`: seed, reset, callbacks obsoletos y `set_gate`. Sobre `de7919c`.
-  Toca los mismos ficheros que T40 (`engine.ts`, `workflow-service.ts`, `prompt.ts`).
-- `Prueba-de-plataforma-y-llamada-real`: trabajo antiguo de voz y frontend, sin PR.
+- `feat/pep-chat-anclado` (PR #56): T39+T40 + chat anclado; `origin/main` integrado.
+- `fix/ventura-cierre-demo` (PR #62): T42, cierre de la crisis y túnel alternativo.
+  Toca `engine.ts`, `workflow-service.ts` y `App.tsx`, como `fix/zhi-demo-readiness`.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
-## Decisiones pendientes
-
-- Coordinar T38 (ya en main) con las ramas de recursos/aprendizaje y el workflow de voz.
-- Qué se graba en el vídeo: `sim` reproducible o una llamada real en el momento clave.
-- Si el sistema debe reintentar solo cuando el plan queda incompleto. T40 no lo hace a
-  propósito: relanzar el coordinador tras un resultado aceptado es justo lo que T33 quitó.
-  Hoy lo dice en pantalla y espera al responsable.
+1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
+   modo caos; el segundo no garantiza convergencia.
+2. Quién hace de responsable de recinto y qué respuestas dará durante el ensayo real.
+3. Cómo termina el relato: plan cerrado o limitación abierta y honesta.
+4. Cuándo sincronizar el prompt y extractor desplegados de HappyRobot con T38.
 
 ## Avisos para el siguiente agente
 
-- Los campos `contingency`, `autonomousLimit` y `authorized` quedan por compatibilidad,
-  pero ya no limitan, autorizan ni aparecen en los prompts o el panel.
-- `approve_spend`/`reject_spend` devuelven 409; el giro `reject_spend` devuelve 400.
-- JEV conserva su prompt congelado, umbrales, privacidad y efectos desactivados por defecto.
-- El script de demo arranca en `rules + sim`. Para probar eventos libres con LLM y llamadas
-  simuladas: `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
-- El recorrido tarda entre 75 s y 5 min de reloj real en cerrar, según lo que conteste el
-  mundo simulado. Para grabar, sube la velocidad en modo `sim`; con llamadas reales no pases
-  de ×2 (el timeout de callback son 180 s de reloj).
-- Un plan que acaba en `atascado` no está roto: hay invitados sin sede y nadie tiene nada en
-  marcha. Es un desenlace válido y se cuenta como tal.
+- T17 ya no usa `approve_spend`: los costes son informativos y las acciones no esperan una
+  aprobación económica. Las decisiones, si existen, son operativas.
+- Helmcode recibe `reasoning_effort=low` por defecto; la variable de entorno puede
+  sobrescribirlo.
+- `accepted` no relanza el coordinador; `rejected` y `no_answer` solo lo relanzan si el
+  resultado todavía pertenece al `runId` y `planVersion` vigentes.
+- El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
+  `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
+- Reiniciar conserva SQLite, pero pierde callbacks simulados programados en memoria.
+- Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
+- Haz `git fetch` antes de analizar: `main` se mueve rápido.
+
+## Piloto de routing con JEV (T41, sin activar)
+
+Medido el 19/09/2026 con corpus sintético congelado (40 textos: 20 desarrollo, 20 holdout;
+60 consultas en total) y un playbook en memoria, aislado del `Engine`.
+
+| Split | Falsos positivos | Verdaderos positivos | Mediana | P95 |
+|---|---:|---:|---:|---:|
+| Desarrollo | 0 | 0 | 313 ms | 842 ms |
+| Holdout | 0 | 0 | 292 ms | 838 ms |
+
+El coordinador de referencia acertó 6 de 6 con mediana de 28,3 s. El piloto es mucho más
+rápido y no produjo ningún falso positivo, pero **con el gate inicial su cobertura es cero**:
+no reconoció ningún caso, así que hoy no sustituye a nadie. No se activa en la demo y no
+toca la ruta de eventos reales. Detalle en [`T41`](specs/T41-jev-routing-pilot.md).

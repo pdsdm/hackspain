@@ -131,7 +131,7 @@ test("with an LLM the world agent invents the incident, applies its operations a
   const completeFn = async (_config: unknown, system: string) => {
     systems.push(system);
     if (system.startsWith("Eres el mundo")) {
-      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }] });
+      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }, { op: "set_place", id: "gate-oeste", status: "cerrado" }] });
     }
     return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "estable", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
   };
@@ -150,6 +150,8 @@ test("with an LLM the world agent invents the incident, applies its operations a
     assert.equal(taxi.destinationId, "accesoSur2");
     const parking = (state.spaces as Array<Record<string, unknown>>).find((item) => item.id === "parkingSur")!;
     assert.notEqual(parking.status, "confirmado");
+    const gate = (state.gates as Array<Record<string, unknown>>).find((item) => item.id === "gate-oeste")!;
+    assert.equal(gate.status, "cerrado");
     assert.ok((state.events as Array<{ kind: string; text: string }>).some((event) => event.kind === "incidencia" && event.text.includes("camión de TV")));
   } finally {
     clock.stop();
@@ -246,5 +248,39 @@ test("POST /simulation/live toggles clock.live", async () => {
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database2.close();
+  }
+});
+
+test("el modo vivo sobrevive a «Reiniciar simulación»", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const control = new ControlService(states);
+
+    const encendido = control.setLive(true, 4242);
+    assert.equal(encendido.live, true);
+
+    control.reset("calm");
+
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.equal(clock.live, true, "el mundo tiene que seguir emitiendo tras el reinicio");
+    assert.equal(clock.liveSeed, 4242, "la semilla se conserva: la demo es reproducible");
+    // La secuencia arranca de cero: mundo nuevo, incidencias desde la primera.
+    assert.equal(clock.liveIndex, 0);
+    assert.equal(clock.liveLastAt, 0);
+  } finally {
+    database.close();
+  }
+});
+
+test("si el modo vivo estaba apagado, un reinicio no lo enciende", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    new ControlService(states).reset("calm");
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.notEqual(clock.live, true);
+  } finally {
+    database.close();
   }
 });

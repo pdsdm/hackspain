@@ -7,7 +7,7 @@ const BASE = import.meta.env.DEV
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), 4000)
+  const t = setTimeout(() => ctrl.abort(), 8000)
   try {
     const res = await fetch(`${BASE}${path}`, { ...init, signal: ctrl.signal, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } })
     if (!res.ok) {

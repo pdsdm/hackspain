@@ -28,6 +28,8 @@ export interface AppConfig {
   jevEnabled: boolean;
   jevApplyConfirmations: boolean;
   jevReviewedTranscriptHashes: string[];
+  jevAllowUnreviewedTranscripts: boolean;
+  jevTimeoutMs: number;
   typesafeApiKey: string | undefined;
   jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
@@ -125,6 +127,15 @@ function readSeed(value: string | undefined): number | undefined {
   return seed;
 }
 
+function readJevTimeout(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return 3_000;
+  const timeout = Number(value);
+  if (!Number.isInteger(timeout) || timeout < 200 || timeout > 15_000) {
+    throw new Error(`JEV_TIMEOUT_MS must be an integer between 200 and 15000, received "${value}"`);
+  }
+  return timeout;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
   const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
@@ -155,6 +166,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jevEnabled: ["1", "true"].includes(env.JEV_ENABLED?.trim().toLowerCase() ?? ""),
     jevApplyConfirmations: ["1", "true"].includes(env.JEV_APPLY_CONFIRMATIONS?.trim().toLowerCase() ?? ""),
     jevReviewedTranscriptHashes: readReviewedHashes(env.JEV_REVIEWED_TRANSCRIPT_HASHES),
+    jevAllowUnreviewedTranscripts: ["1", "true"].includes(env.JEV_ALLOW_UNREVIEWED_TRANSCRIPTS?.trim().toLowerCase() ?? ""),
+    jevTimeoutMs: readJevTimeout(env.JEV_TIMEOUT_MS),
     typesafeApiKey: env.TYPESAFE_API_KEY?.trim() || undefined,
     jevModel: env.JEV_MODEL?.trim() || "jev-1.13.0",
     hooks,

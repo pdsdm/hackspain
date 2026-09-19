@@ -62,6 +62,9 @@ export function normalizeOperation(raw: unknown): unknown {
   const next: Record<string, unknown> = { ...raw };
   if (id !== undefined) next.id = id;
   if (status !== undefined) next.status = status;
+  if (next.op === "set_place" && typeof next.id === "string" && next.id.startsWith("gate-")) {
+    next.op = "set_gate";
+  }
   if (raw.op === "log_event") {
     next.text = text ?? pickString(raw.reason) ?? "";
     if (typeof next.kind !== "string" || next.kind === "") next.kind = "incidencia";

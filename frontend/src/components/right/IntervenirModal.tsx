@@ -22,7 +22,7 @@ export function IntervenirModal({ s, onClose, onIntervene, disabled, feedback }:
         {feedback && <p role="status" className="action-feedback mb-3">{feedback}</p>}
         {pend && <p className="text-[12px] mb-3">{pend.effectApprove}</p>}
         <div className="space-y-2">
-          {pend?.kind === 'operational' && <>
+          {pend && <>
             <Btn disabled={disabled} icon={Check} label="Aceptar propuesta operativa" sub={pend.title} tone="text-green" onClick={() => fire({ type: 'approve_plan', payload: { decisionId: pend.id } })} />
             <Btn disabled={disabled} icon={Ban} label="Rechazar propuesta operativa" sub="Solicitar otra solución, sin cambiar los costes registrados" tone="text-red" onClick={() => fire({ type: 'reject_plan', payload: { decisionId: pend.id } })} />
           </>}

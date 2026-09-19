@@ -5,6 +5,7 @@ import { openDatabase } from "./state/database.js";
 
 const config = loadConfig();
 const database = openDatabase(config.databasePath);
+
 const app = createApp(database, { workflowToken: config.workflowToken, config });
 const executor = app.locals.executor;
 const clock = new SimulationClock(app.locals.stateRepository, executor, config.clockSpeed, config.simSeed);

@@ -6,6 +6,7 @@ import { nextAutoTwist, TWIST_LABELS } from "./auto-twists.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { Engine } from "./engine.js";
 import { LIVE_INTERVAL_SECONDS, incidentAt } from "./incidents.js";
+import { createSimulationSeed } from "./random.js";
 import type { StateRepository } from "../state/state-repository.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -32,7 +33,7 @@ export class SimulationClock {
     private readonly states: StateRepository,
     private readonly executor: ActionExecutor,
     speed = 1,
-    private readonly seed: number = 1 + Math.floor(Math.random() * 99_999),
+    private readonly configuredSeed?: number,
   ) {
     this.speed = speed;
   }
@@ -52,6 +53,7 @@ export class SimulationClock {
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
     state.clock.speed = this.speed;
+    this.ensureSeed(state);
     if (this.liveOnStart) {
       state.clock.live = true;
       state.clock.liveSeed = this.liveOnStart.seed;
@@ -125,11 +127,11 @@ export class SimulationClock {
     }
     state.calls = records(state, "calls");
 
-    if (state.clock.attendanceSeed === undefined) {
-      state.clock.attendanceSeed = Number(state.clock.liveSeed ?? this.seed);
+    if (state.clock.seed === undefined) {
+      this.ensureSeed(state);
       changed = true;
     }
-    const attendance = advanceAttendance(state, now - delta, now, Number(state.clock.attendanceSeed));
+    const attendance = advanceAttendance(state, now - delta, now, Number(state.clock.seed));
     if (attendance.changed) changed = true;
     for (const burst of attendance.bursts) {
       addEvent(state, "info", `Pico de llegadas en ${burst.name}: +${burst.perMin} personas/min durante ${burst.minutes} min`, "asistentes");
@@ -172,6 +174,13 @@ export class SimulationClock {
           .catch((error) => console.error("[live] handle", error));
       }
     }
+  }
+
+  private ensureSeed(state: CrisisStateDocument): void {
+    if (state.clock.seed !== undefined) return;
+    const legacySeed = Number(state.clock.attendanceSeed);
+    state.clock.seed = Number.isInteger(legacySeed) && legacySeed > 0 ? legacySeed : this.configuredSeed ?? createSimulationSeed();
+    delete state.clock.attendanceSeed;
   }
 
   private coordinatorFree(state: CrisisStateDocument): boolean {

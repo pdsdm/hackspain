@@ -203,8 +203,12 @@ function applySpecialistState(
     events.push({
       id: `verification-${randomUUID()}`,
       time: next.clock.simSeconds,
-      kind: verification.decision === "confirm_target" ? "acuerdo" : "accion",
-      text: `JEV · ${verification.target ? "Pabellón B (Sur) / c-pabB" : "Sin target confirmable"}: ${verification.decision === "confirm_target" ? "reserva confirmada" : "sin confirmación automática"}. Motivo: ${verification.reason.replaceAll("_", " ")}. No acredita preparación física ni invitados ubicados.`,
+      // El desacuerdo es una incidencia: el resultado de la llamada afirma más de lo que
+      // sostiene la transcripción y el responsable tiene que poder verlo en la cronología.
+      kind: verification.decision === "confirm_target" ? "acuerdo" : verification.gap ? "incidencia" : "accion",
+      text: verification.gap
+        ? `JEV · Pabellón B (Sur) / c-pabB: el resultado de la llamada dice «aceptado sin condiciones», pero la transcripción no lo sostiene: ${verification.gap}. Revisa la llamada antes de darla por cerrada.`
+        : `JEV · ${verification.target ? "Pabellón B (Sur) / c-pabB" : "Sin target confirmable"}: ${verification.decision === "confirm_target" ? "reserva confirmada" : "sin confirmación automática"}. Motivo: ${verification.reason.replaceAll("_", " ")}. No acredita preparación física ni invitados ubicados.`,
       area,
     });
     next.events = events.slice(-80);
@@ -322,6 +326,15 @@ export class WorkflowService {
       },
       envelope.status === "completed" ? "completed" : "failed",
     );
+    const accepted = envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions";
+    if (recorded.applied && !recorded.duplicate && envelope.status === "completed" && accepted && this.tasks.listOpen(task.runId).length === 0) {
+      const run = this.states.ensureActiveRun();
+      if (run.id === task.runId && run.state.coordinatorBusy === undefined && !run.state.waitingForDecision && run.state.agentsPaused !== true && run.state.coordinatorStatus === "replanificando") {
+        const state = structuredClone(run.state);
+        state.coordinatorStatus = "estable";
+        this.states.saveState(run.id, state);
+      }
+    }
     return { ok: true as const, ...recorded };
   }
 }
