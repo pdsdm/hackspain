@@ -207,6 +207,7 @@ export interface Clock {
   raceAt: number
   live?: boolean
   liveSeed?: number
+  liveMode?: 'open' | 'catalog'
 }
 
 export interface CrisisState {

@@ -19,7 +19,7 @@ export function SimulacionPanel({ s, onTwist, onLive }: { s: CrisisState; onTwis
             <Radio size={13} className={live ? 'text-amber' : 'text-muted'} />
             <div className="flex-1 min-w-0">
               <div className="text-[12px] font-medium">Modo vivo{live ? ' · activo' : ''}</div>
-              <div className="text-[11px] text-muted">Incidencias no previstas cada 3 min · semilla {live ? s.clock.liveSeed ?? '—' : (seed || 'aleatoria')}</div>
+              <div className="text-[11px] text-muted">{s.clock.liveMode === 'catalog' ? 'Catálogo fijo' : 'El LLM inventa la incidencia'} cada 3 min · semilla {live ? s.clock.liveSeed ?? '—' : (seed || 'aleatoria')}</div>
             </div>
             {!live && <input aria-label="Semilla del Modo vivo" inputMode="numeric" placeholder="semilla" value={seed} onChange={(e) => setSeed(e.target.value.replace(/\D/g, ''))} className="w-16 text-[11px] px-1.5 py-1 border border-line bg-transparent num" />}
             <button onClick={() => onLive(!live, seed ? Number(seed) : undefined)} className={`text-[11px] px-2 py-1 border ${live ? 'border-amber text-amber' : 'border-line hover:border-amber'}`}>{live ? 'Apagar' : 'Encender'}</button>

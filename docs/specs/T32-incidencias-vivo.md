@@ -6,6 +6,7 @@ Un «Modo vivo» que, con semilla, lanza microincidencias que nadie ha elegido s
 
 ## Criterios de aceptación
 
+- [x] **Modo abierto** (por defecto con LLM): un agente mundo (`backend/src/domain/incident-generator.ts`) inventa cada incidencia a partir del estado real y de una pista de la semilla; devuelve texto + hasta 3 operaciones validadas. Sin LLM o si falla, catálogo.
 - [x] Catálogo de 18 incidencias en `backend/src/domain/incidents.ts` (12 originales + 6 sobre parkings, paddock, taxis, VIP y repartidores de T29–T31), cada una con texto, efecto determinista sobre el estado y área. Ninguna repite un giro de `TWIST_IDS`.
 - [x] `POST /simulation/live { enabled: boolean, seed?: number }` y `SIM_INCIDENTS=on|off`. Por defecto apagado. `GET /state` expone `clock.live: boolean`.
 - [x] Con el modo encendido, el tick lanza como máximo una incidencia cada 3 minutos simulados y nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision`.

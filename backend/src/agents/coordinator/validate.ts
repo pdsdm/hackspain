@@ -46,7 +46,7 @@ function pickString(...values: unknown[]): string | undefined {
   return undefined;
 }
 
-function normalizeOperation(raw: unknown): unknown {
+export function normalizeOperation(raw: unknown): unknown {
   if (!isRecord(raw)) return raw;
   const id = pickString(
     raw.id,
@@ -84,7 +84,7 @@ function normalizeOperation(raw: unknown): unknown {
   return next;
 }
 
-function operationReady(raw: unknown): boolean {
+export function operationReady(raw: unknown): boolean {
   if (!isRecord(raw) || typeof raw.op !== "string") return false;
   if (raw.op === "set_place") return typeof raw.id === "string" && typeof raw.status === "string";
   if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";

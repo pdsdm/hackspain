@@ -209,7 +209,7 @@ export function createApp(
   app.post("/simulation/live", (request, response, next) => {
     try {
       const body = parseLive(request.body ?? {});
-      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed, body.mode) });
     } catch (error) {
       next(error);
     }
