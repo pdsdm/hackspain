@@ -2,6 +2,7 @@
 // No sustituye a la validación de aforo y presupuesto del backend (T7): esto solo descarta
 // una respuesta del modelo mal formada o incoherente con el estado que recibió.
 
+import { extractJsonObject } from "./llm.js";
 import type {
   Area,
   CommitmentStatus,
@@ -345,12 +346,22 @@ export function validateOutput(
   return { output: issues.length === 0 ? output : null, issues };
 }
 
+function parseJsonText(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const extracted = extractJsonObject(text);
+    if (extracted === null) throw new Error("json");
+    return JSON.parse(extracted);
+  }
+}
+
 export function parseOutput(
   text: string,
   input: CoordinatorInput,
 ): { output: CoordinatorOutput | null; issues: ValidationIssue[] } {
   try {
-    return validateOutput(normalizePayload(JSON.parse(text)), input);
+    return validateOutput(normalizePayload(parseJsonText(text)), input);
   } catch {
     return { output: null, issues: [{ code: "json_invalido", detail: "la respuesta no es JSON" }] };
   }
