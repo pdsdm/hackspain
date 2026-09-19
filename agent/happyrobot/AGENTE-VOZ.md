@@ -91,19 +91,162 @@ backend da la llamada por perdida a los tres minutos y replanifica sin tus datos
 Nunca leas en voz alta el JSON, los identificadores ni el nombre de las tools.
 ```
 
-## 3. Bloque por área
+## 3. Los cuatro agentes
 
-Solo **Espacios** tiene guion cerrado, y ya está escrito en el repo:
+Son cuatro workflows, uno por área, cada uno con su hook. Comparten el prompt base de §2
+y las tools de §4; lo que cambia es este bloque, que se pega debajo.
+
+Los cuatro casos de uso salen de [`escenario/escenario.md`](../../escenario/escenario.md)
+§6.2–6.5, con sus cifras. Cada uno tiene **una trampa**: el error concreto que distingue
+un agente que parece funcionar de uno que sirve. Están marcadas.
+
+| Agente | Hook | Canal | Habla con | Sin esto, no avanza |
+|---|---|---|---|---|
+| Espacios | `HAPPYROBOT_HOOK_ESPACIOS` | Voz | Responsable de recinto | Todo lo demás: sin sitio no hay plan |
+| Catering | `HAPPYROBOT_HOOK_CATERING` | Voz | Responsable de catering | 600 servicios apuntando a un muelle cerrado |
+| Transporte | `HAPPYROBOT_HOOK_TRANSPORTE` | Voz | Coordinador de transporte | 180 personas llegando a un acceso que ya no vale |
+| Asistentes | `HAPPYROBOT_HOOK_ASISTENTES` | **SMS**, voz solo por excepción | Invitados y recepción | 600 personas con la instrucción antigua |
+
+### 3.1. Espacios — voz
+
+**Ya está escrito**, no lo reescribas:
 [`backend/src/agents/spaces/prompt.ts`](../../backend/src/agents/spaces/prompt.ts)
 (`SYSTEM_PROMPT`). Pégalo debajo del prompt base **quitándole la sección «FORMATO DE
-SALIDA»**: en voz, la salida no es un JSON hablado, es la tool `registrar_resultado`.
+SALIDA»**: en voz la salida no es un JSON hablado, es `registrar_resultado`.
 
-Lo que aporta ese bloque y no conviene reescribir: el orden fijo de las seis preguntas
-(capacidad → zona → hora de montaje → accesos → señal de carrera → coste) y las reglas de
-interpretación (una hora de montaje tardía es disponibilidad, no un descarte).
+**Caso de uso.** Reubicar a 600 invitados para abrir a las 13:00. Candidatos: Pabellón B
+(Sur, 450), Lounge de Fan Zone Sur (Sur, 150), Pabellón Norte C (Norte, 600, no antes de
+las 13:45).
 
-Catering, Transporte y Asistentes (T12, T13, T14) todavía no tienen guion. Hasta que lo
-tengan, el prompt base solo con `{{objective}}` es suficiente para una demo.
+**Orden fijo de preguntas:** capacidad → zona → hora de montaje → accesos y accesibilidad
+→ señal de carrera → coste.
+
+> **La trampa:** «el montaje no termina hasta las 13:15» **no es un no**, es una hora de
+> disponibilidad. Un agente que lo apunta como descarte tira el plan Sur entero. Lo mismo
+> con la zona contraria: no se descarta, se anota, porque el coordinador puede acordar un
+> traslado exterior.
+
+`data`: el objeto `spaces[]` de §4.2.
+
+### 3.2. Catering — voz
+
+**Caso de uso.** Hay 600 servicios preparados y dos entregas contratadas, de 360 y 240, a
+un muelle que pertenece al pabellón cerrado. Hay que conseguir que el proveedor reparta el
+servicio siguiendo al plan nuevo (por ejemplo 450 en Pabellón B y 150 en Lounge Sur) sin
+perder los requisitos alimentarios ya registrados.
+
+**Orden de preguntas:**
+1. Si pueden dividir el servicio en el reparto que les propones, y con qué horarios.
+2. Si mantienen los requisitos alimentarios de cada grupo en esa división.
+3. Por qué muelle o acceso necesitan entrar para cada entrega.
+4. Si necesitan que alguien les abra, y a qué hora.
+5. Personal que aportan ellos y personal que esperan de nosotros.
+6. Sobrecoste de la redistribución.
+
+> **La trampa:** el «sí» del proveedor **casi nunca es el final**. En el escenario contesta
+> «sí, pero la segunda entrega necesita el muelle este de Sur y que recepción lo abra». Eso
+> no es un acuerdo cerrado: es un acuerdo con dos dependencias, una con el recinto y otra
+> con recepción. El agente tiene que sacar **quién** abre y **a qué hora**, o el catering
+> se dará por confirmado y la entrega fallará. Y nunca improvises sobre alérgenos o
+> ingredientes: si el menú alternativo cambia, eso es una condición, no un detalle.
+
+`data`:
+
+```json
+{
+  "deliveries": [
+    { "id": "entrega-1", "servings": 450, "spaceId": "pabellonB", "dockId": "muelle-sur",
+      "eta": "12:50", "status": "condicionada",
+      "conditions": ["Recepción debe abrir el muelle este"] }
+  ],
+  "dietaryPreserved": true,
+  "extraCost": 400,
+  "needsFromUs": ["Una persona de recepción en el muelle este a las 12:45"]
+}
+```
+
+### 3.3. Transporte — voz
+
+**Caso de uso.** Cuatro shuttles con 45 pasajeros cada uno, 180 en total, van camino del
+acceso Sur con la instrucción antigua. Hay que acordar un punto de llegada compatible con
+la ubicación nueva, y si el plan acaba en Norte, una ruta por el exterior.
+
+**Orden de preguntas:**
+1. Dónde está ahora cada vehículo y a qué hora llega con la ruta actual.
+2. Si pueden **parar** en el punto que propones (no si pueden llegar: si pueden parar).
+3. Cuánto tarda el desvío y qué hora de llegada nueva sale.
+4. Si el punto admite embarque accesible.
+5. Si el plan pasa a Norte: si el conductor acepta la ruta exterior, y cuánto suma.
+6. Sobrecoste, si lo hay.
+
+> **La trampa:** «el vehículo puede llegar, pero esa entrada no permite parar un autocar».
+> **Llegar y parar no son lo mismo**, y es exactamente el fallo que el escenario pone de
+> ejemplo. Si el agente lo apunta como confirmado, mandamos 45 personas a un sitio donde el
+> autocar no puede descargar. Cuando pase esto: descarta el punto, dilo como no disponible
+> y pide un punto autorizado alternativo. Un cambio a Norte no está hecho hasta que **el
+> conductor** lo acepta, no cuando lo acepta la centralita.
+
+`data`:
+
+```json
+{
+  "shuttles": [
+    { "id": "shuttle-2", "stopId": "acceso-este-sur", "accepted": false,
+      "reason": "La entrada no admite parada de autocar",
+      "etaChange": null, "accessibleBoarding": null }
+  ],
+  "alternativeStops": ["acceso-sur-principal"],
+  "extraCost": 0
+}
+```
+
+### 3.4. Asistentes — SMS, y voz solo por excepción
+
+**Caso de uso.** 600 invitados con la instrucción antigua, en tres grupos que **no reciben
+el mismo mensaje**:
+
+| Grupo | Personas | Situación | Qué se le dice |
+|---|---|---|---|
+| `g-acceso` | 90 | Ya en el control de acceso Sur | Que permanezcan ahí; el equipo les acompañará cuando el espacio esté listo |
+| `g-shuttles` | 180 | En los cuatro shuttles | Que su acceso sigue siendo Sur y que no intenten entrar por Norte |
+| `g-propios` | 330 | Llegando por su cuenta | Lo mismo, más la hora de apertura vigente |
+
+Aparte, dentro de `g-propios` hay 12 personas con necesidad de accesibilidad registrada y
+38 con necesidad alimentaria (4 están en los dos grupos). A las de accesibilidad **se las
+llama**, no se les manda un SMS: hay que confirmar que la alternativa cubre su requisito.
+
+> **La trampa:** **no se comunica una ubicación que no está confirmada.** El escenario es
+> explícito: «Te enviaremos el pabellón asignado cuando quede confirmado». Si el agente
+> adelanta «vais al Pabellón B» y luego el plan cambia a Norte, hemos desinformado a 600
+> personas y el reaviso llega tarde. Se comunica lo que ya es cierto (la zona, la hora, que
+> no crucen a Norte) y se promete el resto. Segundo matiz: **mensaje enviado, mensaje
+> entregado, cambio aceptado y asistencia completada son cuatro resultados distintos**; no
+> devuelvas `accepted` por haber enviado un SMS.
+
+`data`:
+
+```json
+{
+  "notifications": [
+    { "groupId": "g-acceso", "channel": "sms", "sent": 90, "delivered": 88,
+      "accepted": 0, "status": "entregado" }
+  ],
+  "replies": [
+    { "guestId": "guest-013", "text": "Necesito acceso con silla de ruedas", "needsFollowUp": true }
+  ]
+}
+```
+
+> Este agente es el único que en el backend sale ya como `sms`: está fijado en
+> [`replan.ts:269`](../../backend/src/agents/coordinator/replan.ts#L269). Si solo vas a
+> montar un canal de texto, es este.
+
+### 3.5. Si te falta tiempo
+
+La regla de recorte del [plan del sábado](../../docs/plan-sabado.md): **Espacios es el
+único que no se recorta.** Es el que bloquea a los demás y el que tiene guion cerrado y
+probado. Catering y Transporte pueden quedarse en `sim` etiquetado en pantalla, y el SMS
+de Asistentes es lo primero que cae.
 
 ## 4. Tools
 
