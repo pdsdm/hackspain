@@ -54,7 +54,7 @@
 | T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62, mergeada) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | done |
 | T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
 | T45 | Congelar escenario y storyboard técnico de la demo | Carlos + Ventura | `docs/carlos-demo-scenario` | [T45](docs/specs/T45-video-scenario.md) | todo |
-| T46 | Entrada autenticada de incidentes reales desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | todo |
+| T46 | Entrada autenticada de incidentes reales desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
 | T47 | Workflows HappyRobot reales de llamada y SMS entrantes | Álvaro | `feat/alvaro-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | todo |
 | T48 | Director reproducible del recorrido de vídeo | Carlos (revisión: Zhi) | `feat/carlos-demo-director` | [T48](docs/specs/T48-demo-director.md) | todo |
 | T49 | Incidencias activas y procedencia de inputs en el frontend | Pep (revisión: Carlos) | `feat/pep-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | todo |
