@@ -60,7 +60,7 @@ export function applyOperation(
       }
       const space = draft.spaces.find((item) => item.id === operation.id);
       if (!space) return { ok: false, error: `set_place: lugar desconocido ${operation.id}` };
-      space.status = operation.status;
+      space.status = coerceSpaceStatus(operation.status);
       if (operation.note !== undefined) space.note = operation.note;
       if (operation.capacity !== undefined) space.capacity = operation.capacity;
       if (operation.readyAt !== undefined) space.readyAt = operation.readyAt;

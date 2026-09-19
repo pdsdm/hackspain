@@ -49,7 +49,7 @@ function deliveryView(s: CrisisState, d: Delivery, now: number): VehicleView {
   return {
     id: d.id, kind: 'truck', name: d.name.split(' · ')[0], load: `${d.services} servicios`, destId: d.dockId, destName: spaceName(s, d.dockId),
     eta: d.arriveAt, etaLabel: fmtClock(d.arriveAt), pct: Math.round(progress(d.departAt, d.arriveAt, now) * 100),
-    status: label[d.status], tone, delayed: bad, done: d.status === 'entregada', waypoints: viaPoints(s, d.route), fallback: d.route,
+    status: label[d.status] ?? d.status, tone, delayed: bad, done: d.status === 'entregada', waypoints: viaPoints(s, d.route), fallback: d.route?.length ? d.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 

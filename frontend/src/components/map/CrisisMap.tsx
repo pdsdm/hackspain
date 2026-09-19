@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'rea
 import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
 import { PIT_LANE, TRACK } from '../../domain/track'
-import { SPACE, spaceLook } from '../ui/status'
+import { spaceLook } from '../ui/status'
 import { gateIcon, pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'

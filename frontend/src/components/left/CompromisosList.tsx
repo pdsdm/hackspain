@@ -16,8 +16,8 @@ const ICON: Record<CommitmentStatus, { I: typeof CheckCircle2; cls: string }> = 
 const ORDER: CommitmentStatus[] = ['aceptado_condiciones', 'en_consulta', 'propuesto', 'confirmado', 'en_ejecucion', 'completado', 'invalidado']
 
 function Row({ c }: { c: Commitment }) {
-  const { I, cls } = ICON[c.status]
-  const meta = COMMITMENT[c.status]
+  const { I, cls } = ICON[c.status] ?? ICON.propuesto
+  const meta = COMMITMENT[c.status] ?? COMMITMENT.propuesto
   return (
     <li className="flex items-start gap-2.5 py-2 border-b border-line last:border-0 fade-in">
       <I size={18} className={`${cls} mt-0.5 flex-none`} />
