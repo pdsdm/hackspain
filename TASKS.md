@@ -60,7 +60,7 @@
 | T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | doing |
 | T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |
 | T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Ventura (Catering + Asistentes) + Álvaro (Transporte) | `feat/ventura-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | doing |
-| T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | todo |
+| T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | doing |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
