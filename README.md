@@ -104,6 +104,8 @@ make check             # verifica lint + tests + build
 
 Simulación, modo API, endpoints y recorrido HappyRobot: [`docs/guia-pruebas.md`](docs/guia-pruebas.md).
 
+Cómo está montado el sistema de agentes, qué entidades hay y con qué tiempos corre: [`docs/entorno-agentico.md`](docs/entorno-agentico.md).
+
 ## Estructura del repo
 
 ```
@@ -118,6 +120,7 @@ Simulación, modo API, endpoints y recorrido HappyRobot: [`docs/guia-pruebas.md`
 │   ├── specs/            # una spec corta por feature (copiar _plantilla.md)
 │   ├── decisions.md      # decisiones tomadas y su porqué
 │   ├── api-contract.md   # contrato backend ↔ frontend (fuente de verdad)
+│   ├── entorno-agentico.md # entidades, tiempos del bucle y cómo montarlo
 │   └── guia_hackathon.md # horarios, sitios, tracks
 ├── escenario/
 │   └── escenario.md      # escenario MADRING: crisis, agentes, demo

@@ -79,6 +79,27 @@ export interface Delivery {
   note?: string
 }
 
+export type VehicleKind = 'taxi' | 'vip' | 'repartidor'
+export type VehicleStatus = 'en_ruta' | 'retenido' | 'desviado' | 'llegado'
+
+export interface Vehicle {
+  id: string
+  kind: VehicleKind
+  name: string
+  who: string
+  count: number
+  from: string
+  origin: string
+  destinationId: string
+  route: LatLng[]
+  departAt: number
+  arriveAt: number
+  delayMin: number
+  status: VehicleStatus
+  counterpart: string
+  note?: string
+}
+
 export type GateStatus = 'abierto' | 'saturado' | 'cerrado'
 
 export interface Gate {
@@ -92,6 +113,11 @@ export interface Gate {
   arrivalsPerMin: number
   throughputPerMin: number
   status: GateStatus
+  arrivalProfile?: { at: number; perMin: number }[]
+  baseArrivalsPerMin?: number
+  burstUntil?: number
+  burstPerMin?: number
+  lastSaturationAt?: number
 }
 
 export interface GuestGroup {
@@ -193,6 +219,7 @@ export interface CrisisState {
   agents: Agent[]
   shuttles: Shuttle[]
   deliveries: Delivery[]
+  vehicles?: Vehicle[]
   guestGroups: GuestGroup[]
   gates: Gate[]
   attendanceExpected: number

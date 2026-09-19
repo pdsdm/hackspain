@@ -1,4 +1,4 @@
-import { ArrowUpDown, Ban, Bus, Truck, MapPin } from 'lucide-react'
+import { ArrowUpDown, Ban, Bus, Car, Package, Star, Truck, MapPin } from 'lucide-react'
 import type { CrisisState, Space } from '../../domain/types'
 import type { StateChange } from '../../domain/changes'
 import { spaceLook } from '../ui/status'
@@ -31,6 +31,7 @@ export function PlanoOperativo({ s, changes, onSelect }: { s: CrisisState; chang
     <div className="plan-vehicles">
       <h3 className="label flex items-center gap-2"><MapPin size={14} /> Transporte y entregas · hora prevista</h3>
       <div className="vehicle-grid">{s.shuttles.map((sh) => <button key={sh.id} aria-pressed={s.selectedId === sh.id} className={`vehicle-item ${changed.has(sh.id) ? 'site-changed' : ''}`} onClick={() => onSelect(sh.id)}><Bus size={17} /><span><strong>{sh.name} · {sh.passengers} personas</strong><span>{location(sh.destinationId)} · {fmtClock(sh.arriveAt)}</span><span className={sh.status === 'retrasado' ? 'text-red' : 'text-muted'}>{sh.status.replaceAll('_', ' ')} · {sh.accepted ? 'coordinado' : 'sin confirmar'}</span></span>{changed.has(sh.id) && <span className="change-tag">Δ</span>}</button>)}</div>
+      <div className="vehicle-grid">{(s.vehicles ?? []).map((v) => <button key={v.id} aria-pressed={s.selectedId === v.id} className={`vehicle-item ${changed.has(v.id) ? 'site-changed' : ''}`} onClick={() => onSelect(v.id)}>{v.kind === 'taxi' ? <Car size={17} /> : v.kind === 'vip' ? <Star size={17} /> : <Package size={17} />}<span><strong>{v.name} · {v.who}</strong><span>{location(v.destinationId)} · {fmtClock(v.arriveAt)}</span><span className={v.status === 'retenido' ? 'text-red' : v.status === 'desviado' ? 'text-amber' : 'text-muted'}>{v.status.replaceAll('_', ' ')}{v.note ? ` · ${v.note}` : ''}</span></span>{changed.has(v.id) && <span className="change-tag">Δ</span>}</button>)}</div>
       <div className="vehicle-grid deliveries">{s.deliveries.map((d) => <button key={d.id} aria-pressed={s.selectedId === d.id} className={`vehicle-item ${changed.has(d.id) ? 'site-changed' : ''}`} onClick={() => onSelect(d.id)}><Truck size={17} /><span><strong>{d.id} · {d.services} servicios</strong><span>{location(d.dockId)} · {fmtClock(d.arriveAt)}</span><span className={['bloqueada', 'invalidada', 'retrasada'].includes(d.status) ? 'text-red' : 'text-muted'}>{d.status}</span></span>{changed.has(d.id) && <span className="change-tag">Δ</span>}</button>)}</div>
     </div>
     <p className="plan-caption">Plano esquemático de demo · sin escala. «Cambio» compara con la referencia elegida; selecciona un recurso para ver el detalle.</p>

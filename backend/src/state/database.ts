@@ -92,6 +92,7 @@ export function openDatabase(path: string): CrisisDatabase {
   }
 
   const connection = new DatabaseSync(path);
+  connection.exec("PRAGMA busy_timeout = 5000;");
   connection.exec("PRAGMA foreign_keys = ON;");
   if (path !== ":memory:") {
     connection.exec("PRAGMA journal_mode = WAL;");

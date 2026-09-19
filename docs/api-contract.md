@@ -123,7 +123,23 @@ Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha ele
 { "ok": true, "live": true, "seed": 42 }
 ```
 
-`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo en `backend/src/domain/incidents.ts`). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo de 18 en `backend/src/domain/incidents.ts`; seis tocan `vehicles[]`, parkings y paddock). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+
+### Afluencia en los accesos (`gates[]`)
+
+El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.attendanceSeed`, de `SIM_SEED` o de `liveSeed`) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado`, se anota `incidencia` y, como máximo cada 900 s simulados por acceso (`lastSaturationAt`), entra al coordinador un evento `source: clock`, `kind: gate_saturated`, `payload: { gateId, waiting }`; en `rules` se abre otro acceso cerrado de la misma zona si lo hay. Misma semilla, misma serie.
+
+### Actores móviles (`vehicles[]`, opcional)
+
+Además de `shuttles` y `deliveries`, `GET /state` puede traer `vehicles[]`: taxis con invitados, traslados VIP al paddock y repartidores de última hora. Un fixture sin `vehicles` sigue siendo válido.
+
+```json
+{ "id": "REP-01", "kind": "repartidor", "name": "REP-01", "who": "Hielo y bebida · última hora", "count": 1, "from": "coslada", "origin": "Coslada", "destinationId": "muelleSur", "route": [[40.4405, -3.585], [40.4645, -3.6245]], "departAt": 44400, "arriveAt": 46500, "delayMin": 0, "status": "en_ruta", "counterpart": "Repartidor REP-01", "note": "Destino invalidado: Muelle Sur cerrado" }
+```
+
+- `kind`: `taxi` | `vip` | `repartidor`. `status`: `en_ruta` | `retenido` | `desviado` | `llegado`. `from` es el id del lugar de origen en `world.json`; `origin` es su nombre.
+- El reloj marca `llegado` al pasar `arriveAt` y lo anota en la cronología (`info`, área `transporte`). Un vehículo `retenido` no avanza.
+- El coordinador los ve en la sección VEHÍCULOS y los mueve con la operación `redirect_vehicle { id, destinationId, note?, delayMin?, status? }`, validada como `redirect_delivery`: destino existente y no `cerrado` ni `descartado`; la ruta y la hora nueva salen de `world.json` desde `from`.
 
 ### `POST /events`
 
@@ -262,7 +278,7 @@ puerta traducida de abajo.
 
 Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
 
-#### Verificación opcional JEV (T34)
+#### Verificación opcional JEV (T35)
 
 No cambia el JSON del callback ni su autenticación. El handler evalúa antes de persistir, fuera de SQLite, con límite de 1.500 ms, sin reintentos y fallback conservador. El simulador no utiliza JEV.
 

@@ -109,13 +109,56 @@ curl -X POST https://TU-HOST/incoming-call -d "CallSid=CAtest&From=%2B3460000000
 Estado verificado el 2026-09-19: llamada entrante real al DID → `/incoming-call`
 200 → `/media-stream` 101 → la IA saluda. Coste de esa prueba: $0,022.
 
-## Modo conferencia (sin terminar)
+## Sala con la IA y varias personas
 
-`CALL_MODE=conference` mete a quien llama en una sala y `/add-human-to-conference`
-añade al humano. **El agente IA no entra en la conferencia**: `<Connect><Stream>`
-y `<Dial><Conference>` no pueden convivir en el mismo call leg, así que meter la
-IA exige un segundo leg (por ejemplo, un segundo número o un endpoint SIP que
-entre en la sala). Sin eso, la conferencia es solo cliente + humano.
+**La IA sí entra en la sala.** El truco es una **TwiML Application**: el leg del agente lo
+crea Twilio (`To=app:APxxxx`), ejecuta nuestro `/ai-leg` y ese leg devuelve
+`<Connect><Stream>`. Así se esquiva la limitación de que un mismo call leg no puede estar
+en `<Dial><Conference>` y en el stream a la vez, **sin SIP ni media server externo**.
+
+La app se crea sola al arrancar y se reapunta si cambia `PUBLIC_HOST`, que es lo que pasa
+cada vez que reinicias el túnel.
+
+### El recorrido
+
+1. Llamas al DID. Hablas con la IA a solas (`CALL_MODE=direct`).
+2. Pides hablar con alguien. La IA usa la tool `transfer_to_human`.
+3. Se monta la sala: **entra la IA, entras tú, y se llama a todos los de
+   `CONFERENCE_PARTICIPANTS`**. Los tres (o los que sean) acaban en la misma conferencia.
+
+El orden no es casual: primero la IA, cuyo leg Twilio crea al instante y arranca la sala;
+luego se redirige al cliente; y por último los humanos, que es lo único que tarda en
+descolgar. Así el cliente nunca se queda en silencio.
+
+### A mano, sin esperar a la conversación
+
+```bash
+# Monta la sala para una llamada en curso (CallSid de /conferences o del log)
+curl -X POST "http://localhost:8000/transfer?call_sid=CAxxxx&motivo=prueba" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Añadir más gente a una sala ya montada (varios, separados por coma)
+curl -X POST "http://localhost:8000/add-participant?conference_name=conf-xxx&to=%2B34600000002" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Sacar a alguien (así se dará de baja a la IA cuando se quiera)
+curl -X POST "http://localhost:8000/remove-participant?conference_name=conf-xxx&call_sid=CAyyyy" \
+  -H "X-Demo-Token: $DEMO_API_TOKEN"
+
+# Qué salas hay vivas
+curl http://localhost:8000/conferences
+```
+
+Detalles que importan:
+
+- `CONFERENCE_PARTICIPANTS` admite **varios teléfonos separados por coma**, en E.164. Lo
+  que no cumpla el formato se descarta con un aviso en consola en vez de llegar a Twilio.
+- **Un número que falla no tumba la sala**: se monta con el resto y el fallido sale en
+  `failed`.
+- La sala **sobrevive a que un humano cuelgue** (`endConferenceOnExit=false`); termina
+  cuando se va el cliente.
+- Los endpoints que crean llamadas exigen `X-Demo-Token` si `DEMO_API_TOKEN` está puesto.
+  Con el túnel abierto, un endpoint que marca números es fraude telefónico esperando.
 
 ## Limitaciones conocidas (demo)
 

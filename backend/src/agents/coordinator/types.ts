@@ -64,6 +64,7 @@ export interface CoordinatorInput {
   constraints: string[];
   shuttles?: InputShuttle[];
   deliveries?: InputDelivery[];
+  vehicles?: InputVehicle[];
   gates?: InputGate[];
   pendingActions?: InputPendingAction[];
   world?: { places: Array<Record<string, unknown>>; links: Array<Record<string, unknown>> };
@@ -85,6 +86,17 @@ export interface InputShuttle {
 export interface InputDelivery {
   id: string;
   dockId: string;
+  arriveAt: number;
+  status: string;
+}
+
+export interface InputVehicle {
+  id: string;
+  kind: string;
+  who: string;
+  count: number;
+  from: string;
+  destinationId: string;
   arriveAt: number;
   status: string;
 }
@@ -171,6 +183,7 @@ export type CoordinatorOperation =
   | { op: "set_gate"; id: string; status?: string; arrivalsPerMin?: number; throughputPerMin?: number; waiting?: number }
   | { op: "reroute_shuttle"; id: string; destinationId: string; delayMin?: number; status?: string; note?: string }
   | { op: "redirect_delivery"; id: string; dockId: string; delayMin?: number; status?: string; note?: string }
+  | { op: "redirect_vehicle"; id: string; destinationId: string; delayMin?: number; status?: string; note?: string }
   | { op: "set_group"; id: string; where?: string; assignedSpaceId?: string; needs?: string }
   | { op: "cancel_action"; taskId: string; reason: string }
   | { op: "set_agent"; area: Area; objective: string; reason: string; status: string }

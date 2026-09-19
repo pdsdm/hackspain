@@ -255,7 +255,7 @@ case "$command" in
     start_frontend
     wait_http "$public_url/health" "Quick Tunnel"
     echo "Panel: $FRONTEND_URL"
-    echo "Callback público: $public_url/workflow/results"
+    echo "Callback público: $public_url/workflow/happyrobot/results"
     echo "Modo coordinador: $COORDINATOR_MODE; llamadas: $CALL_MODE"
     ;;
   up-local)
