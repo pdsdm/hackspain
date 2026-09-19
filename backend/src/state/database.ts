@@ -60,6 +60,17 @@ const SCHEMA = `
     applied INTEGER NOT NULL CHECK (applied IN (0, 1)),
     received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS workflow_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL CHECK (event_type = 'coordinator'),
+    run_id TEXT NOT NULL,
+    plan_version INTEGER NOT NULL,
+    request_json TEXT NOT NULL CHECK (json_valid(request_json)),
+    response_json TEXT CHECK (response_json IS NULL OR json_valid(response_json)),
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT
+  ) STRICT;
 `;
 
 export function openDatabase(path: string): CrisisDatabase {
@@ -76,7 +87,7 @@ export function openDatabase(path: string): CrisisDatabase {
   connection
     .prepare(`
       INSERT INTO app_metadata (key, value)
-      VALUES ('schema_version', '2')
+      VALUES ('schema_version', '3')
       ON CONFLICT (key) DO UPDATE SET
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP

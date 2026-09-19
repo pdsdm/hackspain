@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 
+import { ContractError } from "../contracts/api.js";
 import { applyPlanProposal, type PlanProposal } from "./plan-rules.js";
 import type { StateRepository } from "../state/state-repository.js";
 
@@ -21,8 +22,16 @@ export class PlanService {
 
   applyProposal(proposal: PlanProposal) {
     const run = this.states.ensureActiveRun();
+    return this.applyProposalFor(run.id, run.state.planVersion, proposal);
+  }
+
+  applyProposalFor(runId: string, planVersion: number, proposal: PlanProposal) {
+    const run = this.states.ensureActiveRun();
+    if (run.id !== runId || run.state.planVersion !== planVersion) {
+      throw new ContractError(`Stale or inactive plan context: ${runId}@${planVersion}`, 409);
+    }
     const nextState = applyPlanProposal(run.state, this.knownGuestIds, proposal);
-    this.states.savePlan(run.id, run.state.planVersion, nextState, proposal.allocations);
+    this.states.savePlan(run.id, planVersion, nextState, proposal.allocations);
     return nextState;
   }
 }

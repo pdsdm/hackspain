@@ -4,7 +4,7 @@ import { openDatabase } from "./state/database.js";
 
 const config = loadConfig();
 const database = openDatabase(config.databasePath);
-const app = createApp(database);
+const app = createApp(database, { workflowToken: config.workflowToken });
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`Backend listening on http://${config.host}:${config.port}`);

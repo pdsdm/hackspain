@@ -6,6 +6,7 @@ export interface AppConfig {
   databasePath: string;
   host: string;
   port: number;
+  workflowToken: string | undefined;
 }
 
 function readPort(value: string | undefined): number {
@@ -35,5 +36,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
     port: readPort(env.PORT),
+    workflowToken: env.HAPPYROBOT_WEBHOOK_TOKEN?.trim() || undefined,
   };
 }

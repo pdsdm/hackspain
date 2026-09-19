@@ -81,6 +81,13 @@ export class TaskRepository {
     return this.toTask(row);
   }
 
+  get(taskId: string): DispatchTask | undefined {
+    const row = this.database
+      .prepare("SELECT * FROM dispatch_tasks WHERE id = ?")
+      .get(taskId) as unknown as TaskRow | undefined;
+    return row ? this.toTask(row) : undefined;
+  }
+
   claimNext(): DispatchTask | undefined {
     this.database.exec("BEGIN IMMEDIATE");
     try {
@@ -91,7 +98,16 @@ export class TaskRepository {
           JOIN demo_runs AS run ON run.id = task.run_id
           WHERE task.status = 'pending'
             AND run.active = 1
+            AND COALESCE(json_extract(run.state_json, '$.agentsPaused'), 0) = 0
             AND task.plan_version = json_extract(run.state_json, '$.planVersion')
+            AND NOT EXISTS (
+              SELECT 1
+              FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
+              LEFT JOIN dispatch_tasks AS required
+                ON required.run_id = task.run_id
+                AND required.idempotency_key = dependency.value
+              WHERE required.id IS NULL OR required.status != 'completed'
+            )
           ORDER BY task.created_at, task.id
           LIMIT 1
         `)
@@ -138,6 +154,7 @@ export class TaskRepository {
       state: CrisisStateDocument,
       payload: unknown,
     ) => CrisisStateDocument,
+    terminalStatus: "completed" | "failed" = "completed",
   ): { applied: boolean; duplicate: boolean } {
     this.database.exec("BEGIN IMMEDIATE");
     try {
@@ -193,10 +210,10 @@ export class TaskRepository {
       this.database
         .prepare(`
           UPDATE dispatch_tasks
-          SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+          SET status = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `)
-        .run(taskId);
+        .run(terminalStatus, taskId);
       this.database.exec("COMMIT");
       return { applied, duplicate: false };
     } catch (error) {

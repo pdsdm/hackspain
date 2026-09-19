@@ -44,6 +44,7 @@ export interface Agent {
   id: Area
   name: string
   objective: string
+  reason?: string
   status: AgentStatus
   lastResult?: string
 }
@@ -111,6 +112,7 @@ export interface Decision {
   id: string
   title: string
   summary: string
+  rationale?: string
   cost: number
   conditions: string[]
   effectApprove: string
