@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'rea
 import type { CrisisState } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
 import { PIT_LANE, TRACK } from '../../domain/track'
-import { SPACE } from '../ui/status'
+import { SPACE, spaceLook } from '../ui/status'
 import { gateIcon, pinIcon, vehicleIcon, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { MapLayersControl, type Layers } from './MapLayersControl'
@@ -60,7 +60,7 @@ export function CrisisMap({ s, onSelect, selected }: { s: CrisisState; onSelect:
         {s.spaces.map((sp) => {
           if (!layers.accesos && (sp.kind === 'acceso' || sp.kind === 'muelle')) return null
           if (sp.status === 'inactivo' && (sp.kind === 'espera')) return null
-          const st = SPACE[sp.status]
+          const st = spaceLook(sp.status)
           const sub = sp.capacity && sp.kind !== 'acceso' ? `${sp.capacity}` : undefined
           const incoming = vehicles.filter((v) => v.destId === sp.id && !v.done)
           const isHover = hover === sp.id
