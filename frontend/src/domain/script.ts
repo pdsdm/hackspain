@@ -91,16 +91,8 @@ const main: ScriptStep[] = [
     run(s) {
       setAgent(s, 'transporte', { status: 'activo', objective: 'Encontrar parada autorizada para autocares en Sur', lastResult: 'Entrada este descartada: no admite autocar' })
       pushEvent(s, 'fallo', 'Transporte: la entrada este no admite parada de autocar. Punto descartado', 'transporte')
-      openDecision(s, {
-        id: 'd-plan-sur',
-        title: 'Autorizar plan Sur: Pabellón B + Lounge Sur',
-        summary: 'Dividir la hospitalidad en dos espacios de MADRING Sur. Coste previsto 3.200 € (supera el límite autónomo de 1.500 €).',
-        cost: 3200,
-        conditions: ['Lounge Sur listo a las 13:15 (150 personas en espera)', 'Muelle Este pendiente de validación', 'Parada de autocar pendiente'],
-        effectApprove: 'Se reservan Pabellón B y Lounge Sur y se autorizan 3.200 €. Las condiciones siguen abiertas.',
-        effectReject: 'Se busca un único espacio de 600 (Pabellón Norte C, apertura 13:45, traslado Norte↔Sur).',
-      })
-      setAgent(s, 'espacios', { status: 'esperando', objective: 'Esperando autorización del responsable' })
+      pushEvent(s, 'info', 'Plan Sur: coste previsto 3.200 €. Continúan las gestiones sin aprobación económica; las reservas y condiciones siguen pendientes.')
+      setAgent(s, 'espacios', { status: 'activo', objective: 'Confirmar reservas y condiciones operativas' })
     },
   },
   {
@@ -129,7 +121,7 @@ const main: ScriptStep[] = [
       setSpace(s, 'esperaSur', 'pendiente', 'Explanada acceso Sur · carpa y agua')
       setCommitment(s, 'c-lounge', 'aceptado_condiciones', 'Espera autorizada; falta aceptar apertura escalonada', ['Organizador acepta apertura escalonada 13:15'])
       pushEvent(s, 'espera', 'Lounge Sur solo estará preparado a las 13:15. Recinto autoriza zona de espera en Sur', 'espacios')
-      pushEvent(s, 'decision', 'Coordinador propone apertura escalonada: 450 a las 13:00, 150 a las 13:15 (dentro del gasto autorizado)')
+      pushEvent(s, 'decision', 'Coordinador propone apertura escalonada: 450 a las 13:00, 150 a las 13:15 (coste registrado, sin aprobación económica)')
     },
   },
   {
@@ -167,7 +159,7 @@ const main: ScriptStep[] = [
       setCommitment(s, 'c-entrega2', 'confirmado', 'Muelle Este confirmado', [])
       setAgent(s, 'catering', { status: 'estable', objective: 'Seguir entregas CAT-01 (12:40) y CAT-02 (13:05)', lastResult: '2 entregas confirmadas en Muelle Este' })
       pushEvent(s, 'acuerdo', 'Catering confirma CAT-01 y CAT-02 en Muelle Este Sur', 'catering')
-      s.budget.committed = s.budget.forecast
+      if (s.budget.forecast !== null) s.budget.committed = s.budget.forecast
       s.coordinatorStatus = 'estable'
       s.planVersion = 2
       pushEvent(s, 'accion', 'Plan v2 confirmado. Asistentes publica instrucciones segmentadas (seguir en Sur)')
@@ -224,7 +216,8 @@ const norte: ScriptStep[] = [
       pushEvent(s, 'acuerdo', 'Recinto: Norte C disponible desde 13:45. Acceso por Valdebebas', 'espacios')
       openDecision(s, {
         id: 'd-plan-norte',
-        title: 'Autorizar plan Norte: Pabellón Norte C (600) a las 13:45',
+        kind: 'operational',
+        title: 'Aceptar traslado a Norte y apertura a las 13:45',
         summary: 'Un único espacio para 600, con 45 min de retraso sobre la apertura y traslado exterior de 90 personas desde el acceso Sur. Coste previsto 2.800 €.',
         cost: 2800,
         conditions: ['Aceptar apertura 13:45 (almuerzo se retrasa a 14:00)', 'Shuttles cambian destino a Acceso Norte', '2 lanzaderas Sur→Norte para 90 personas'],
@@ -295,29 +288,4 @@ const norte: ScriptStep[] = [
   },
 ]
 
-const reducido: ScriptStep[] = [
-  {
-    after: 15,
-    run(s) {
-      setCommitment(s, 'c-pabB', 'confirmado', 'Reserva confirmada dentro del límite autónomo', [])
-      setSpace(s, 'pabellonB', 'confirmado', `Reservado · ${pabBCap(s)} plazas`)
-      s.budget.forecast = 1500
-      s.budget.committed = 1500
-      assignSur(s, true)
-      pushEvent(s, 'acuerdo', `Pabellón B reservado con el límite autónomo: ${pabBCap(s)} plazas confirmadas`, 'espacios')
-      pushEvent(s, 'fallo', `Sin gasto adicional no hay espacio para ${600 - pabBCap(s)} invitados. El coordinador no declara cobertura completa`)
-      setAgent(s, 'espacios', { status: 'incidencia', objective: `${600 - pabBCap(s)} invitados sin ubicación · buscar opción sin coste` })
-      openDecision(s, {
-        id: 'd-lounge-solo',
-        title: `Autorizar 900 € para Lounge Sur (${600 - pabBCap(s)} invitados sin espacio)`,
-        summary: 'Sin este gasto, 150 invitados no tienen ubicación confirmada. Alternativa: cancelar el servicio a 150 invitados con compensación.',
-        cost: 2400,
-        conditions: ['Lounge Sur listo 13:15', 'Zona de espera autorizada'],
-        effectApprove: 'Se reserva Lounge Sur y se completa la cobertura en Sur (apertura escalonada).',
-        effectReject: 'El sistema mantiene 150 invitados sin ubicación y prepara comunicación de cancelación parcial.',
-      })
-    },
-  },
-]
-
-export const SCRIPTS: Record<ScriptId, ScriptStep[]> = { main, norte, reducido }
+export const SCRIPTS: Record<ScriptId, ScriptStep[]> = { main, norte, reducido: main }

@@ -26,8 +26,8 @@
 | T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | review |
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
-| T17 | Integración y pruebas críticas | Zhi | `feat/zhi-integracion-final` | [T17](docs/specs/T17-integracion-final.md) | doing |
-| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-integracion-final` | [T18](docs/specs/T18-entorno-demo.md) | doing |
+| T17 | Integración y pruebas críticas | Zhi | `fix/zhi-demo-readiness` | [T17](docs/specs/T17-integracion-final.md) | doing |
+| T18 | Entorno de demo y recuperación | Zhi | `fix/zhi-demo-readiness` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
 | T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |
@@ -47,8 +47,9 @@
 | T35 | JEV verifica la evidencia del callback antes de confirmar (`evidence-v2`, efectos desactivados) | Ventura | `feat/ventura-jev-confirmacion` | [Contrato T35](docs/api-contract.md#verificación-opcional-jev-t35) | review |
 | T37 | Rutas dinámicas: origen libre (geocode) + spawn_vehicle + OSRM | Pep | `feat/pep-rutas-dinamicas` | - | doing |
 | T38 | Costes informativos: eliminar bloqueos presupuestarios durante la crisis | Ventura + Devin | `feat/ventura-costes-informativos` | [Política y contrato T38](docs/api-contract.md#costes-informativos-t38) | review |
-| T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen` | - | review |
-| T40 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` | [T40](docs/specs/T40-jev-routing-pilot.md) | review |
+| T39 | Mapa a pantalla completa con paneles flotantes, cronología tipo chat y velocidad cíclica | Pep | `feat/pep-mapa-fullscreen`, `feat/pep-chat-anclado` (PR #56) | - | review |
+| T40 | Persistir el estado de la crisis en Supabase (espejo Postgres) | Pep | `feat/pep-supabase` | - | descartada: el despliegue va en Railway |
+| T41 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` (PR #57) | [T41](docs/specs/T41-jev-routing-pilot.md) | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**

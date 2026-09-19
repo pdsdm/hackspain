@@ -64,6 +64,22 @@ test("un acceso cerrado no se mueve", () => {
   assert.equal(gate.status, "cerrado");
 });
 
+test("un reset conserva la velocidad y la semilla configuradas", async () => {
+  const { ControlService } = await import("../src/domain/control-service.js");
+  const { openDatabase } = await import("../src/state/database.js");
+  const { StateRepository } = await import("../src/state/state-repository.js");
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    new ControlService(states, 7, 30).reset("calm");
+    const state = states.ensureActiveRun().state;
+    assert.equal(state.clock.seed, 7);
+    assert.equal(state.clock.speed, 30);
+  } finally {
+    database.close();
+  }
+});
+
 test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehículo retenido", async () => {
   const { SimulationClock } = await import("../src/domain/clock.js");
   const { ActionExecutor } = await import("../src/actions/executor.js");
@@ -86,8 +102,16 @@ test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehícul
     const vehicles = state.vehicles as Array<Record<string, unknown>>;
     vehicles.find((item) => item.id === "TX-02")!.status = "retenido";
     states.saveState(run.id, state);
+    clock.start();
+    const started = structuredClone(states.ensureActiveRun().state);
+    assert.equal(started.clock.seed, 1);
+    started.clock.speed = 3600;
+    states.saveState(run.id, started);
     clock.tick();
-    const after = states.ensureActiveRun().state.vehicles as Array<Record<string, unknown>>;
+    const afterState = states.ensureActiveRun().state;
+    assert.equal(afterState.clock.seed, 1);
+    assert.equal(afterState.clock.attendanceSeed, undefined);
+    const after = afterState.vehicles as Array<Record<string, unknown>>;
     assert.equal(after.find((item) => item.id === "VIP-01")!.status, "llegado");
     assert.equal(after.find((item) => item.id === "TX-01")!.status, "llegado");
     assert.equal(after.find((item) => item.id === "TX-02")!.status, "retenido");

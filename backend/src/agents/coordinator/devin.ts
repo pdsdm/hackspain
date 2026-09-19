@@ -18,6 +18,7 @@ const OUTPUT_SCHEMA = {
     commitments: { type: "array" },
     assignments: { type: "array" },
     decision: {},
+    estimatedCost: { type: ["number", "null"] },
     unverified: { type: "array", items: { type: "string" } },
     operations: { type: "array" },
     queries: { type: "array" },

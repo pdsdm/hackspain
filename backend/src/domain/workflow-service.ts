@@ -11,7 +11,7 @@ import { confirmationBlocker, decideAcceptance, readVerificationTarget, resolved
 import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
-import type { TaskRepository } from "../state/task-repository.js";
+import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import type { WorkflowEventRepository } from "../state/workflow-event-repository.js";
 
 export interface CoordinatorResponse extends Record<string, unknown> {
@@ -80,10 +80,21 @@ function applyCoordinatorState(
 function applySpecialistState(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
-  area: string,
+  task: DispatchTask,
   verification?: CallAcceptanceVerification,
 ): CrisisStateDocument {
+  const area = task.area;
   const next = structuredClone(state);
+  const cost = envelope.result.data.committedCost;
+  if (typeof cost === "number" && Number.isFinite(cost) && cost >= 0 &&
+    ["dispatching", "dispatched", "unknown"].includes(task.status) && envelope.status === "completed" &&
+    envelope.result.outcome === "accepted" && envelope.result.conditions.length === 0 &&
+    envelope.result.evidence.callId === `call-${task.id}` &&
+    envelope.result.evidence.transcript?.some((line) => line.who === "humano" && line.text.trim())) {
+    const total = Math.round((next.budget.committed + cost) * 100) / 100;
+    if (!Number.isFinite(total)) throw new ContractError("Invalid committed cost total");
+    next.budget.committed = total;
+  }
   const agents = records(next, "agents");
   const agent = agents.find((item) => item.id === area);
   if (agent) {
@@ -186,8 +197,12 @@ function applySpecialistState(
     events.push({
       id: `verification-${randomUUID()}`,
       time: next.clock.simSeconds,
-      kind: verification.decision === "confirm_target" ? "acuerdo" : "accion",
-      text: `JEV · ${verification.target ? "Pabellón B (Sur) / c-pabB" : "Sin target confirmable"}: ${verification.decision === "confirm_target" ? "reserva confirmada" : "sin confirmación automática"}. Motivo: ${verification.reason.replaceAll("_", " ")}. No acredita preparación física ni invitados ubicados.`,
+      // El desacuerdo es una incidencia: el resultado de la llamada afirma más de lo que
+      // sostiene la transcripción y el responsable tiene que poder verlo en la cronología.
+      kind: verification.decision === "confirm_target" ? "acuerdo" : verification.gap ? "incidencia" : "accion",
+      text: verification.gap
+        ? `JEV · Pabellón B (Sur) / c-pabB: el resultado de la llamada dice «aceptado sin condiciones», pero la transcripción no lo sostiene: ${verification.gap}. Revisa la llamada antes de darla por cerrada.`
+        : `JEV · ${verification.target ? "Pabellón B (Sur) / c-pabB" : "Sin target confirmable"}: ${verification.decision === "confirm_target" ? "reserva confirmada" : "sin confirmación automática"}. Motivo: ${verification.reason.replaceAll("_", " ")}. No acredita preparación física ni invitados ubicados.`,
       area,
     });
     next.events = events.slice(-80);
@@ -300,10 +315,19 @@ export class WorkflowService {
         }
         if (checked && target) checked = { ...checked, target };
         else if (checked) checked = { decision: "keep_conditional", reason: "target_no_admitido" };
-        return applySpecialistState(state, envelope, currentTask.area, checked);
+        return applySpecialistState(state, envelope, currentTask, checked);
       },
       envelope.status === "completed" ? "completed" : "failed",
     );
+    const accepted = envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions";
+    if (recorded.applied && !recorded.duplicate && envelope.status === "completed" && accepted && this.tasks.listOpen(task.runId).length === 0) {
+      const run = this.states.ensureActiveRun();
+      if (run.id === task.runId && run.state.coordinatorBusy === undefined && !run.state.waitingForDecision && run.state.agentsPaused !== true && run.state.coordinatorStatus === "replanificando") {
+        const state = structuredClone(run.state);
+        state.coordinatorStatus = "estable";
+        this.states.saveState(run.id, state);
+      }
+    }
     return { ok: true as const, ...recorded };
   }
 }

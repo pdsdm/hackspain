@@ -19,4 +19,4 @@ export function fmtCountdown(sec: number) {
   return `${neg ? '-' : ''}${p(h)}:${p(m)}:${p(ss)}`
 }
 
-export const fmtEur = (n: number) => `${n.toLocaleString('es-ES')} €`
+export const fmtEur = (n: number | null) => n === null ? 'Sin estimar' : `${n.toLocaleString('es-ES')} €`

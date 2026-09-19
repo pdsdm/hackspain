@@ -34,6 +34,15 @@ export function decideAcceptance(scores: AcceptanceScores): AcceptanceDecision {
     : "keep_conditional";
 }
 
+// Por qué la evidencia no sostiene el «aceptado sin condiciones» que afirma el extractor.
+// Es la señal que se enseña al responsable: sin esto, «evidencia insuficiente» no dice nada.
+export function acceptanceGap(scores: AcceptanceScores): string | undefined {
+  if (scores.hasUnresolvedConditions > 0.1) return "la contraparte deja condiciones abiertas";
+  if (scores.acceptsTargetExplicitly < 0.95) return "no hay una aceptación firme del interlocutor";
+  if (scores.answerMatchesTarget < 0.95) return "lo aceptado no coincide con los términos pedidos";
+  return undefined;
+}
+
 export function readVerificationTarget(payload: unknown): VerificationTarget | undefined {
   if (!isRecord(payload) || !isRecord(payload.verificationTarget)) return undefined;
   const target = payload.verificationTarget;
@@ -70,9 +79,6 @@ export function confirmationBlocker(state: CrisisStateDocument, task: DispatchTa
     !["propuesto", "pendiente", "confirmado"].includes(String(space.status))) return "recurso_no_disponible";
   if (payload.verificationSnapshot !== verificationSnapshot(state)) return "terminos_modificados";
   if (state.waitingForDecision || state.decisions.some((item) => item.status === "pendiente")) return "decision_pendiente";
-  const { forecast, authorized, committed } = state.budget;
-  if (typeof forecast !== "number" || !Number.isFinite(forecast) || forecast < 0 ||
-    forecast > authorized || committed > authorized) return "gasto_no_autorizado";
   const access = state.spaces.find((item) => item.id === "accesoSur");
   if (!access || !["operativo", "confirmado"].includes(String(access.status))) return "acceso_pendiente";
   if (!Array.isArray(commitment.conditions) || commitment.conditions.some((condition) =>

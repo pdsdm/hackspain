@@ -5,17 +5,15 @@ import { activeCall, pendingDecision } from './domain/selectors'
 import type { FixtureName } from './domain/fixtures'
 import { TopBar } from './components/layout/TopBar'
 import { NavTabs } from './components/layout/NavTabs'
-import { OperacionesPanel } from './components/left/OperacionesPanel'
-import { IncidenciaCard } from './components/left/IncidenciaCard'
-import { PresupuestoCard } from './components/left/PresupuestoCard'
-import { AforoCard } from './components/left/AforoCard'
+import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
-import { EstadoGlobal } from './components/center/EstadoGlobal'
+import { KpiOverlay } from './components/map/KpiOverlay'
+import { AforoOverlay } from './components/map/AforoOverlay'
+import { CronologiaChat } from './components/map/CronologiaChat'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
 import { LlamadaCard } from './components/right/LlamadaCard'
 import { AvisarPanel } from './components/right/AvisarPanel'
 import { DecisionCard } from './components/right/DecisionCard'
-import { Cronologia } from './components/right/Cronologia'
 import { IntervenirModal } from './components/right/IntervenirModal'
 import { EventChat } from './components/right/EventChat'
 import { SimulacionPanel } from './components/right/SimulacionPanel'
@@ -29,6 +27,7 @@ export default function App() {
   const ctl = useCrisisState()
   const { state: s } = ctl
   const [modal, setModal] = useState<'intervenir' | 'decisiones' | null>(null)
+  const [drawer, setDrawer] = useState(false)
   const decision = pendingDecision(s)
   const call = activeCall(s)
   const disabled = ctl.pending || ctl.stale
@@ -43,7 +42,7 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col bg-bg text-text">
-      <TopBar ctl={ctl} onIntervenir={() => setModal('intervenir')} />
+      <TopBar ctl={ctl} onIntervenir={() => setModal('intervenir')} onDrawer={() => setDrawer((v) => !v)} drawerOpen={drawer} />
       <NavTabs s={s} />
       {ctl.stale && (
         <div role="alert" className="flex items-center gap-2 px-4 py-1.5 bg-red/10 border-b border-red/40 text-red text-[12px]">
@@ -51,41 +50,37 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_372px] gap-5 px-6 pt-5 pb-6">
-        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto [&>*]:flex-none">
-          <OperacionesPanel s={s} onSelect={ctl.select} selected={s.selectedId} />
-          <IncidenciaCard s={s} />
-          <AforoCard s={s} />
-          <div className="flex-1" />
-          <PresupuestoCard s={s} />
-        </aside>
-
-        <section className="flex flex-col gap-5 min-h-0">
-          <div className="flex-1 min-h-[360px]">
-            <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId} />
+      <main className="flex-1 min-h-0 relative">
+        <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId}>
+          <div className="map-overlays">
+            <div className="absolute top-3 left-3 w-[300px]">
+              <AforoOverlay s={s} />
+            </div>
+            <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
+              <KpiOverlay s={s} />
+              <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
+            </div>
+            <div className="absolute bottom-3 left-3">
+              <CoordinadorPanel s={s} className="glass w-[320px]" />
+            </div>
+            <div className="absolute top-3 right-3 bottom-3 w-[404px] flex flex-col gap-3">
+              <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+              <CronologiaChat s={s} className="flex-1 min-h-0" footer={
+                <EventChat className="border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe un evento…' : 'Eventos libres solo contra el backend'} />
+              } />
+            </div>
           </div>
-          <EstadoGlobal s={s} reference={ctl.reference} />
-        </section>
-
-        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto [&>*]:flex-none">
-          <DecisionCard d={decision} authorized={s.budget.authorized} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
-          <CoordinadorPanel s={s} />
-          <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
-          {ctl.source === 'api' && <AvisarPanel disabled={disabled} />}
-          {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
-          <Cronologia s={s} />
-          <button onClick={() => setModal('decisiones')} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>
-          {ctl.source === 'api' && (
-            <EventChat disabled={disabled} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} />
-          )}
-          {ctl.source === 'sim' && (
-            <>
-              <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="calm">Estable · 12:00</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
-            </>
-          )}
-          <SimulacionPanel s={s} onTwist={ctl.twist} onLive={ctl.setLive} />
-        </aside>
+        </CrisisMap>
       </main>
+
+      <Drawer open={drawer} onClose={() => setDrawer(false)}>
+        {ctl.source === 'api' && <AvisarPanel disabled={disabled} />}
+        {ctl.source === 'sim' && (
+          <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="calm">Estable · 12:00</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
+        )}
+        <SimulacionPanel s={s} onTwist={ctl.twist} onLive={ctl.setLive} />
+        <button onClick={() => { setDrawer(false); setModal('decisiones') }} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>
+      </Drawer>
 
       {modal === 'intervenir' && <IntervenirModal s={s} disabled={disabled} feedback={ctl.feedback} onClose={() => setModal(null)} onIntervene={ctl.intervene} />}
       {modal === 'decisiones' && (
@@ -99,7 +94,7 @@ export default function App() {
                   <li key={d.id} className="text-[12px] flex gap-2">
                     <span className="text-muted num">{fmtClock(d.createdAt)}</span>
                     <span className={d.status === 'aprobada' ? 'text-green' : d.status === 'rechazada' ? 'text-red' : 'text-amber'}>{d.status}</span>
-                    <span>{d.title} · {d.cost.toLocaleString('es-ES')} €</span>
+                    <span>{d.title} · {d.cost === null ? 'Sin estimar' : `${d.cost.toLocaleString('es-ES')} €`}</span>
                   </li>
                 ))}
               </ul>

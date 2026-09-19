@@ -1,5 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
+import { notifyRemote } from "./database.js";
+
 import { ContractError } from "../contracts/api.js";
 
 interface WorkflowEventRow {
@@ -51,6 +53,7 @@ export class WorkflowEventRepository {
         ) VALUES (?, 'coordinator', ?, ?, ?)
       `)
       .run(eventId, runId, planVersion, requestJson);
+    notifyRemote(this.database);
     return { duplicate: false };
   }
 
@@ -62,11 +65,13 @@ export class WorkflowEventRepository {
         WHERE event_id = ?
       `)
       .run(JSON.stringify(response), eventId);
+    notifyRemote(this.database);
   }
 
   release(eventId: string): void {
     this.database
       .prepare("DELETE FROM workflow_events WHERE event_id = ? AND response_json IS NULL")
       .run(eventId);
+    notifyRemote(this.database);
   }
 }
