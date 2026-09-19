@@ -4,6 +4,7 @@ import { ContractError, type Intervention, type TwistId } from "../contracts/api
 import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import { findIncident } from "./incidents.js";
+import { createSimulationSeed } from "./random.js";
 import type { StateRepository } from "../state/state-repository.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -137,7 +138,11 @@ function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
 }
 
 export class ControlService {
-  constructor(private readonly states: StateRepository) {}
+  constructor(
+    private readonly states: StateRepository,
+    private readonly simSeed?: number,
+    private readonly clockSpeed = 1,
+  ) {}
 
   applyIntervention(intervention: Intervention): void {
     const run = this.states.ensureActiveRun();
@@ -251,6 +256,11 @@ export class ControlService {
 
   reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
     const run = this.states.reset(fixture);
-    return { runId: run.id, planVersion: run.state.planVersion };
+    const state = structuredClone(run.state);
+    state.clock.speed = this.clockSpeed;
+    state.clock.seed = this.simSeed ?? createSimulationSeed();
+    delete state.clock.attendanceSeed;
+    this.states.saveState(run.id, state);
+    return { runId: run.id, planVersion: state.planVersion };
   }
 }

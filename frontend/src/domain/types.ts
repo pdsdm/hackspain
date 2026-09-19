@@ -205,6 +205,7 @@ export interface Clock {
   openingAt: number
   lunchAt: number
   raceAt: number
+  seed?: number
   live?: boolean
   liveSeed?: number
 }

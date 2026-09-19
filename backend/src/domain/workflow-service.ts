@@ -250,6 +250,15 @@ export class WorkflowService {
       (state) => applySpecialistState(state, envelope, task.area),
       envelope.status === "completed" ? "completed" : "failed",
     );
+    const accepted = envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions";
+    if (recorded.applied && !recorded.duplicate && envelope.status === "completed" && accepted && this.tasks.listOpen(task.runId).length === 0) {
+      const run = this.states.ensureActiveRun();
+      if (run.id === task.runId && run.state.coordinatorBusy === undefined && !run.state.waitingForDecision && run.state.agentsPaused !== true && run.state.coordinatorStatus === "replanificando") {
+        const state = structuredClone(run.state);
+        state.coordinatorStatus = "estable";
+        this.states.saveState(run.id, state);
+      }
+    }
     return { ok: true as const, ...recorded };
   }
 }

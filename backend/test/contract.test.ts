@@ -3,9 +3,11 @@ import { once } from "node:events";
 import test from "node:test";
 
 import { createApp } from "../src/app.js";
+import { WorkflowService } from "../src/domain/workflow-service.js";
 import { openDatabase } from "../src/state/database.js";
 import { StateRepository } from "../src/state/state-repository.js";
 import { TaskRepository } from "../src/state/task-repository.js";
+import { WorkflowEventRepository } from "../src/state/workflow-event-repository.js";
 
 const TOKEN = "test-workflow-token";
 
@@ -243,12 +245,21 @@ test("specialist results apply once and stale callbacks remain evidence", async 
     };
     const firstTask = proposal.tasks[0]!;
     const secondTask = proposal.tasks[1]!;
+    const replanning = structuredClone(states.ensureActiveRun().state);
+    replanning.coordinatorStatus = "replanificando";
+    states.saveState(run.id, replanning);
     const result = specialistBody(firstTask.taskId, run.id, proposal.planVersion);
 
     let response = await post(base, "/workflow/results", result, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
     assert.equal(response.status, 200);
+    assert.equal(states.getPublicState().coordinatorStatus, "replanificando");
     assert.equal(tasks.claimNext()?.id, secondTask.taskId);
+    const secondResult = specialistBody(secondTask.taskId, run.id, proposal.planVersion);
+    secondResult.eventId = "specialist-event-2";
+    response = await post(base, "/workflow/results", secondResult, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
+    assert.equal(states.getPublicState().coordinatorStatus, "estable");
 
     response = await post(base, "/workflow/results", result, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: true });
@@ -267,6 +278,32 @@ test("specialist results apply once and stale callbacks remain evidence", async 
     response = await post(base, "/workflow/results", stale, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
   });
+});
+
+test("an accepted result does not mark the coordinator stable while another cycle is running", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.coordinatorStatus = "replanificando";
+    state.coordinatorBusy = { eventId: "next-cycle", text: "incidencia siguiente" };
+    states.saveState(run.id, state);
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: {},
+      idempotencyKey: "previous-plan-call",
+    });
+    workflows.recordSpecialistResult(specialistBody(task.id, run.id, run.state.planVersion));
+    assert.equal(states.ensureActiveRun().state.coordinatorStatus, "replanificando");
+  } finally {
+    database.close();
+  }
 });
 
 test("the HappyRobot door translates a native payload and applies it", async () => {
