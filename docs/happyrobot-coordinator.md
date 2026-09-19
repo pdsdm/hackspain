@@ -26,6 +26,7 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `COORDINATOR_MODE` | `llm` (se infiere si `COORDINATOR_HARNESS=happyrobot` y hay workflow). |
 | `HAPPYROBOT_API_KEY` | La misma clave de las llamadas. |
 | `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | UUID o slug del workflow Orquestador. |
+| `HAPPYROBOT_COORDINATOR_HOOK_URL` | Opcional. Hook directo, p. ej. `https://workflows.platform.eu.happyrobot.ai/hooks/development/<slug>`. Si está, el trigger va ahí en vez de `/workflows/{id}/runs`; el hook no devuelve `run_id`, así que no se sondea el estado del run. En EU el endpoint del API devolvía `Workflow not found`. |
 | `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development`. |
 | `HAPPYROBOT_COORDINATOR_APPLY` | Vacío o `false`. `true` solo cuando se decida aplicar planes. |
 | `HAPPYROBOT_COORDINATOR_TIMEOUT_MS` | Opcional. Por defecto 180000. |
@@ -33,22 +34,24 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `PUBLIC_BASE_URL` | URL pública del backend (túnel). Los webhooks la usan. |
 | `HAPPYROBOT_WEBHOOK_TOKEN` | Bearer de los webhooks y del endpoint shadow. |
 
-`COORDINATOR_MODEL` sobrescribe el modelo mostrado en el informe. El modelo real se elige dentro del workflow.
+El modelo se elige dentro del workflow. El informe muestra siempre `gpt-5.6-luna-low`; `COORDINATOR_MODEL` no le afecta.
 
 ## Configurar el workflow (manual)
 
 Workflow `Orquestador`, versión V3 no publicada. Pasos que faltan:
 
-1. **Esquema del trigger.** Envía un POST de ejemplo al Incoming hook y genera el esquema. JSON mínimo:
+1. **Esquema del trigger.** Envía un POST al hook con el slug de la versión: `https://workflows.platform.eu.happyrobot.ai/hooks/<workflow-slug>/<version-slug>`. Registra el payload y genera el esquema sin ejecutar el workflow. Sin cabecera `Authorization`: el registro guarda las cabeceras. JSON mínimo:
    ```json
    { "correlation_id": "x", "run_id": "x", "plan_version": 1, "event": { "source": "chat", "kind": "free_text", "text": "x" }, "system_prompt": "x", "system_prompt_version": "x", "world_snapshot": "x", "backend_base_url": "https://x" }
    ```
 2. **Prompt del agente.** Sustituye `<!-- INYECTAR AQUI -->` por las variables `system_prompt` y `world_snapshot` del trigger. Modelo `gpt-5.6-luna-low`.
-3. **Webhooks.** URL: `{{backend_base_url}}/workflow/coordinator/happyrobot/consult` y `.../submit`. Método POST, JSON. Auth bearer con una variable de entorno de HappyRobot que contenga `HAPPYROBOT_WEBHOOK_TOKEN`.
+3. **Webhooks.** URL: `{{backend_base_url}}/workflow/coordinator/happyrobot/consult` y `.../submit`. Método POST, JSON. Auth bearer con la variable `HAPPYROBOT_COORDINATOR_TOKEN` del workflow (Workflow settings → Variables). Su valor en los tres entornos es el de `HAPPYROBOT_WEBHOOK_TOKEN`. En el campo Bearer se selecciona con `@`; si aparece como texto plano, el backend recibe el nombre y responde `Invalid workflow token`.
 4. **Body de `consult_world`:** `correlation_id`, `run_id`, `plan_version` desde el trigger (fijos). `query` desde el parámetro de la herramienta: objeto con `type`, `placeId`, `minCapacity`, `vehicleId`, `fromId`, `destinationId`.
 5. **Body de `submit_plan`:** los tres fijos más `plan` desde el parámetro de la herramienta (objeto `CoordinatorOutput` completo).
 6. **Tool Call Result.** Exponer solo: `consult_world` → `ok`, `stale`, `error`, `answer`. `submit_plan` → `accepted`, `retry`, `stale`, `errors`, `plan_version`. Generar el esquema requiere el backend público en marcha.
-7. **Publicar** en `development`.
+7. **Publicar** en `development`. El hook de ejecución solo enruta a versiones publicadas: `hooks/<workflow-slug>` (production) o `hooks/development/<workflow-slug>`.
+
+Estado al 19/09/2026 22:50: fork `mpp8gtbh590v` publicado en `development`. Única ejecución live hecha con `HAPPYROBOT_COORDINATOR_HOOK_URL=https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb` y fixture `crisis`: run `3caee838-57ab-47ff-9476-d145016824fc`, latencia 7,6 s, 1 `consult_world`, 1 `submit_plan`, plan aceptado a la primera sin errores de validación, `aplicado: no`. El plan cerró `loungeSur` con una acción de espacios y sin reubicaciones. Una sola muestra: no valida el proveedor.
 
 ## Prueba manual única (shadow)
 

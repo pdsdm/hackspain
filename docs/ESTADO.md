@@ -66,6 +66,10 @@ Los dos incidentes se probaron localmente contra T46: Principal cerró, Muelle E
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
 - `origin/docs/estado-1200`: fotografía antigua.
+- `feat/astra-happyrobot-coordinator` (T44): piloto HappyRobot Reasoning Agent como
+  coordinador. Backend con tests unitarios, una ejecución shadow (7,6 s) y ensayo en el panel
+  con `HAPPYROBOT_COORDINATOR_APPLY=true` (6 planes aceptados a la primera, 5–14 s). El
+  proveedor por defecto no cambia. Guía en `docs/happyrobot-coordinator.md`.
 
 Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists`, `feat/ventura-demo-incidents-ui`, `feat/ventura-happyrobot-incident-inputs` y `feat/ventura-demo-director` ya están mergeadas mediante PRs #73–#77.
 

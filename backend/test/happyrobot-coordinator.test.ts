@@ -120,6 +120,9 @@ test("loadHappyRobotCoordinatorConfig exige la clave y el workflow y no se activ
   assert.equal(pilot.provider, "happyrobot");
   assert.equal(pilot.harness, "happyrobot");
   assert.equal(pilot.happyrobot?.apply, true);
+  assert.equal(pilot.textProvider?.provider, "helmcode");
+  assert.equal(pilot.textProvider?.harness, "json");
+  assert.equal(loadLlmConfig(ENV_BASE).textProvider, undefined);
 
   assert.equal(loadConfig({ HAPPYROBOT_API_KEY: "hr" }).coordinatorMode, "rules");
   assert.equal(loadConfig(ENV_BASE).coordinatorMode, "llm");
@@ -209,6 +212,39 @@ test("apply=true persiste el plan aceptado", async () => {
     assert.equal(report.applied, true);
     const acceso = states.ensureActiveRun().state.spaces.find((space) => space.id === "accesoSur");
     assert.equal(acceso?.status, "cerrado");
+  } finally {
+    database.close();
+  }
+});
+
+test("con HAPPYROBOT_COORDINATOR_HOOK_URL el trigger va al hook directo y no sondea el run", async () => {
+  const { database, deps, states } = openDeps();
+  try {
+    const registry = new HappyRobotSessionRegistry();
+    const run = states.ensureActiveRun();
+    const calls: string[] = [];
+    const fetchFn = async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.run_id, run.id);
+      assert.equal(body.payload, undefined);
+      queueMicrotask(() => {
+        registry.submit({ correlation_id: body.correlation_id, run_id: body.run_id, plan_version: body.plan_version, plan: baseOutput({ planVersion: run.state.planVersion }) });
+      });
+      return new Response("", { status: 200 });
+    };
+    const report = await runHappyRobotCoordinator({
+      config: { ...CONFIG, hookUrl: "https://hooks.test/hooks/development/wf" },
+      event: { source: "chat", kind: "free_text" },
+      deps,
+      apply: false,
+      registry,
+      fetchFn,
+      pollMs: 20,
+    });
+    assert.equal(report.status, "accepted");
+    assert.equal(report.happyrobotRunId, null);
+    assert.deepEqual(calls, ["POST https://hooks.test/hooks/development/wf"]);
   } finally {
     database.close();
   }

@@ -52,7 +52,7 @@
 | T41 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` (PR #57) | [T41](docs/specs/T41-jev-routing-pilot.md) | review |
 | T42 | Arranque limpio y pausado en cada despliegue | Zhi + Devin | `fix/zhi-clean-deploy-state` (PR #64, mergeada) | [T42](docs/specs/T42-arranque-limpio.md) | done |
 | T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62, mergeada) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | done |
-| T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
+| T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` (PR #81, mergeada) | [T44](docs/specs/T44-happyrobot-coordinator.md) | review |
 | T45 | Congelar escenario y storyboard técnico de la demo | Ventura (revisión: Carlos) | `docs/ventura-video-scenario` | [T45](docs/specs/T45-video-scenario.md) | review |
 | T46 | Entrada autenticada de incidentes desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
 | T47 | Workflow HappyRobot determinista para inputs simulados de llamada y SMS | Ventura | `feat/ventura-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | bloqueada |
