@@ -1,14 +1,13 @@
 # Estado del proyecto
 
 > Memoria del proyecto: contrastar esta foto con `origin/main` antes de trabajar.
-> Esta actualización distingue la base integrada del trabajo local T38; no afirma que
-> los cambios de esta rama estén ya mergeados.
+> Todo lo afirmado aquí sale de comandos ejecutados o se marca como información del equipo.
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 16:43 CEST |
-| **Base de `main` integrada** | `9969945` (incluye PR #50 y #48) |
-| **Trabajo verificado** | `feat/ventura-costes-informativos`, T38, después de integrar esa base |
+| **Foto tomada** | 19 de septiembre de 2026, 17:09 CEST |
+| **Commit de `main`** | `c2c0482` (PR #52) |
+| **Rama verificada** | `fix/zhi-demo-readiness` sobre `c2c0482` |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -16,80 +15,106 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la rama T38 | OK |
-| Tests | 265: **258 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en `origin/main` | OK |
+| Tests de backend en `origin/main` | 266: **259 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en `fix/zhi-demo-readiness` | OK |
+| Tests de backend en la rama | 269: **262 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node de esta verificación | 22.14.0: suite, lint, build y fixtures completos |
-| Navegador Orca | Frontend API → evento → llamada simulada → coste visible; pausa humana verificada |
+| Node | 22.23.2 |
 
 El build del frontend conserva el aviso de chunk mayor de 500 kB.
-Se integraron PR #50 (rutas) y #48 (JEV) antes de repetir la verificación.
-Se conserva íntegro su comportamiento; `originStopId` ya no existe tras esos cambios.
-La rama adapta tres tests de simulación al adaptador asíncrono con semilla.
-T37/D16 pasaron a T38/D17 porque main ya asignó esos identificadores a rutas.
 
 ## Qué funciona
 
-- La base `9969945` incluye panel API, motor persistente, callbacks HappyRobot,
-  verificación opcional JEV, afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
-- T6 tiene código integrado en `main`; la antigua indicación «sin mergear» no describe
-  todo el trabajo entregado. No se han repetido llamadas reales en esta sesión.
-- **T38, solo en esta rama:** costes informativos sin límites ni aprobaciones económicas.
-  `estimatedCost` es independiente de las decisiones; un coste desconocido es `null`.
-- `committedCost` registra el coste adicional de una tarea aceptada con evidencia,
-  sin duplicarlo al repetir callbacks ni inventarlo desde una previsión.
-- Las decisiones operativas usan `kind: operational`, `approve_plan` y `reject_plan`.
-  Conservan la pausa, las restricciones, la toma de llamadas y el rechazo de división.
-- El recorrido integrado pasa con previsión de 6.000 €, callbacks, giro y replan de
-  7.000 €, conservando 7.200 € comprometidos sin aprobación económica ni doble cargo.
-- En navegador: estado inicial «Sin estimar»; evento enviado desde el panel; llamada
-  simulada terminada; panel muestra 6.000 € previstos y comprometidos, cero decisiones
-  económicas. Se comprobó que la pausa del modal llega al backend. Coordinador y
-  contraparte inyectados, SQLite en memoria, sin credenciales ni llamadas externas.
+### Mergeado en `main`
+
+- Panel API, motor SQLite, cola por `planVersion`, callbacks HappyRobot e idempotencia.
+- JEV opcional con efectos desactivados por defecto (T35).
+- Mundo dinámico: afluencia, actores, incidencias, giros automáticos y rutas dinámicas.
+- Costes informativos (T38): no bloquean acciones ni crean aprobaciones económicas;
+  `estimatedCost` y `committedCost` registran información sin inventar disponibilidad.
+- Decisiones operativas separadas del coste mediante `approve_plan` y `reject_plan`.
+- Helmcode usa `deepseek-v4-flash`, harness JSON y `reasoning_effort=low` por defecto.
+- T17 automatizado: evento → plan con coste informativo → llamada sim → callback → giro →
+  replan, sin aprobación económica y sin duplicar coste.
+- T18 local: frontend API, SQLite persistente y comandos de arranque, reset, reinicio y parada.
+
+### En `fix/zhi-demo-readiness`, aún sin mergear
+
+- `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
+- `POST /simulation/reset` conserva `CLOCK_SPEED`.
+- El coordinador vuelve a `estable` tras el último resultado aceptado sin pisar otro ciclo.
+- El prompt no presenta `verificationTarget` como campo genérico; sigue disponible solo para
+  la llamada confirmable de `c-pabB`.
+- Una operación `set_place` sobre un id `gate-*` se normaliza a `set_gate`.
+- Hay regresiones para seed, reset, concurrencia de callbacks, targets opcionales y puertas.
 
 ## Qué falta, por riesgo para la demo
 
-1. Revisar y mergear T38; su rama ya incorpora los PR #50 y #48. Publicación solicitada por Ventura.
-2. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
-   comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
-3. Ensayar el mismo recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por
-   pasar las pruebas simuladas.
-4. Al integrar el trabajo local de recursos y T20, retirar sus límites presupuestarios
-   y recomendaciones `ask_budget`; esas ramas no se han modificado aquí.
+### 1. T17 con servicios reales — Zhi (`doing`)
+
+El recorrido automatizado pasa. En una prueba aislada, Helmcode real aplicó la política
+nueva: cero decisiones económicas y despacho inmediato. No convergió porque el simulador
+de contrapartes produjo `no_answer` y `rejected`; cada resultado adverso lanzó otro replan
+y acumuló versiones y acciones. La instancia se detuvo sin llamadas reales.
+
+Para cerrar T17 falta repetir el recorrido con el actor HappyRobot real/controlado, callback
+y giro. El usuario informó de una primera llamada real previa, pero no se repitió ni se
+verificó en esta foto el recorrido completo de T17.
+
+### 2. T18 ensayo completo — Zhi (`doing`)
+
+En la sesión anterior se verificaron `/health` y `/state` públicos por Quick Tunnel,
+autenticación del callback, persistencia SQLite, seed y velocidad tras reinicio. Falta un
+ensayo completo que incluya el T17 real y recuperación operativa.
+
+### 3. Integraciones del equipo
+
+- El prompt y extractor desplegados en HappyRobot deben reflejar costes informativos y
+  `result.data.committedCost` (sin verificar).
+- T37 figura `doing` aunque PR #50 está mergeado; corresponde a Pep actualizar su fila.
+- T38 figura `review` aunque PR #51 está mergeado; corresponde a Ventura actualizar su fila.
+- T13, T19, T20–T22 siguen `todo`; T1, T9, T12, T14–T16 y T33–T35 siguen `review`.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Prompt y extractor de voz desplegados | Responsable de HappyRobot | Sí |
-| Ensayo con proveedores reales | Entorno y credenciales del portátil de demo | Sí |
-| Integración de recursos y aprendizaje | Sus ramas locales y revisión del equipo | No |
+| T17 aceptado | actor HappyRobot controlado, callback y giro en el mismo recorrido | Sí |
+| T18 aceptado | ensayo completo y recuperación con el entorno de demo | Parcial |
+| Prompt/extractor de voz | sincronizar workflow desplegado con T38 | Sí |
+| Simulación LLM estable | decidir si `sim-world` adversarial es ensayo o solo modo caos | No |
 
 ## Ramas vivas sin mergear
 
-- `feat/ventura-costes-informativos`: T38 implementada y verificada, pendiente de revisión.
-- `feat/ventura-routing-local`: trabajo local de ciclo de recursos y coordinador sobre
-  una base anterior; contiene límites por recurso, saldo autorizado y reservas de saldo.
-- `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
-- Git conserva otras referencias remotas no ancestro de `main`; eso no prueba que su
-  funcionalidad falte en main. GitHub consultado el 19/09 a las 16:43: ningún PR abierto;
-  #50 y #48 ya mergeados e incorporados aquí. Orden de integración: #50/#48 → T38.
+- `fix/zhi-demo-readiness`: fixes de seed, reset, estado del coordinador, target opcional y
+  operaciones de puertas; basada en `c2c0482`, sin push.
+- `Prueba-de-plataforma-y-llamada-real`: seis commits antiguos de voz y frontend; diverge
+  del camino único de D14 y no tiene PR abierto.
+- `docs/estado-1200`: estado obsoleto basado en `c371546`.
+- `origin/feat/pep-afluencia`: referencia con commit de merge, sin diff funcional contra main.
+
+No hay PRs abiertos en GitHub al tomar esta foto.
 
 ## Decisiones pendientes
 
-- La política de T38 ya está aprobada por Ventura: recuperar servicio, registrar costes,
-  no bloquear por importe. Véanse D17 y el contrato.
-- Coordinar su aplicación con las ramas de recursos/aprendizaje y el workflow de voz.
+1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
+   parte de la demo; el segundo no garantiza convergencia.
+2. Quién hace de responsable de recinto y qué respuestas dará durante el ensayo real.
+3. Cómo termina el relato: plan cerrado o limitación abierta y honesta.
+4. Cuándo sincronizar el prompt y extractor desplegados de HappyRobot con T38.
 
 ## Avisos para el siguiente agente
 
-- Empezar una ejecución nueva al ensayar T38. No se migran ni aprueban silenciosamente
-  decisiones económicas guardadas en ejecuciones antiguas; se conserva su histórico.
-- Los campos `contingency`, `autonomousLimit` y `authorized` quedan por compatibilidad,
-  pero ya no limitan, autorizan ni aparecen en los prompts o el panel.
-- `approve_spend`/`reject_spend` devuelven 409; el giro `reject_spend` devuelve 400.
-- No confundir una estimación o un coste registrado con disponibilidad física confirmada.
-- JEV conserva su prompt congelado, umbrales, privacidad y efectos desactivados por defecto.
-- El script de demo arranca en `rules + sim`. Para probar eventos libres con LLM y llamadas
-  simuladas: `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
+- T17 ya no usa `approve_spend`: los costes son informativos y las acciones no esperan una
+  aprobación económica. Las decisiones, si existen, son operativas.
+- Helmcode recibe `reasoning_effort=low` por defecto; la variable de entorno puede
+  sobrescribirlo.
+- Los resultados `accepted` no relanzan el coordinador; `rejected` y `no_answer` sí. Varias
+  respuestas adversas de `sim-world` pueden producir una cascada legítima de replans.
+- El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
+  `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
+- Reiniciar conserva SQLite, pero pierde callbacks simulados programados solo en memoria.
+- Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
+- Haz `git fetch` antes de analizar: `main` se mueve rápido.
