@@ -134,10 +134,10 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
       devinMode,
     });
   }
-  if (openaiUsable) {
+  if (openai) {
     return withHarness({
       provider: "openai",
-      apiKey: openai!,
+      apiKey: openai,
       model: model || DEFAULT_MODELS.openai,
       baseUrl: trimSlash(openaiBase || DEFAULT_BASE_URLS.openai),
       jsonObject: jsonFlag === undefined || jsonFlag === "" ? true : jsonObject,
