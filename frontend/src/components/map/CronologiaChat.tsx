@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, type ReactNode } from 'react'
 import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
 import type { Area, CrisisState, EventKind } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
@@ -28,6 +28,20 @@ const CHANNEL = {
   api: { label: 'API', icon: Radio },
 } as const
 
+const RAW: Array<[RegExp, string]> = [
+  [/^happyrobot:call_result$/i, 'Resultado de llamada recibido de HappyRobot'],
+  [/^happyrobot:sms_result$/i, 'Resultado de SMS recibido de HappyRobot'],
+  [/^happyrobot:(\w+)$/i, 'Evento de HappyRobot'],
+]
+
+const block = (t: number) => fmtClock(Math.floor(t / 600) * 600).slice(0, 5)
+
+function renderText(text: string) {
+  const hit = RAW.find(([re]) => re.test(text.trim()))
+  if (!hit) return text
+  return <><code>{text.trim()}</code> {hit[1]}</>
+}
+
 export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
   const follow = useRef(true)
@@ -37,6 +51,7 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
     if (el && follow.current) el.scrollTo({ top: el.scrollHeight, behavior: 'instant' })
   }, [n])
   const items = s.events.slice(-40)
+  const lastId = items[items.length - 1]?.id
   return (
     <Glass label="Cronología" className={`chronology-panel ${className}`}>
       <header className="chronology-heading">
@@ -52,24 +67,38 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
           <h3>Todo empieza aquí</h3>
           <p>Los avisos, las acciones y las decisiones aparecerán en esta cronología.</p>
         </li>}
-        {items.map((e) => {
+        {items.map((e, i) => {
           const look = EVENT[e.kind] ?? EVENT.info
           const area = e.area ? AREA[e.area] : undefined
           const source = e.channel ? CHANNEL[e.channel] : undefined
-          const Icon = source?.icon ?? area?.icon ?? look.icon
+          const Icon = area?.icon ?? look.icon
           const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
           const simulated = e.simulated || e.actor?.startsWith('SIMULACIÓN')
-          const sourceLabel = source ? `${source.label}${simulated ? ' · simulado' : ''}` : undefined
+          const hour = block(e.time)
+          const prevHour = i > 0 ? block(items[i - 1].time) : null
+          const tone = e.kind === 'intervencion' ? 'intervencion' : look.tone
           return (
-            <li key={e.id} className={`timeline-card timeline-card--${look.tone}`}>
-              <div className="timeline-card-heading">
-                <span className="timeline-avatar"><Icon size={16} strokeWidth={1.7} /></span>
-                <span className="timeline-author">{name}</span>
-                <time className="timeline-time num">{fmtClock(e.time)}</time>
-              </div>
-              <p className="timeline-text">{e.text}</p>
-              <span className="timeline-kind"><look.icon size={11} aria-hidden="true" />{sourceLabel ? `${sourceLabel} · ${look.label}` : look.label}</span>
-            </li>
+            <Fragment key={e.id}>
+              {hour !== prevHour && <li className="timeline-hour num" aria-hidden="true">{hour}</li>}
+              <li className={`timeline-item timeline-item--${tone}${e.id === lastId ? ' is-new' : ''}`}>
+                <span className="timeline-node" aria-hidden="true"><look.icon strokeWidth={2.5} /></span>
+                <div className="timeline-card">
+                  <div className="timeline-card-heading">
+                    <span className="timeline-avatar"><Icon size={13} strokeWidth={1.8} /></span>
+                    <span className="timeline-author">{name}</span>
+                    <span className="timeline-chip"><look.icon aria-hidden="true" />{look.label}</span>
+                    <time className="timeline-time num">{fmtClock(e.time)}</time>
+                  </div>
+                  <p className="timeline-text">{renderText(e.text)}</p>
+                  {(source || simulated) && (
+                    <span className="timeline-meta">
+                      {source && <><source.icon aria-hidden="true" />{source.label}</>}
+                      {simulated && <span className="sim">simulado</span>}
+                    </span>
+                  )}
+                </div>
+              </li>
+            </Fragment>
           )
         })}
       </ul>

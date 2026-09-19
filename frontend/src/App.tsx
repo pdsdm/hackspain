@@ -67,10 +67,10 @@ export default function App() {
                 <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
               </div>
 
+              <CoordinadorPanel s={s} className="absolute left-3 right-[428px] bottom-3" />
             </div>
           </CrisisMap>
           </div>
-          <CoordinadorPanel s={s} className="agents-beside-chronology" />
               <div className="absolute z-[1000] top-3 right-3 bottom-3 w-[404px] flex flex-col gap-3">
                 <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
                 <CronologiaChat s={s} className="flex-1 min-h-0" footer={
