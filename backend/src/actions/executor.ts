@@ -82,7 +82,7 @@ export class ActionExecutor {
 
   pump(): void {
     const run = this.states.ensureActiveRun();
-    if (run.state.agentsPaused) return;
+    if (run.state.agentsPaused || run.state.waitingForDecision) return;
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
@@ -177,7 +177,7 @@ export class ActionExecutor {
       applied: recorded.applied,
       duplicate: recorded.duplicate,
     });
-    if (recorded.applied) {
+    if (recorded.applied && !recorded.duplicate) {
       void this.engine?.handle({
         source: "happyrobot",
         kind: "call_result",

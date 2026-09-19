@@ -27,7 +27,7 @@
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
 | T17 | Integración y pruebas críticas | Zhi | `feat/zhi-integracion-final` | [T17](docs/specs/T17-integracion-final.md) | doing |
-| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-entorno-demo` | [T18](docs/specs/T18-entorno-demo.md) | todo |
+| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-integracion-final` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
 | T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |

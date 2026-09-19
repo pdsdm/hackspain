@@ -227,7 +227,7 @@ export function createApp(
         applied: recorded.applied,
         duplicate: recorded.duplicate,
       });
-      if (recorded.applied) {
+      if (recorded.applied && !recorded.duplicate) {
         void engine.handle({
           source: "happyrobot",
           kind: "call_result",
