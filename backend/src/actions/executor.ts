@@ -10,6 +10,7 @@ import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import { logAction, logActionError } from "../log.js";
 import { dispatchHappyRobot } from "./adapters/happyrobot.js";
 import { scheduleSimResult } from "./adapters/sim.js";
+import { counterpartReply } from "./adapters/sim-world.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -155,8 +156,11 @@ export class ActionExecutor {
     }
 
     this.tasks.markDispatchOutcome(task.id, "dispatched");
+    const seed = Number(state.clock.liveSeed ?? state.clock.attendanceSeed ?? this.config.simSeed ?? 1);
+    const reply = await counterpartReply(task, state, seed, this.engine?.llmDeps() ?? {});
     const delay = 20 + Math.floor(Math.random() * 21);
     const envelope = scheduleSimResult({
+      reply,
       task,
       runId: run.id,
       planVersion: task.planVersion,
@@ -166,8 +170,9 @@ export class ActionExecutor {
       deliveries: records(state, "deliveries"),
       spaces: records(state, "spaces"),
     });
-    this.due.push({ at: Number(state.clock.simSeconds) + delay, envelope });
-    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay });
+    const nowAfter = Number(this.states.ensureActiveRun().state.clock.simSeconds);
+    this.due.push({ at: nowAfter + delay, envelope });
+    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay, reply: reply.outcome });
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {

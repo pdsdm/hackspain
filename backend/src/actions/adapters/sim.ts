@@ -2,6 +2,7 @@ import { guessGroupId } from "../../agents/attendees/extract.js";
 import { guessDeliveryId } from "../../agents/catering/extract.js";
 import type { SpecialistResultEnvelope } from "../../contracts/api.js";
 import type { DispatchTask } from "../../state/task-repository.js";
+import type { SimReply } from "./sim-world.js";
 
 function attendeesData(
   task: DispatchTask,
@@ -52,31 +53,41 @@ export function scheduleSimResult(input: {
   guestGroups?: Record<string, unknown>[];
   deliveries?: Record<string, unknown>[];
   spaces?: Record<string, unknown>[];
+  reply?: SimReply;
 }): SpecialistResultEnvelope {
   const payload = typeof input.task.payload === "object" && input.task.payload !== null
     ? (input.task.payload as Record<string, unknown>)
     : {};
+  const reply: SimReply = input.reply ?? {
+    outcome: "accepted_with_conditions",
+    summary: `Simulado: ${String(payload.counterpart ?? "la contraparte")} acepta con condiciones.`,
+    conditions: ["Verificación pendiente en campo"],
+    transcript: [
+      { who: "agente", text: String(payload.objective ?? "Confirmar situación"), at: 5 },
+      { who: "humano", text: "De acuerdo, con las condiciones habituales.", at: 18 },
+    ],
+  };
+  const positive = reply.outcome === "accepted" || reply.outcome === "accepted_with_conditions";
   return {
     eventId: input.eventId,
     taskId: input.task.id,
     runId: input.runId,
     planVersion: input.planVersion,
-    status: "completed",
+    status: reply.outcome === "no_answer" ? "no_answer" : "completed",
     result: {
-      outcome: "accepted_with_conditions",
-      summary: `Simulado: ${String(payload.counterpart ?? "la contraparte")} acepta con condiciones.`,
-      conditions: ["Verificación pendiente en campo"],
+      outcome: reply.outcome,
+      summary: reply.summary,
+      conditions: reply.conditions,
       evidence: {
         callId: input.callId,
-        transcript: [
-          { who: "agente", text: String(payload.objective ?? "Confirmar situación"), at: 5 },
-          { who: "humano", text: "De acuerdo, con las condiciones habituales.", at: 18 },
-        ],
+        transcript: reply.transcript,
       },
-      data: {
-        ...attendeesData(input.task, payload, input.guestGroups),
-        ...cateringData(input.task, payload, input.deliveries, input.spaces),
-      },
+      data: positive
+        ? {
+            ...attendeesData(input.task, payload, input.guestGroups),
+            ...cateringData(input.task, payload, input.deliveries, input.spaces),
+          }
+        : {},
     },
   };
 }
