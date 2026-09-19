@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 16:03 CEST |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 16:35 CEST |
 | **Commit de `main`** | `da6f49f` (PR #44) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, revisión de preparación de demo de Zhi |
@@ -69,32 +69,32 @@ Verificado con Node 22.23.2. El frontend mantiene el aviso conocido de chunk may
 
 ### 1. Llamada HappyRobot real — T6 (`doing`), T9 (`review`)
 
-No se ejecutó una llamada saliente real en esta sesión para no contactar al número
-configurado sin confirmación específica. Falta demostrar `trigger → llamada → callback
-público autenticado → compromiso visible en /state`.
-
-La puerta nativa y sus tests ya están en `main`; el bloqueo restante es la ejecución con
-credenciales, trigger, teléfono E.164 y actor de prueba reales.
+El usuario confirma que la llamada saliente real ya se probó antes de esta validación; no se
+repitió para evitar contactar otra vez al número configurado. La puerta nativa y sus tests
+están en `main`. Esta sesión verificó además que el endpoint público existe y exige token.
 
 ### 2. Recorrido T17 con servicios reales
 
-El test integrado simulado pasa. Helmcode `deepseek-v4-flash` arrancó y respondió en
-intentos anteriores, pero una repetición final agotó el timeout de 120 s. Falta repetir el
-recorrido completo con Helmcode estable y una llamada HappyRobot real. T17 sigue `doing`.
+El test integrado simulado pasa. En una instancia aislada con llamadas `sim`, Helmcode
+`deepseek-v4-flash`, harness JSON y `reasoning_effort=low`, el evento inicial agotó tres
+rondas porque varias acciones traían `verificationTarget` inválidos. No creó la decisión
+humana. T17 sigue `doing` hasta corregir ese contrato y repetir el recorrido.
 
 ### 3. T18 público y ensayo
 
-`up-local`, reset, persistencia SQLite y reinicio se verificaron. `cloudflared` existe en
-`/usr/local/bin/cloudflared`, creó un Quick Tunnel y registró conexión QUIC en Madrid, pero
-el host generado no resolvió por DNS en dos intentos. `/health` público, callback real y
-ensayo completo siguen sin verificar. T18 sigue `doing`.
+Backend, frontend y Cloudflare estaban arrancados manualmente. El Quick Tunnel tuvo una
+conexión lista; `/health` y `/state` públicos respondieron `200`, y
+`POST /workflow/happyrobot/results` sin token respondió `401`. En una instancia aislada,
+SQLite, `clock.seed` y `CLOCK_SPEED=30` sobrevivieron al reinicio. Queda el ensayo completo
+con operador; T18 sigue `doing`.
 
 ### 4. Modo vivo con LLM
 
 La spec T32 conserva sin marcar el criterio de tres incidencias respondidas en diez minutos
-reales. Se encontraron y corrigieron en esta rama dos bloqueos locales: pérdida de
-`CLOCK_SPEED` tras reset y estado `replanificando` permanente. La validación final quedó
-bloqueada por un timeout de Helmcode de 120 s en la primera incidencia.
+reales. En una instancia aislada a velocidad 30 y modo `open`, el agente mundo generó tres
+incidencias distintas. La primera coordinación terminó con dos acciones simuladas; otras
+fallaron por `verificationTarget` inválidos y por usar `set_place` sobre `gate-oeste`.
+Terminó en `replanificando`, aunque sin llamadas ni acciones abiertas.
 
 ### 5. Entrega
 
@@ -107,11 +107,10 @@ bloqueada por un timeout de Helmcode de 120 s en la primera incidencia.
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Llamada real | trigger, credenciales, número, actor y autorización de llamada | Sí — HappyRobot y equipo |
-| Callback público | resolución DNS del Quick Tunnel o otra red/túnel | Sí — red/Cloudflare |
-| T17 aceptado | llamada real y repetición estable con Helmcode | Parcial |
-| T18 aceptado | `/health` público, callback real y ensayo | Parcial |
-| Modo vivo con LLM | proveedor por debajo del timeout; probar `COORDINATOR_REASONING_EFFORT=low` | Sí — Helmcode |
+| Evidencia de llamada real | conservar resultado y callback de la prueba informada por el usuario | Sí — HappyRobot y equipo |
+| T17 aceptado | corregir `verificationTarget` de la salida LLM y repetir el recorrido | No |
+| T18 aceptado | ensayo completo con operador | No |
+| Modo vivo con LLM | corregir targets y distinguir operaciones de puerta/lugar | No |
 | Pitch final | actor telefónico, número de interacciones y desenlace | No |
 
 ## Ramas vivas sin mergear
@@ -131,8 +130,7 @@ contra `main` está vacío.
 1. Quién hace de responsable de recinto al teléfono y qué respuestas dará.
 2. Cuántas interacciones reales entran en la demo; propuesta vigente: una llamada y un SMS.
 3. Cómo termina el relato: plan cerrado o limitación abierta y honesta.
-4. Si se reintenta Quick Tunnel en otra red o se usa otro túnel para el callback.
-5. Si Helmcode se fija con `COORDINATOR_REASONING_EFFORT=low` o se usa el respaldo `rules`.
+4. Si la demo usa Helmcode tras corregir los targets o mantiene `rules` como respaldo.
 
 ## Avisos para el siguiente agente
 
