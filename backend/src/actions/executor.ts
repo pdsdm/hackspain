@@ -123,6 +123,7 @@ export class ActionExecutor {
         planVersion: task.planVersion,
         callId,
         publicBaseUrl: this.config.publicBaseUrl,
+        contactPhones: this.config.contactPhones,
         state,
       });
       this.tasks.markDispatchOutcome(task.id, outcome);

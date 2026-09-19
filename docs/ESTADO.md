@@ -63,6 +63,11 @@ del navegador), con un panel «Avisar a…» y lista de contactos.
 **Lo que falta exactamente:** la URL de un trigger **Webhook** del workflow. POSTear al
 deployment devuelve HTML. Esa URL la tiene HappyRobot.
 
+**T9 ya no bloquea** (rama `feat/alvaro-integracion`, sin mergear): el backend manda el
+teléfono real en E.164 desde el entorno y expone `POST /workflow/happyrobot/results`, que
+traduce el payload nativo del workflow al sobre del contrato. En cuanto exista la URL del
+hook, el círculo se cierra sin tocar más código.
+
 **Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
 llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →
 `sim` etiquetado como simulado en pantalla. Nunca presentar una grabación como llamada en
@@ -116,6 +121,7 @@ el panel en modo `api` vea las llamadas y haya una sola verdad.
 | Rama | Qué tiene |
 |---|---|
 | `Prueba-de-plataforma-y-llamada-real` | T6: workflow de HappyRobot, web call, panel «Avisar a…», proxy en Vite. **No está en `TASKS.md` con este nombre.** |
+| `feat/alvaro-integracion` | T9: teléfono E.164 desde entorno y `POST /workflow/happyrobot/results`, que traduce el webhook nativo del workflow. Sale de `origin/main`, no arrastra la deuda de T6. |
 | `feat/ventura-specs-cerebro` | Obsoleta: su contenido ya está en `main`. Se puede borrar. |
 
 ## Decisiones pendientes que bloquean a otros

@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
+import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
 import { loadLlmConfig } from "./agents/coordinator/llm.js";
 import type { AppConfig } from "./config.js";
@@ -14,6 +15,7 @@ import {
   parseReset,
   parseSpecialistResult,
   parseTwist,
+  type SpecialistResultEnvelope,
 } from "./contracts/api.js";
 import { ControlService } from "./domain/control-service.js";
 import { Engine } from "./domain/engine.js";
@@ -44,6 +46,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     clockSpeed: 1,
     coordinatorMode: "rules",
     hooks: {},
+    contactPhones: {},
     publicBaseUrl: "http://localhost:8000",
   };
 }
@@ -214,18 +217,31 @@ export function createApp(
     }
   });
 
+  const recordResult = (envelope: SpecialistResultEnvelope, response: Response) => {
+    const recorded = workflowService.recordSpecialistResult(envelope);
+    if (recorded.applied) {
+      void engine.handle({
+        source: "happyrobot",
+        kind: "call_result",
+        payload: envelope as unknown as Record<string, unknown>,
+      });
+    }
+    response.status(200).json(recorded);
+  };
+
+  // La puerta del contrato: cuerpo exacto, sin interpretación.
   app.post("/workflow/results", authorizeWorkflow, (request, response, next) => {
     try {
-      const envelope = parseSpecialistResult(request.body);
-      const recorded = workflowService.recordSpecialistResult(envelope);
-      if (recorded.applied) {
-        void engine.handle({
-          source: "happyrobot",
-          kind: "call_result",
-          payload: envelope as unknown as Record<string, unknown>,
-        });
-      }
-      response.status(200).json(recorded);
+      recordResult(parseSpecialistResult(request.body), response);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // La puerta de HappyRobot: cuerpo nativo del workflow, traducido por el adaptador (T9).
+  app.post("/workflow/happyrobot/results", authorizeWorkflow, (request, response, next) => {
+    try {
+      recordResult(translateHappyRobotResult(request.body, taskRepository), response);
     } catch (error) {
       next(error);
     }

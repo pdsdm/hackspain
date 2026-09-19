@@ -268,3 +268,61 @@ test("specialist results apply once and stale callbacks remain evidence", async 
     assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
   });
 });
+
+test("the HappyRobot door translates a native payload and applies it", async () => {
+  await withServer(async (base, states) => {
+    const run = states.ensureActiveRun();
+    const proposalResponse = await post(
+      base,
+      "/workflow/coordinator/proposals",
+      coordinatorBody(run.id, run.state.planVersion),
+      TOKEN,
+    );
+    const proposal = (await proposalResponse.json()) as {
+      planVersion: number;
+      tasks: Array<{ actionId: string; taskId: string }>;
+    };
+    const taskId = proposal.tasks[0]!.taskId;
+
+    // Cuerpo tal como lo manda el workflow: sin runId, sin planVersion y anidado.
+    const native = {
+      call_id: `call-${taskId}`,
+      session_id: "happyrobot-session-real",
+      data: {
+        outcome: "aceptado con condiciones",
+        summary: "Pabellón B disponible a las 13:00 por 1.500 €.",
+        conditions: ["Confirmar reserva antes de las 12:45"],
+        transcript: [{ role: "assistant", content: "¿Tienen libre el Pabellón B?", at: 4 }],
+      },
+    };
+
+    let response = await post(base, "/workflow/happyrobot/results", native, TOKEN);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
+
+    const state = states.getPublicState();
+    const agent = (state.agents as Array<Record<string, unknown>>).find((item) => item.id === "espacios");
+    assert.equal(agent?.lastResult, "Pabellón B disponible a las 13:00 por 1.500 €.");
+
+    // Reenviar el mismo webhook no lo aplica dos veces.
+    response = await post(base, "/workflow/happyrobot/results", native, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: true });
+
+    // Sin token sigue siendo 401, y un cuerpo sin tarea identificable es 400.
+    assert.equal((await post(base, "/workflow/happyrobot/results", native)).status, 401);
+    assert.equal(
+      (await post(base, "/workflow/happyrobot/results", { outcome: "accepted" }, TOKEN)).status,
+      400,
+    );
+
+    // Un callback que llega tras un reset queda como evidencia, sin tocar la ejecución nueva.
+    states.reset();
+    response = await post(
+      base,
+      "/workflow/happyrobot/results",
+      { task_id: proposal.tasks[1]!.taskId, session_id: "sesion-tardia", outcome: "accepted", summary: "Tarde" },
+      TOKEN,
+    );
+    assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
+  });
+});

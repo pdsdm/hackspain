@@ -25,6 +25,8 @@ export interface AppConfig {
   clockSpeed: number;
   coordinatorMode: CoordinatorMode;
   hooks: Partial<Record<AreaHook, string>>;
+  /** Teléfono de la contraparte por área, más `default` como número de pruebas. */
+  contactPhones: Record<string, string>;
   publicBaseUrl: string;
 }
 
@@ -101,6 +103,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (transporte) hooks.transporte = transporte;
   if (asistentes) hooks.asistentes = asistentes;
 
+  const contactPhones: Record<string, string> = {};
+  const phoneByArea: Record<string, string | undefined> = {
+    espacios: env.HAPPYROBOT_PHONE_ESPACIOS,
+    catering: env.HAPPYROBOT_PHONE_CATERING,
+    transporte: env.HAPPYROBOT_PHONE_TRANSPORTE,
+    asistentes: env.HAPPYROBOT_PHONE_ASISTENTES,
+    default: env.HAPPYROBOT_TEST_PHONE,
+  };
+  for (const [area, value] of Object.entries(phoneByArea)) {
+    const phone = value?.trim();
+    // El formato se valida en el adaptador, que es quien puede avisar sin romper el arranque.
+    if (phone) contactPhones[area] = phone;
+  }
+
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
@@ -111,6 +127,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     clockSpeed: readClockSpeed(env.CLOCK_SPEED),
     coordinatorMode: readCoordinatorMode(env.COORDINATOR_MODE, env),
     hooks,
+    contactPhones,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
   };
 }

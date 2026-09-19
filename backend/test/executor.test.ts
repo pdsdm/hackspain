@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
@@ -121,6 +122,102 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(calls[0]?.status, "sin_respuesta");
     const agent = (states.ensureActiveRun().state.agents as Array<Record<string, unknown>>).find((a) => a.id === "transporte");
     assert.equal(agent?.status, "incidencia");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("a native HappyRobot callback closes the open call with its transcript", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { espacios: "http://hook.test/espacios" },
+    contactPhones: { espacios: "+34600000000" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  let sent: Record<string, unknown> = {};
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+    return new Response("{}", { status: 200 });
+  }) as unknown as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "Confirmar Pabellón B", counterpart: "Recinto" },
+      idempotencyKey: "native-callback",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // El backend manda el teléfono del entorno y el callback de la puerta de HappyRobot.
+    assert.equal((sent.contact as Record<string, unknown>).phone, "+34600000000");
+    assert.match(String(sent.callbackUrl), /\/workflow\/happyrobot\/results$/);
+
+    const envelope = translateHappyRobotResult(
+      {
+        call_id: `call-${task.id}`,
+        outcome: "accepted",
+        summary: "Pabellón B reservado",
+        transcript: [{ speaker: "human", text: "Lo tienes a las 13:00", at: 20 }],
+      },
+      tasks,
+    );
+    const recorded = workflows.recordSpecialistResult(envelope);
+    assert.equal(recorded.applied, true);
+
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(calls[0]?.status, "terminada");
+    assert.deepEqual(calls[0]?.transcript, [{ who: "humano", text: "Lo tienes a las 13:00", at: 20 }]);
+    assert.equal(tasks.get(task.id)?.status, "completed");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("a phone that is not E.164 is dropped instead of being dialled", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { catering: "http://hook.test/catering" },
+    contactPhones: { catering: "600 00 00 00" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  let sent: Record<string, unknown> = {};
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+    return new Response("{}", { status: 200 });
+  }) as unknown as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "catering",
+      kind: "call",
+      payload: { objective: "Recolocar el servicio", counterpart: "Catering" },
+      idempotencyKey: "bad-phone",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal((sent.contact as Record<string, unknown>).phone, null);
   } finally {
     globalThis.fetch = originalFetch;
     database.close();

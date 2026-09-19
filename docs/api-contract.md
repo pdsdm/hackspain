@@ -189,7 +189,8 @@ Reglas:
 
 ### `POST /workflow/results`
 
-Callback común al que T9 traduce el payload de HappyRobot:
+Callback común, con el cuerpo exacto del contrato. HappyRobot no postea aquí: usa la
+puerta traducida de abajo.
 
 ```json
 {
@@ -224,6 +225,32 @@ Callback común al que T9 traduce el payload de HappyRobot:
 
 Si `applied` es true, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador.
 
+### `POST /workflow/happyrobot/results`
+
+Misma autorización, misma respuesta y mismos efectos que `/workflow/results`, pero acepta el cuerpo nativo del workflow. Es la URL que el backend manda en `callbackUrl`, y el adaptador de T9 (`backend/src/actions/adapters/happyrobot-inbound.ts`) lo traduce al sobre de arriba antes de aplicarlo.
+
+```json
+{
+  "call_id": "call-7a31…",
+  "session_id": "id-real-de-happyrobot",
+  "data": {
+    "outcome": "aceptado con condiciones",
+    "summary": "Lounge disponible desde las 13:15 por 900 €.",
+    "conditions": ["Montaje termina a las 13:15"],
+    "transcript": [{ "role": "assistant", "content": "¿Tienen libre el Lounge?", "at": 4 }]
+  }
+}
+```
+
+Qué tolera y qué no:
+
+- Los campos valen sueltos o anidados hasta dos niveles en `data`, `output`, `result`, `payload`, `extracted`, `variables`, `evidence`, `call` o `context`. El sobre estricto de `/workflow/results` también se acepta aquí.
+- `taskId` vale también como `task_id`; si no viene, se recupera del `callId` (`call-<taskId>`). Sin ninguno de los dos, `400`.
+- `runId` y `planVersion` **se ignoran del cuerpo** y se leen de la tarea: una sesión de HappyRobot no sabe en qué ejecución vive. Una tarea de otra ejecución o versión responde `200` con `applied: false`.
+- Sin `eventId`, la clave de idempotencia es `hr-<sessionId>`, o `hr-<taskId>` si tampoco hay sesión. Reenviar el mismo webhook devuelve `duplicate: true` sin aplicarlo dos veces.
+- `outcome` se normaliza desde texto libre en español o inglés (`aceptado`, `con condiciones`, `rechazado`, `no contesta`, `buzón`, `error`) y también desde `accepted: true|false` o `answered: false`. `status` se deriva del `outcome`. Si no hay nada clasificable, `400`: no se inventa un acuerdo.
+- La transcripción admite `{ role | speaker | who }` con `{ content | text | message }`, o un texto plano con `Agente: …` por líneas.
+
 ### Salida del backend hacia HappyRobot
 
 Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL con `Authorization: Bearer <HAPPYROBOT_API_KEY>`:
@@ -238,10 +265,12 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "counterpart": "Transportes Ibéricos",
   "reason": "El Acceso Sur está cerrado",
   "callId": "call-7a31…",
-  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": null, "email": null },
+  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": "+34600000000", "email": null },
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
-  "callbackUrl": "https://demo.example/workflow/results"
+  "callbackUrl": "https://demo.example/workflow/happyrobot/results"
 }
 ```
 
-El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+
+`contact.phone` sale del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_PHONE_<AREA>`, con `HAPPYROBOT_TEST_PHONE` de reserva. Va en E.164 (`+34600000000`, sin espacios ni guiones); un número mal formado se registra en el log y se manda `null`.
