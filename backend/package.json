@@ -17,6 +17,7 @@
     "fixtures:check": "tsc -p tsconfig.fixtures.json && node --import tsx ../scripts/generate-fixtures.mts --check"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "express": "^5.1.0"
   },
   "devDependencies": {

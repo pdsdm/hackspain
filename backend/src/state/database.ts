@@ -2,9 +2,25 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+export interface CrisisRemote {
+  hydrate: (connection: DatabaseSync) => Promise<void>;
+  scheduleSync: (connection: DatabaseSync) => void;
+  flush: () => Promise<void>;
+}
+
 export interface CrisisDatabase {
   connection: DatabaseSync;
   close: () => void;
+}
+
+const remotes = new WeakMap<DatabaseSync, CrisisRemote>();
+
+export function bindRemote(connection: DatabaseSync, remote: CrisisRemote): void {
+  remotes.set(connection, remote);
+}
+
+export function notifyRemote(connection: DatabaseSync): void {
+  remotes.get(connection)?.scheduleSync(connection);
 }
 
 const SCHEMA = `

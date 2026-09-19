@@ -8,6 +8,8 @@ export interface VehicleView {
   kind: VehicleIconKind
   name: string
   load: string
+  originName?: string
+  originPos?: LatLng
   destId: string
   destName: string
   eta: number
@@ -25,11 +27,12 @@ function spaceName(s: CrisisState, id: string) {
   return s.spaces.find((x) => x.id === id)?.name ?? id
 }
 
-function viaPoints(s: CrisisState, route: LatLng[] | undefined): LatLng[] {
-  if (!route || route.length < 2) return [[40.4732, -3.6195], [40.4732, -3.6195]]
-  const inner = route.slice(1, -1)
-  const vias = inner.filter((p) => s.spaces.some((sp) => Math.abs(sp.pos[0] - p[0]) < 1e-6 && Math.abs(sp.pos[1] - p[1]) < 1e-6))
-  return [route[0], ...vias, route[route.length - 1]]
+function endpoints(s: CrisisState, destId: string, route: LatLng[] | undefined, originPos?: LatLng): LatLng[] {
+  const dest = s.spaces.find((sp) => sp.id === destId)?.pos
+  const start = originPos ?? route?.[0]
+  const end = dest ?? route?.[route && route.length ? route.length - 1 : 0]
+  if (!start || !end) return [[40.4732, -3.6195], [40.4732, -3.6195]]
+  return [start, end]
 }
 
 function shuttleView(s: CrisisState, sh: Shuttle, now: number): VehicleView {
@@ -39,7 +42,9 @@ function shuttleView(s: CrisisState, sh: Shuttle, now: number): VehicleView {
   return {
     id: sh.id, kind: 'bus', name: sh.name, load: `${sh.passengers} pax`, destId: sh.destinationId, destName: spaceName(s, sh.destinationId),
     eta: sh.arriveAt, etaLabel: fmtClock(sh.arriveAt), pct: Math.round(progress(sh.departAt, sh.arriveAt, now) * 100),
-    status, tone, delayed, done: sh.status === 'llegado', waypoints: viaPoints(s, sh.route), fallback: sh.route?.length ? sh.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
+    status, tone, delayed, done: sh.status === 'llegado',
+    originName: sh.origin, originPos: sh.route?.[0],
+    waypoints: endpoints(s, sh.destinationId, sh.route), fallback: sh.route?.length ? sh.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 
@@ -50,7 +55,9 @@ function deliveryView(s: CrisisState, d: Delivery, now: number): VehicleView {
   return {
     id: d.id, kind: 'truck', name: d.name.split(' · ')[0], load: `${d.services} servicios`, destId: d.dockId, destName: spaceName(s, d.dockId),
     eta: d.arriveAt, etaLabel: fmtClock(d.arriveAt), pct: Math.round(progress(d.departAt, d.arriveAt, now) * 100),
-    status: label[d.status] ?? d.status, tone, delayed: bad, done: d.status === 'entregada', waypoints: viaPoints(s, d.route), fallback: d.route?.length ? d.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
+    status: label[d.status] ?? d.status, tone, delayed: bad, done: d.status === 'entregada',
+    originName: 'Origen', originPos: d.route?.[0],
+    waypoints: endpoints(s, d.dockId, d.route), fallback: d.route?.length ? d.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 
@@ -62,7 +69,9 @@ function otherView(s: CrisisState, v: Vehicle, now: number): VehicleView {
   return {
     id: v.id, kind, name: v.name, load, destId: v.destinationId, destName: spaceName(s, v.destinationId),
     eta: v.arriveAt, etaLabel: fmtClock(v.arriveAt), pct: v.status === 'retenido' ? Math.round(progress(v.departAt, v.arriveAt, now) * 100) : Math.round(progress(v.departAt, v.arriveAt, now) * 100),
-    status: v.note ? `${label[v.status]} · ${v.note}` : label[v.status], tone, delayed: v.status === 'retenido', done: v.status === 'llegado', waypoints: viaPoints(s, v.route), fallback: v.route?.length ? v.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
+    status: v.note ? `${label[v.status]} · ${v.note}` : label[v.status], tone, delayed: v.status === 'retenido', done: v.status === 'llegado',
+    originName: v.origin, originPos: v.route?.[0],
+    waypoints: endpoints(s, v.destinationId, v.route, v.route?.[0]), fallback: v.route?.length ? v.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
   }
 }
 

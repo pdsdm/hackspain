@@ -6,6 +6,7 @@ import { createApp } from "../src/app.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { TWIST_IDS } from "../src/contracts/api.js";
+import { nextAutoTwist, twistSequence } from "../src/domain/auto-twists.js";
 import { SimulationClock } from "../src/domain/clock.js";
 import { ControlService } from "../src/domain/control-service.js";
 import { Engine } from "../src/domain/engine.js";
@@ -93,12 +94,14 @@ test("live mode fires at most one incident per interval, never while replanning,
     clock.tick();
     await settle();
     state = states.ensureActiveRun().state;
-    assert.deepEqual(state.incidentsApplied, incidentSequence(7).slice(0, 2));
+    assert.equal((state.incidentsApplied as string[]).length, 1);
+    assert.equal((state.twistsApplied as string[]).length, 1);
 
     control.setLive(false);
     for (let index = 0; index < ticksPerInterval + 1; index += 1) clock.tick();
     await settle();
-    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 2);
+    assert.equal((states.ensureActiveRun().state.incidentsApplied as string[]).length, 1);
+    assert.equal((states.ensureActiveRun().state.twistsApplied as string[]).length, 1);
   } finally {
     clock.stop();
     database.close();
@@ -128,7 +131,7 @@ test("with an LLM the world agent invents the incident, applies its operations a
   const completeFn = async (_config: unknown, system: string) => {
     systems.push(system);
     if (system.startsWith("Eres el mundo")) {
-      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }] });
+      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }, { op: "set_place", id: "gate-oeste", status: "cerrado" }] });
     }
     return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "estable", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
   };
@@ -147,6 +150,8 @@ test("with an LLM the world agent invents the incident, applies its operations a
     assert.equal(taxi.destinationId, "accesoSur2");
     const parking = (state.spaces as Array<Record<string, unknown>>).find((item) => item.id === "parkingSur")!;
     assert.notEqual(parking.status, "confirmado");
+    const gate = (state.gates as Array<Record<string, unknown>>).find((item) => item.id === "gate-oeste")!;
+    assert.equal(gate.status, "cerrado");
     assert.ok((state.events as Array<{ kind: string; text: string }>).some((event) => event.kind === "incidencia" && event.text.includes("camión de TV")));
   } finally {
     clock.stop();
@@ -182,6 +187,38 @@ test("with an LLM in catalog mode, or when the world agent fails, the catalogue 
   } finally {
     broken.clock.stop();
     broken.database.close();
+  }
+});
+
+test("live mode fires a jury twist on the second live slot, skipping ineligible ones", async () => {
+  const { database, states, control, clock } = world();
+  try {
+    const first = nextAutoTwist(states.ensureActiveRun().state, 7);
+    assert.ok(first);
+    assert.ok((TWIST_IDS as readonly string[]).includes(first));
+    assert.notEqual(first, "reject_spend");
+    assert.deepEqual(twistSequence(7), twistSequence(7));
+    assert.notDeepEqual(twistSequence(7), twistSequence(8));
+
+    control.setLive(true, 7);
+    clock.tick();
+    await settle();
+    assert.deepEqual(states.ensureActiveRun().state.incidentsApplied, [incidentSequence(7)[0]]);
+    assert.deepEqual(states.ensureActiveRun().state.twistsApplied, []);
+
+    const run = states.ensureActiveRun();
+    const wait = structuredClone(run.state);
+    wait.coordinatorStatus = "estable";
+    wait.clock.liveLastAt = Number(wait.clock.simSeconds) - LIVE_INTERVAL_SECONDS;
+    wait.clock.liveIndex = 1;
+    states.saveState(run.id, wait);
+    clock.tick();
+    await settle();
+    const state = states.ensureActiveRun().state;
+    assert.deepEqual(state.twistsApplied, [first]);
+  } finally {
+    clock.stop();
+    database.close();
   }
 });
 

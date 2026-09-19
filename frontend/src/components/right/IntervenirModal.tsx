@@ -22,9 +22,11 @@ export function IntervenirModal({ s, onClose, onIntervene, disabled, feedback }:
         {feedback && <p role="status" className="action-feedback mb-3">{feedback}</p>}
         {pend && <p className="text-[12px] mb-3">{pend.effectApprove}</p>}
         <div className="space-y-2">
-          <Btn disabled={disabled || !pend} icon={Check} label="Aprobar gasto" sub={pend ? `${pend.title} · ${pend.cost.toLocaleString('es-ES')} €` : 'No hay decisión pendiente'} tone="text-green" onClick={() => fire({ type: 'approve_spend', payload: { decisionId: pend!.id } })} />
-          <Btn disabled={disabled || !pend} icon={Ban} label="Rechazar gasto adicional" sub="Mantener el límite autónomo de 1.500 €" tone="text-red" onClick={() => fire({ type: 'reject_spend', payload: { decisionId: pend!.id } })} />
-          <Btn disabled={disabled || !pend} icon={Split} label="No dividir la hospitalidad" sub="Buscar un único espacio para 600 (Norte C)" tone="text-amber" onClick={() => fire({ type: 'reject_split', payload: { decisionId: pend!.id } })} />
+          {pend && <>
+            <Btn disabled={disabled} icon={Check} label="Aceptar propuesta operativa" sub={pend.title} tone="text-green" onClick={() => fire({ type: 'approve_plan', payload: { decisionId: pend.id } })} />
+            <Btn disabled={disabled} icon={Ban} label="Rechazar propuesta operativa" sub="Solicitar otra solución, sin cambiar los costes registrados" tone="text-red" onClick={() => fire({ type: 'reject_plan', payload: { decisionId: pend.id } })} />
+          </>}
+          <Btn disabled={disabled || s.twistsApplied.includes('reject_split')} icon={Split} label="No dividir la hospitalidad" sub="Buscar un único espacio para 600 (Norte C)" tone="text-amber" onClick={() => fire({ type: 'reject_split' })} />
           {s.agentsPaused
             ? <Btn disabled={disabled} icon={Play} label="Reanudar agentes" sub="Los agentes retoman sus tareas" tone="text-ink" onClick={() => fire({ type: 'resume' })} />
             : <Btn disabled={disabled} icon={Pause} label="Pausar nuevas acciones" sub="Los agentes no inician nuevas llamadas ni reservas" tone="text-ink" onClick={() => fire({ type: 'pause' })} />}

@@ -127,7 +127,7 @@ test("verified acceptance confirms only the bound space and never guest coverage
 });
 
 for (const [name, prepare] of Object.entries<Record<string, (state: CrisisStateDocument) => void>[string]>({
-  budget: (state) => { state.budget.authorized = 1500; },
+
   decision: (state) => { state.waitingForDecision = "pending-approval"; },
   conditions: (state) => { state.commitments.find((item) => item.id === "c-pabB")!.conditions = ["Montaje pendiente"]; },
 })) {
@@ -299,7 +299,8 @@ for (const change of ["reset", "plan", "invalidate", "cancel", "capacity", "budg
       }
       release();
       const result = await pending;
-      assert.notEqual(commitment(h).status, "confirmado");
+      if (change === "budget") assert.equal(commitment(h).status, "confirmado");
+      else assert.notEqual(commitment(h).status, "confirmado");
       if (change === "invalidate") assert.equal(commitment(h).status, "invalidado");
       if (["reset", "plan", "cancel"].includes(change)) {
         assert.equal(result.applied, false);

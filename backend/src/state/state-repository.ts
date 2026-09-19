@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 import type { DatabaseSync } from "node:sqlite";
 
+import { notifyRemote } from "./database.js";
+
 import type { InitialFixture } from "../config.js";
 import {
   parseCrisisState,
@@ -74,6 +76,7 @@ export class StateRepository {
       throw error;
     }
 
+    notifyRemote(this.database);
     return { id, scenarioId, state: parsed };
   }
 
@@ -94,6 +97,7 @@ export class StateRepository {
     if (result.changes !== 1) {
       throw new Error(`Active demo run not found: ${runId}`);
     }
+    notifyRemote(this.database);
   }
 
   savePlan(
@@ -138,6 +142,7 @@ export class StateRepository {
       this.database.exec("ROLLBACK");
       throw error;
     }
+    notifyRemote(this.database);
   }
 
   getPublicState(): CrisisStateDocument {
