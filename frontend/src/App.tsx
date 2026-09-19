@@ -7,6 +7,7 @@ import { NavTabs } from './components/layout/NavTabs'
 import { OperacionesPanel } from './components/left/OperacionesPanel'
 import { IncidenciaCard } from './components/left/IncidenciaCard'
 import { PresupuestoCard } from './components/left/PresupuestoCard'
+import { AforoCard } from './components/left/AforoCard'
 import { CrisisMap } from './components/map/CrisisMap'
 import { EstadoGlobal } from './components/center/EstadoGlobal'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
@@ -39,9 +40,10 @@ export default function App() {
       )}
 
       <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_372px] gap-5 px-6 pt-5 pb-6">
-        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto">
+        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto [&>*]:flex-none">
           <OperacionesPanel s={s} onSelect={ctl.select} selected={s.selectedId} />
           <IncidenciaCard s={s} />
+          <AforoCard s={s} />
           <div className="flex-1" />
           <PresupuestoCard s={s} />
         </aside>
@@ -53,7 +55,7 @@ export default function App() {
           <EstadoGlobal s={s} />
         </section>
 
-        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto">
+        <aside className="flex flex-col gap-5 min-h-0 overflow-y-auto [&>*]:flex-none">
           <DecisionCard d={decision} authorized={s.budget.authorized} onApprove={() => ctl.intervene({ type: 'approve_spend' })} onReject={() => ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend' })} />
           <CoordinadorPanel s={s} />
           <LlamadaCard s={s} call={call} onTake={() => ctl.intervene({ type: 'take_call' })} />

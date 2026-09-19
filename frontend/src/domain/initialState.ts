@@ -13,6 +13,10 @@ export const POS = {
   muelleSur: [40.4645, -3.6245] as LatLng,
   muelleEste: [40.4700, -3.6150] as LatLng,
   esperaSur: [40.4645, -3.6150] as LatLng,
+  gateNorte: [40.4829, -3.6160] as LatLng,
+  gateSur: [40.4631, -3.6158] as LatLng,
+  gateEste: [40.4625, -3.6112] as LatLng,
+  gateOeste: [40.4690, -3.6262] as LatLng,
   chamartin: [40.4728, -3.6826] as LatLng,
   castilla: [40.4666, -3.6892] as LatLng,
   t4: [40.4919, -3.5928] as LatLng,
@@ -91,6 +95,13 @@ export function createInitialState(): CrisisState {
     deliveries: [
       { id: 'CAT-01', name: 'CAT-01 · 360 servicios', services: 360, dockId: 'muelleSur', route: routeCoslada, departAt: hm(12, 5), arriveAt: hm(12, 40), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
       { id: 'CAT-02', name: 'CAT-02 · 240 servicios', services: 240, dockId: 'muelleSur', route: routeCoslada, departAt: hm(12, 30), arriveAt: hm(13, 5), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
+    ],
+    attendanceExpected: 110000,
+    gates: [
+      { id: 'gate-norte', name: 'Puerta Norte · Valdebebas', zone: 'norte', pos: POS.gateNorte, capacity: 38000, entered: 16800, waiting: 1900, arrivalsPerMin: 520, throughputPerMin: 560, status: 'abierto' },
+      { id: 'gate-sur', name: 'Puerta Sur · Feria de Madrid', zone: 'sur', pos: POS.gateSur, capacity: 42000, entered: 19600, waiting: 4300, arrivalsPerMin: 640, throughputPerMin: 480, status: 'saturado' },
+      { id: 'gate-este', name: 'Puerta Este · Campo de las Naciones', zone: 'sur', pos: POS.gateEste, capacity: 18000, entered: 7200, waiting: 650, arrivalsPerMin: 230, throughputPerMin: 260, status: 'abierto' },
+      { id: 'gate-oeste', name: 'Puerta Oeste · Ribera del Sena', zone: 'sur', pos: POS.gateOeste, capacity: 12000, entered: 4100, waiting: 300, arrivalsPerMin: 150, throughputPerMin: 180, status: 'abierto' },
     ],
     guestGroups: [
       { id: 'g-acceso', name: 'En control de acceso Sur', count: 90, where: 'Acceso Sur', confirmedCount: 0, informedCount: 0, acceptedCount: 0 },
