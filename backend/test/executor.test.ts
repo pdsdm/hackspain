@@ -99,7 +99,11 @@ test("a dispatched task without callback times out as no_answer", async () => {
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  let dispatched: { url: string; init: RequestInit } | undefined;
+  globalThis.fetch = (async (input, init) => {
+    dispatched = { url: String(input), init: init ?? {} };
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
   try {
     const run = states.ensureActiveRun();
     const task = tasks.enqueue({
@@ -113,6 +117,15 @@ test("a dispatched task without callback times out as no_answer", async () => {
     executor.pump();
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(tasks.get(task.id)?.status, "dispatched");
+    assert.ok(dispatched);
+    assert.equal(dispatched.url, "http://hook.test/transporte");
+    assert.equal(new Headers(dispatched.init.headers).get("Authorization"), "Bearer key");
+    const payload = JSON.parse(String(dispatched.init.body)) as Record<string, unknown>;
+    assert.equal(payload.taskId, task.id);
+    assert.equal(payload.runId, run.id);
+    assert.equal(payload.planVersion, run.state.planVersion);
+    // T9: el workflow contesta por la puerta traducida, no por la estricta del contrato.
+    assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
     const now = Number(run.state.clock.simSeconds);
     executor.fireDue(now + 60);
     assert.equal(tasks.get(task.id)?.status, "dispatched");

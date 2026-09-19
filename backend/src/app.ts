@@ -28,6 +28,7 @@ import { TaskRepository } from "./state/task-repository.js";
 import { WorkflowEventRepository } from "./state/workflow-event-repository.js";
 import { loadWorld } from "./world/world.js";
 import type { CompleteFn } from "./agents/coordinator/loop.js";
+import { logWorkflow } from "./log.js";
 
 export interface AppOptions {
   workflowToken: string | undefined;
@@ -219,6 +220,13 @@ export function createApp(
 
   const recordResult = (envelope: SpecialistResultEnvelope, response: Response) => {
     const recorded = workflowService.recordSpecialistResult(envelope);
+    logWorkflow("result", {
+      taskId: envelope.taskId,
+      eventId: envelope.eventId,
+      status: envelope.status,
+      applied: recorded.applied,
+      duplicate: recorded.duplicate,
+    });
     if (recorded.applied) {
       void engine.handle({
         source: "happyrobot",

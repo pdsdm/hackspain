@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
-import { logAction, logActionError } from "../../log.js";
 import type { CrisisStateDocument } from "../../domain/crisis-state.js";
+import { logAction, logActionError } from "../../log.js";
 import type { DispatchTask } from "../../state/task-repository.js";
 
 const SEED_URL = new URL("../../../fixtures/madring/seed.json", import.meta.url);
@@ -108,13 +108,25 @@ export async function dispatchHappyRobot(input: {
     if (!response.ok) {
       // Sin esta traza, un hook mal configurado se veía igual que una contraparte que no
       // coge el teléfono: la tarea quedaba en "unknown" y nadie sabía por qué.
-      logActionError(`hook de ${input.task.area} respondió ${response.status} ${response.statusText}`);
+      logActionError("happyrobot rejected", {
+        taskId: input.task.id,
+        area: input.task.area,
+        status: response.status,
+      });
       return "unknown";
     }
-    logAction(`despachada ${input.task.area} ${input.task.kind} ${input.task.id} por HappyRobot`);
+    logAction("happyrobot accepted", {
+      taskId: input.task.id,
+      area: input.task.area,
+      status: response.status,
+    });
     return "dispatched";
   } catch (error) {
-    logActionError(`hook de ${input.task.area} falló:`, error instanceof Error ? error.message : error);
+    logActionError("happyrobot request failed", {
+      taskId: input.task.id,
+      area: input.task.area,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return "unknown";
   }
 }

@@ -17,3 +17,7 @@ export function logAction(...parts: unknown[]): void {
 export function logActionError(...parts: unknown[]): void {
   console.error("[actions]", ...parts);
 }
+
+export function logWorkflow(...parts: unknown[]): void {
+  console.log("[workflow]", ...parts);
+}
