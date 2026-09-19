@@ -103,8 +103,10 @@ function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
       break;
     }
     case "reject_spend": {
-      const pending = state.decisions.find((decision) => decision.status === "pendiente");
-      if (pending) pending.status = "rechazada";
+      const pending =
+        (typeof state.waitingForDecision === "string" ? findById(state.decisions, state.waitingForDecision) : undefined) ??
+        state.decisions.find((decision) => decision.status === "pendiente");
+      if (pending && pending.status === "pendiente") pending.status = "rechazada";
       state.waitingForDecision = null;
       addEvent(state, "intervencion", "El responsable rechaza el gasto adicional");
       break;
