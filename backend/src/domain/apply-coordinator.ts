@@ -173,7 +173,7 @@ export function applyOperation(
         return { ok: false, error: `spawn_vehicle: ya existe ${id}; usa redirect_vehicle` };
       }
       const kind = operation.kind ?? "repartidor";
-      if (!["taxi", "vip", "repartidor"].includes(kind)) {
+      if (!["taxi", "vip", "repartidor", "bus"].includes(kind)) {
         return { ok: false, error: `spawn_vehicle: kind desconocido ${kind}` };
       }
       const delayMin = operation.delayMin ?? 0;

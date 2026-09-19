@@ -883,6 +883,906 @@
       "delayMin": 0,
       "status": "en_ruta",
       "counterpart": "Repartidor REP-02"
+    },
+    {
+      "id": "TX-05",
+      "kind": "taxi",
+      "name": "TX-05",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "atocha",
+      "origin": "Estación de Atocha",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4065,
+          -3.6895
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 42900,
+      "arriveAt": 44460,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A1",
+      "kind": "bus",
+      "name": "BUS-A1",
+      "who": "Autocar · peña Aston Martin",
+      "count": 38,
+      "from": "alcala",
+      "origin": "Alcalá de Henares",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.482,
+          -3.364
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 46500,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Autocares Henares"
+    },
+    {
+      "id": "VIP-04",
+      "kind": "vip",
+      "name": "VIP-04",
+      "who": "Director deportivo · Ferrari",
+      "count": 2,
+      "from": "colon",
+      "origin": "Plaza de Colón",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.425,
+          -3.69
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 44100,
+      "arriveAt": 45540,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-04"
+    },
+    {
+      "id": "REP-03",
+      "kind": "repartidor",
+      "name": "REP-03",
+      "who": "Merchandising · última hora",
+      "count": 1,
+      "from": "vicalvaro",
+      "origin": "Vicálvaro",
+      "destinationId": "muelleNorte",
+      "route": [
+        [
+          40.402,
+          -3.606
+        ],
+        [
+          40.4755,
+          -3.6246
+        ]
+      ],
+      "departAt": 44700,
+      "arriveAt": 46200,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-03"
+    },
+    {
+      "id": "TX-06",
+      "kind": "taxi",
+      "name": "TX-06",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "moncloa",
+      "origin": "Moncloa",
+      "destinationId": "accesoSur2",
+      "route": [
+        [
+          40.435,
+          -3.719
+        ],
+        [
+          40.4668,
+          -3.6125
+        ]
+      ],
+      "departAt": 45600,
+      "arriveAt": 47220,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A2",
+      "kind": "bus",
+      "name": "BUS-A2",
+      "who": "Minibús · patrocinador Iberia",
+      "count": 16,
+      "from": "barajasT1",
+      "origin": "Aeropuerto T1",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.473,
+          -3.576
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 45765,
+      "arriveAt": 46965,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Iberia Ground"
+    },
+    {
+      "id": "TX-07",
+      "kind": "taxi",
+      "name": "TX-07",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "alcobendas",
+      "origin": "Alcobendas",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.541,
+          -3.641
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 45930,
+      "arriveAt": 47490,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "VIP-05",
+      "kind": "vip",
+      "name": "VIP-05",
+      "who": "Piloto reserva · McLaren",
+      "count": 1,
+      "from": "nuevosMinisterios",
+      "origin": "Nuevos Ministerios",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.446,
+          -3.6915
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 46095,
+      "arriveAt": 47415,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-05"
+    },
+    {
+      "id": "REP-04",
+      "kind": "repartidor",
+      "name": "REP-04",
+      "who": "Equipo audiovisual",
+      "count": 1,
+      "from": "sanFernando",
+      "origin": "San Fernando de Henares",
+      "destinationId": "muelleEste",
+      "route": [
+        [
+          40.423,
+          -3.533
+        ],
+        [
+          40.47,
+          -3.615
+        ]
+      ],
+      "departAt": 46260,
+      "arriveAt": 47760,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-04"
+    },
+    {
+      "id": "TX-08",
+      "kind": "taxi",
+      "name": "TX-08",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "tresCantos",
+      "origin": "Tres Cantos",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.602,
+          -3.708
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 46425,
+      "arriveAt": 48945,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A3",
+      "kind": "bus",
+      "name": "BUS-A3",
+      "who": "Autocar · club de fans",
+      "count": 42,
+      "from": "torrejon",
+      "origin": "Torrejón de Ardoz",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.456,
+          -3.476
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 46590,
+      "arriveAt": 48450,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Autocares Henares"
+    },
+    {
+      "id": "VIP-06",
+      "kind": "vip",
+      "name": "VIP-06",
+      "who": "Consejero delegado · patrocinador",
+      "count": 3,
+      "from": "lasTablas",
+      "origin": "Las Tablas",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.508,
+          -3.668
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 46755,
+      "arriveAt": 47955,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-06"
+    },
+    {
+      "id": "TX-09",
+      "kind": "taxi",
+      "name": "TX-09",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "sanse",
+      "origin": "San Sebastián de los Reyes",
+      "destinationId": "accesoSur2",
+      "route": [
+        [
+          40.547,
+          -3.626
+        ],
+        [
+          40.4668,
+          -3.6125
+        ]
+      ],
+      "departAt": 46920,
+      "arriveAt": 48480,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "REP-05",
+      "kind": "repartidor",
+      "name": "REP-05",
+      "who": "Hielo adicional",
+      "count": 1,
+      "from": "canillejas",
+      "origin": "Canillejas",
+      "destinationId": "muelleNorte",
+      "route": [
+        [
+          40.447,
+          -3.61
+        ],
+        [
+          40.4755,
+          -3.6246
+        ]
+      ],
+      "departAt": 47085,
+      "arriveAt": 48285,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-05"
+    },
+    {
+      "id": "TX-10",
+      "kind": "taxi",
+      "name": "TX-10",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "sanchinarro",
+      "origin": "Sanchinarro",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.494,
+          -3.656
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 47250,
+      "arriveAt": 48450,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A4",
+      "kind": "bus",
+      "name": "BUS-A4",
+      "who": "Minibús · prensa acreditada",
+      "count": 14,
+      "from": "atocha",
+      "origin": "Estación de Atocha",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.4065,
+          -3.6895
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 47415,
+      "arriveAt": 49095,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Prensa GP"
+    },
+    {
+      "id": "VIP-07",
+      "kind": "vip",
+      "name": "VIP-07",
+      "who": "Embajador de marca",
+      "count": 2,
+      "from": "arturoSoria",
+      "origin": "Arturo Soria",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.456,
+          -3.642
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 47580,
+      "arriveAt": 48780,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-07"
+    },
+    {
+      "id": "TX-11",
+      "kind": "taxi",
+      "name": "TX-11",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "vicalvaro",
+      "origin": "Vicálvaro",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.402,
+          -3.606
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 47745,
+      "arriveAt": 49065,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "REP-06",
+      "kind": "repartidor",
+      "name": "REP-06",
+      "who": "Uniformes de recepción",
+      "count": 1,
+      "from": "alcala",
+      "origin": "Alcalá de Henares",
+      "destinationId": "muelleNorte",
+      "route": [
+        [
+          40.482,
+          -3.364
+        ],
+        [
+          40.4755,
+          -3.6246
+        ]
+      ],
+      "departAt": 47910,
+      "arriveAt": 51030,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-06"
+    },
+    {
+      "id": "TX-12",
+      "kind": "taxi",
+      "name": "TX-12",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "colon",
+      "origin": "Plaza de Colón",
+      "destinationId": "accesoSur2",
+      "route": [
+        [
+          40.425,
+          -3.69
+        ],
+        [
+          40.4668,
+          -3.6125
+        ]
+      ],
+      "departAt": 48075,
+      "arriveAt": 49515,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A5",
+      "kind": "bus",
+      "name": "BUS-A5",
+      "who": "Autocar · escuela de pilotos",
+      "count": 30,
+      "from": "tresCantos",
+      "origin": "Tres Cantos",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.602,
+          -3.708
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 48240,
+      "arriveAt": 50820,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Autocares Sierra"
+    },
+    {
+      "id": "VIP-08",
+      "kind": "vip",
+      "name": "VIP-08",
+      "who": "Director de circuito invitado",
+      "count": 2,
+      "from": "barajasT1",
+      "origin": "Aeropuerto T1",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.473,
+          -3.576
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 48405,
+      "arriveAt": 49605,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-08"
+    },
+    {
+      "id": "TX-13",
+      "kind": "taxi",
+      "name": "TX-13",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "moncloa",
+      "origin": "Moncloa",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.435,
+          -3.719
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 48570,
+      "arriveAt": 50190,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "REP-07",
+      "kind": "repartidor",
+      "name": "REP-07",
+      "who": "Cartelería de emergencia",
+      "count": 1,
+      "from": "torrejon",
+      "origin": "Torrejón de Ardoz",
+      "destinationId": "muelleNorte",
+      "route": [
+        [
+          40.456,
+          -3.476
+        ],
+        [
+          40.4755,
+          -3.6246
+        ]
+      ],
+      "departAt": 48735,
+      "arriveAt": 50775,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-07"
+    },
+    {
+      "id": "TX-14",
+      "kind": "taxi",
+      "name": "TX-14",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "sanchinarro",
+      "origin": "Sanchinarro",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.494,
+          -3.656
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 48900,
+      "arriveAt": 50100,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A6",
+      "kind": "bus",
+      "name": "BUS-A6",
+      "who": "Minibús · patrocinador Santander",
+      "count": 18,
+      "from": "alcobendas",
+      "origin": "Alcobendas",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.541,
+          -3.641
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 49065,
+      "arriveAt": 50385,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Santander Events"
+    },
+    {
+      "id": "VIP-09",
+      "kind": "vip",
+      "name": "VIP-09",
+      "who": "Invitado institucional",
+      "count": 3,
+      "from": "sanFernando",
+      "origin": "San Fernando de Henares",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.423,
+          -3.533
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 49230,
+      "arriveAt": 50910,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-09"
+    },
+    {
+      "id": "TX-15",
+      "kind": "taxi",
+      "name": "TX-15",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "lasTablas",
+      "origin": "Las Tablas",
+      "destinationId": "accesoSur2",
+      "route": [
+        [
+          40.508,
+          -3.668
+        ],
+        [
+          40.4668,
+          -3.6125
+        ]
+      ],
+      "departAt": 49395,
+      "arriveAt": 50655,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "TX-16",
+      "kind": "taxi",
+      "name": "TX-16",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "nuevosMinisterios",
+      "origin": "Nuevos Ministerios",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.446,
+          -3.6915
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 49560,
+      "arriveAt": 50880,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A7",
+      "kind": "bus",
+      "name": "BUS-A7",
+      "who": "Autocar · concesionario oficial",
+      "count": 26,
+      "from": "sanse",
+      "origin": "San Sebastián de los Reyes",
+      "destinationId": "parkingSur",
+      "route": [
+        [
+          40.547,
+          -3.626
+        ],
+        [
+          40.4618,
+          -3.6135
+        ]
+      ],
+      "departAt": 49725,
+      "arriveAt": 51345,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Autocares Sierra"
+    },
+    {
+      "id": "VIP-10",
+      "kind": "vip",
+      "name": "VIP-10",
+      "who": "Jefe de prensa · Red Bull",
+      "count": 2,
+      "from": "canillejas",
+      "origin": "Canillejas",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.447,
+          -3.61
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 49890,
+      "arriveAt": 51090,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-10"
+    },
+    {
+      "id": "REP-08",
+      "kind": "repartidor",
+      "name": "REP-08",
+      "who": "Repuesto de sonido",
+      "count": 1,
+      "from": "arturoSoria",
+      "origin": "Arturo Soria",
+      "destinationId": "muelleNorte",
+      "route": [
+        [
+          40.456,
+          -3.642
+        ],
+        [
+          40.4755,
+          -3.6246
+        ]
+      ],
+      "departAt": 50055,
+      "arriveAt": 51255,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-08"
+    },
+    {
+      "id": "TX-17",
+      "kind": "taxi",
+      "name": "TX-17",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "atocha",
+      "origin": "Estación de Atocha",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4065,
+          -3.6895
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 50220,
+      "arriveAt": 51780,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "BUS-A8",
+      "kind": "bus",
+      "name": "BUS-A8",
+      "who": "Minibús · hotel oficial",
+      "count": 12,
+      "from": "colon",
+      "origin": "Plaza de Colón",
+      "destinationId": "parkingNorte",
+      "route": [
+        [
+          40.425,
+          -3.69
+        ],
+        [
+          40.4808,
+          -3.6232
+        ]
+      ],
+      "departAt": 50385,
+      "arriveAt": 51885,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Hotel Oficial GP"
+    },
+    {
+      "id": "TX-18",
+      "kind": "taxi",
+      "name": "TX-18",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "vicalvaro",
+      "origin": "Vicálvaro",
+      "destinationId": "accesoSur2",
+      "route": [
+        [
+          40.402,
+          -3.606
+        ],
+        [
+          40.4668,
+          -3.6125
+        ]
+      ],
+      "departAt": 50550,
+      "arriveAt": 51870,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "VIP-11",
+      "kind": "vip",
+      "name": "VIP-11",
+      "who": "Expiloto invitado",
+      "count": 1,
+      "from": "moncloa",
+      "origin": "Moncloa",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.435,
+          -3.719
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 50715,
+      "arriveAt": 52335,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-11"
     }
   ],
   "attendanceExpected": 110000,

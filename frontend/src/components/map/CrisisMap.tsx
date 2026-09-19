@@ -175,7 +175,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
         <Pane name="routes" style={{ zIndex: 470 }}>
           {vehicles.map((v) => {
             if (!vehicleVisible(v, layers)) return null
-            const path = routes[v.id] ?? v.fallback
+            const path = routes[v.id]
             if (!path || path.length < 2) return null
             const lit = hover === v.id || hover === v.destId || selected === v.id
             const color = v.kind === 'truck' || v.kind === 'van' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
@@ -194,7 +194,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
         </Pane>
         {vehicles.map((v) => {
           if (!vehicleVisible(v, layers)) return null
-          const path = routes[v.id] ?? v.fallback
+          const path = routes[v.id]
           if (!path || path.length < 2) return null
           const pos = pointAlong(path, v.pct / 100)
           const lit = hover === v.id || hover === v.destId || selected === v.id

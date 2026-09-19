@@ -62,10 +62,10 @@ function deliveryView(s: CrisisState, d: Delivery, now: number): VehicleView {
 }
 
 function otherView(s: CrisisState, v: Vehicle, now: number): VehicleView {
-  const kind: VehicleIconKind = v.kind === 'taxi' ? 'taxi' : v.kind === 'vip' ? 'vip' : 'van'
+  const kind: VehicleIconKind = v.kind === 'taxi' ? 'taxi' : v.kind === 'vip' ? 'vip' : v.kind === 'bus' ? 'bus' : 'van'
   const label: Record<Vehicle['status'], string> = { en_ruta: 'En ruta', retenido: 'Retenido', desviado: 'Desviado · nueva ruta', llegado: 'Llegado' }
   const tone = v.status === 'llegado' ? 'green' : v.status === 'retenido' ? 'red' : v.status === 'desviado' ? 'amber' : 'ink'
-  const load = v.kind === 'repartidor' ? v.who : `${v.count} · ${v.who}`
+  const load = v.kind === 'repartidor' ? v.who : v.kind === 'bus' ? `${v.count} pax · ${v.who}` : `${v.count} · ${v.who}`
   return {
     id: v.id, kind, name: v.name, load, destId: v.destinationId, destName: spaceName(s, v.destinationId),
     eta: v.arriveAt, etaLabel: fmtClock(v.arriveAt), pct: v.status === 'retenido' ? Math.round(progress(v.departAt, v.arriveAt, now) * 100) : Math.round(progress(v.departAt, v.arriveAt, now) * 100),
