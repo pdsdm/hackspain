@@ -10,7 +10,8 @@ export type TaskStatus =
   | "dispatched"
   | "unknown"
   | "completed"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export interface DispatchTask {
   id: string;
@@ -86,6 +87,29 @@ export class TaskRepository {
       .prepare("SELECT * FROM dispatch_tasks WHERE id = ?")
       .get(taskId) as unknown as TaskRow | undefined;
     return row ? this.toTask(row) : undefined;
+  }
+
+  listOpen(runId: string): DispatchTask[] {
+    const rows = this.database
+      .prepare(`
+        SELECT * FROM dispatch_tasks
+        WHERE run_id = ?
+          AND status IN ('pending', 'dispatching', 'dispatched')
+        ORDER BY created_at, id
+      `)
+      .all(runId) as unknown as TaskRow[];
+    return rows.map((row) => this.toTask(row));
+  }
+
+  cancel(taskId: string, _reason: string): boolean {
+    const result = this.database
+      .prepare(`
+        UPDATE dispatch_tasks
+        SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status IN ('pending', 'dispatching')
+      `)
+      .run(taskId);
+    return result.changes === 1;
   }
 
   claimNext(): DispatchTask | undefined {
