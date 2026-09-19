@@ -28,6 +28,7 @@ export const POS = {
   castilla: [40.4666, -3.6892] as LatLng,
   t4: [40.4919, -3.5928] as LatLng,
   coslada: [40.4405, -3.5850] as LatLng,
+  dealerMclaren: [40.5414, -3.6419] as LatLng,
 }
 
 export const ZONE_SUR: LatLng[] = [

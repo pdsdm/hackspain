@@ -261,7 +261,7 @@ export function buildMadringFixtures() {
     vehicles: (base.vehicles ?? []).map((v) => ({ id: v.id, kind: v.kind, who: v.who, count: v.count, from: v.from, destinationId: v.destinationId, departAt: v.departAt, arriveAt: v.arriveAt, contactRef: v.kind === 'taxi' ? 'test-taxi-dispatch' : v.kind === 'vip' ? 'test-vip-transport' : 'test-courier' })),
     receptionStaff: Array.from({ length: 6 }, (_, i) => ({ id: `staff-${i + 1}`, zone: 'sur', assignedTask: null })),
     transfers: [{ id: 'sur-norte-external', from: 'accesoSur', to: 'accesoNorte', via: 'external', route: ROUTE_NORTE_FROM_SUR, driveMinutes: 15, boardingMinutes: 10, alightingMinutes: 5, status: 'unconfirmed', confirmedTrips: [], requiresNorthAccess: true }],
-    contacts: ['venue-manager', 'catering-manager', 'transport-manager', 'reception-manager', 'organizer', 'taxi-dispatch', 'vip-transport', 'courier'].map((role) => ({ id: `test-${role}`, role, phone: null, email: null })),
+    contacts: ['venue-manager', 'catering-manager', 'transport-manager', 'reception-manager', 'organizer', 'taxi-dispatch', 'vip-transport', 'courier', 'dhl'].map((role) => ({ id: `test-${role}`, role, phone: null, email: null })),
   };
   const world = buildWorld(seed);
   const manifest = {
@@ -330,7 +330,8 @@ function buildWorld(seed: SeedShape) {
     { id: 'chamartin', name: 'Chamartín', kind: 'parada' as const, zone: null, pos: POS.chamartin },
     { id: 'castilla', name: 'Plaza de Castilla', kind: 'parada' as const, zone: null, pos: POS.castilla },
     { id: 't4', name: 'Aeropuerto T4', kind: 'parada' as const, zone: null, pos: POS.t4 },
-    { id: 'coslada', name: 'Coslada', kind: 'parada' as const, zone: null, pos: POS.coslada },
+    { id: 'coslada', name: 'Hub DHL Coslada', kind: 'parada' as const, zone: null, pos: POS.coslada },
+    { id: 'dealerMclaren', name: 'Concesionario McLaren Madrid', kind: 'parada' as const, zone: null, pos: POS.dealerMclaren },
   ];
 
   const links: Array<{
