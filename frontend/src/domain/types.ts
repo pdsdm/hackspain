@@ -92,6 +92,11 @@ export interface Gate {
   arrivalsPerMin: number
   throughputPerMin: number
   status: GateStatus
+  arrivalProfile?: { at: number; perMin: number }[]
+  baseArrivalsPerMin?: number
+  burstUntil?: number
+  burstPerMin?: number
+  lastSaturationAt?: number
 }
 
 export interface GuestGroup {

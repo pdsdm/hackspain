@@ -232,6 +232,23 @@ export class ControlService {
     this.states.saveState(run.id, state);
   }
 
+  applyGateSaturation(gateId: string): void {
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    const gates = records(state, "gates");
+    const gate = findById(gates, gateId);
+    if (!gate) throw new ContractError(`Unknown gate: ${gateId}`, 400);
+    const closed = gates.find((item) => item.zone === gate.zone && item.id !== gate.id && item.status === "cerrado");
+    if (closed) {
+      closed.status = "abierto";
+      addEvent(state, "accion", `Regla: abre ${String(closed.name ?? closed.id)} para descargar ${String(gate.name ?? gate.id)}`, "asistentes");
+    } else {
+      addEvent(state, "info", `Sin acceso cerrado en zona ${String(gate.zone)}; el coordinador decide cómo descargar ${String(gate.name ?? gate.id)}`, "asistentes");
+    }
+    state.gates = gates;
+    this.states.saveState(run.id, state);
+  }
+
   reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
     const run = this.states.reset(fixture);
     return { runId: run.id, planVersion: run.state.planVersion };
