@@ -3,6 +3,7 @@ import test from "node:test";
 import { useAcceptingSeed } from "./sim-support.js";
 
 import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
+import { dispatchHappyRobot } from "../src/actions/adapters/happyrobot.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
@@ -175,6 +176,51 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(calls[0]?.status, "sin_respuesta");
     const agent = (states.ensureActiveRun().state.agents as Array<Record<string, unknown>>).find((a) => a.id === "transporte");
     assert.equal(agent?.status, "incidencia");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("HappyRobot receives an explicit call, sms or email channel", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const run = states.ensureActiveRun();
+  const originalFetch = globalThis.fetch;
+  const sent: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input, init) => {
+    sent.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+  try {
+    for (const kind of ["call", "sms", "email"] as const) {
+      await dispatchHappyRobot({
+        hookUrl: "http://hook.test/asistentes",
+        apiKey: "key",
+        task: {
+          id: `task-${kind}`,
+          runId: run.id,
+          planVersion: run.state.planVersion,
+          area: "asistentes",
+          kind,
+          payload: { objective: "Avisar del destino vigente", counterpart: "Invitado de prueba" },
+          idempotencyKey: `channel-${kind}`,
+          status: "dispatching",
+          attempts: 1,
+        },
+        runId: run.id,
+        planVersion: run.state.planVersion,
+        callId: `call-task-${kind}`,
+        publicBaseUrl: "http://localhost:8000",
+        testPhone: "+34600000000",
+        state: run.state,
+      });
+    }
+    assert.deepEqual(sent.map((payload) => [payload.kind, payload.channel]), [
+      ["call", "call"],
+      ["sms", "sms"],
+      ["email", "email"],
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
     database.close();

@@ -34,6 +34,17 @@ Hecho en `fix/zhi-demo-readiness`:
 - `verificationTarget` fuera de la demo no invalida el plan y las operaciones `set_place`
   sobre ids `gate-*` se normalizan a `set_gate`.
 
+Correcciones técnicas de `feat/zhi-demo-gaps`:
+
+- Un resultado aceptado de Espacios fusiona condiciones nuevas y aplica `capacity`/`readyAt`
+  válidos al ID exacto. Solo un cambio material vigente relanza el coordinador una vez.
+- Duplicados, callbacks obsoletos, rechazos, `no_answer`, IDs ajenos y datos inválidos no
+  mutan recursos ni generan otra reconsideración.
+- `resolved` exige plazas confirmadas, condiciones resueltas, aforo y acceso operativo. El
+  panel separa sede asignada de plaza confirmada y muestra el desenlace condicionado.
+- El payload saliente a HappyRobot incluye `kind` y `channel` para `call`, `sms` y `email`;
+  esto no acredita envío ni entrega real.
+
 Pendiente para cerrar T17:
 
 - Repetir en una sola ejecución `evento → Helmcode → llamada HappyRobot real → callback →
