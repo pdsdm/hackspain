@@ -5,9 +5,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 19:01 CEST |
-| **Commit de `main`** | `4e63383` (PR #63) |
-| **Trabajo verificado** | `fix/zhi-clean-deploy-state`, T42, sobre ese commit |
+| **Foto tomada** | 19 de septiembre de 2026, 19:05 CEST |
+| **Commit de `main`** | `3450107` (PR #64) |
+| **Trabajo verificado** | T42 en Vercel y Railway de producción |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -37,13 +37,10 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
   económica ni doble cargo.
 - T18 local: frontend API, SQLite persistente, reset, reinicio y parada.
 - T39: mapa a pantalla completa, paneles flotantes y cronología tipo chat.
-
-### En `fix/zhi-clean-deploy-state`, pendiente de revisión
-
-- T42 usa `RAILWAY_DEPLOYMENT_ID` para crear una ejecución `calm` nueva por deployment.
-- El run empieza a las 12:00, pausado, sin eventos, llamadas, decisiones ni tareas abiertas.
-- Reiniciar el mismo deployment conserva el run; los anteriores quedan inactivos en SQLite.
-- La prueba de proceso mantuvo `simSeconds=43200` durante tres segundos y `/actions` vacío.
+- T42 (PR #64): cada deployment de Railway crea un run `calm` nuevo; reiniciar el mismo
+  deployment lo conserva y mantiene los anteriores inactivos en SQLite.
+- Producción validada: `simSeconds=43200` estable durante tres segundos, reloj pausado,
+  `planVersion=1`, coordinador estable y cero eventos, llamadas, decisiones o acciones.
 - README documenta frontend Vercel, backend Railway, healthcheck y volumen SQLite.
 
 ### En `fix/zhi-demo-readiness`, aún sin mergear
@@ -59,12 +56,7 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 
 ## Qué falta, por riesgo para la demo
 
-### 1. Validar T42 en Railway
-
-Mergear la rama y comprobar que el nuevo deployment deja `/state` en `planVersion=1`,
-`clock.paused=true`, `simSeconds=43200` y cero eventos, llamadas, decisiones y acciones.
-
-### 2. T17 con servicios reales — Zhi (`doing`)
+### 1. T17 con servicios reales — Zhi (`doing`)
 
 El recorrido automatizado pasa. Helmcode real aplicó la política nueva en una instancia
 aislada: cero decisiones económicas y despacho inmediato. Esa prueba detectó callbacks
@@ -75,13 +67,13 @@ Para cerrar T17 falta repetir el recorrido completo con actor HappyRobot control
 callback y giro. El usuario informó de una primera llamada real previa, pero no se verificó
 en esta foto el recorrido completo tras el fix.
 
-### 3. T18 ensayo completo — Zhi (`doing`)
+### 2. T18 ensayo completo — Zhi (`doing`)
 
 Se verificaron `/health` y `/state` públicos por Quick Tunnel, autenticación del callback,
 persistencia SQLite, seed y velocidad tras reinicio. Falta un ensayo completo que incluya
 T17 real y recuperación operativa.
 
-### 4. Integraciones del equipo
+### 3. Integraciones del equipo
 
 - El prompt y extractor desplegados en HappyRobot deben reflejar costes informativos y
   `result.data.committedCost` (sin verificar).
@@ -115,9 +107,8 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 
 ## Ramas vivas sin mergear
 
-- `fix/zhi-clean-deploy-state`: T42 implementada y verificada, pendiente de revisión.
 - `backup/pre-demo-cleanup-20260919`: copia exacta de `4e63383` antes de T42.
-- `fix/ventura-cierre-demo`: cierre de crisis y túnel alternativo, dos commits sobre `main`.
+- `fix/ventura-cierre-demo`: cierre de crisis y túnel alternativo, tres commits sobre `main`.
 - `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
 - `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
 
@@ -137,6 +128,8 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
   resultado todavía pertenece al `runId` y `planVersion` vigentes.
 - El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
   `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
+- Un deployment nuevo en Railway crea un run `calm` pausado; reiniciar el mismo deployment
+  conserva su run. Los callbacks de runs anteriores quedan como evidencia sin aplicarse.
 - Reiniciar conserva SQLite, pero pierde callbacks simulados programados en memoria.
 - Un Quick Tunnel cambia de URL al arrancar; HappyRobot debe usar el `callbackUrl` enviado.
 - Haz `git fetch` antes de analizar: `main` se mueve rápido.
