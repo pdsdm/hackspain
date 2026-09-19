@@ -20,8 +20,8 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
         <span className="ml-1 px-2 py-[3px] border border-line-2 text-muted display font-semibold text-[10px] tracking-[0.14em] uppercase">Simulación</span>
       )}
       {ctl.source === 'api' && (
-        <span className={`flex items-center gap-1 text-[11px] ${ctl.error ? 'text-red' : 'text-green'}`}>
-          <Radio size={12} /> {ctl.error ? 'Backend sin respuesta' : 'Backend conectado'}
+        <span className={`flex items-center gap-1 text-[11px] ${ctl.stale ? 'text-red' : 'text-green'}`}>
+          <Radio size={12} /> {ctl.stale ? 'Datos sin actualizar' : 'Backend conectado'}
         </span>
       )}
 
@@ -55,7 +55,7 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
         </>
       )}
 
-      <button onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
+      <button disabled={ctl.pending || ctl.stale} onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
     </header>
   )
 }
