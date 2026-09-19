@@ -1,4 +1,4 @@
-# T35: Giros del jurado en automático (Modo vivo)
+# T36: Giros del jurado en automático (Modo vivo)
 
 El jurado puede seguir pulsando los 9 giros. Con «Modo vivo» encendido, el reloj también los lanza solo, intercalados con las incidencias, para que la demo no dependa de que alguien pulse.
 
