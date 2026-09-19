@@ -1,8 +1,23 @@
 {
+  "_nota": "Cuerpo que el BACKEND manda al hook del area (HAPPYROBOT_HOOK_<AREA>) con Authorization: Bearer $HAPPYROBOT_API_KEY. El frontend no manda esto: ver SPEC.md. Telefonos en E.164, sin espacios ni guiones.",
+  "taskId": "7a31c0de-0000-4000-8000-000000000001",
+  "runId": "3bd0a1f2-0000-4000-8000-000000000002",
+  "planVersion": 2,
   "area": "espacios",
-  "contraparte": "Responsable de recinto - MADRING",
-  "objetivo": "Confirmar si el Pabellon B esta disponible para 450 invitados a las 13:00",
-  "incidencia": "Pabellon Principal cerrado por averia de agua",
-  "hora_apertura": "13:00",
-  "task_id": "t-espacios-0001"
+  "objective": "Confirmar el Pabellon B para 450 invitados a las 13:00",
+  "counterpart": "Responsable de recinto - MADRING",
+  "reason": "El Pabellon Principal esta cerrado por una averia de agua",
+  "callId": "call-7a31c0de",
+  "contact": {
+    "id": "test-venue-manager",
+    "role": "venue-manager",
+    "phone": "+34600000000",
+    "email": null
+  },
+  "situation": {
+    "simSeconds": 44160,
+    "planVersion": 2,
+    "coordinatorStatus": "replanificando"
+  },
+  "callbackUrl": "https://demo.example/workflow/results"
 }
