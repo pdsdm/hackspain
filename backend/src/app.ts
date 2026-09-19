@@ -40,7 +40,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     port: 8000,
     workflowToken,
     happyrobotApiKey: undefined,
-    initialFixture: "crisis",
+    initialFixture: "calm",
     clockSpeed: 1,
     coordinatorMode: "rules",
     hooks: {},

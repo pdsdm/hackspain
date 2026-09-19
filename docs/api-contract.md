@@ -95,7 +95,7 @@ Repetir un giro es idempotente. El backend aplica el efecto inmediato comprobabl
 
 ### `POST /simulation/reset`
 
-Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (por defecto `crisis`). La anterior queda inactiva y sus callbacks no alteran la nueva.
+Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (por defecto `calm`: 12:00, Principal confirmado, sin incidente). La anterior queda inactiva y sus callbacks no alteran la nueva.
 
 ```json
 { "fixture": "calm" }

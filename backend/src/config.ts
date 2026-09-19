@@ -52,7 +52,7 @@ function readDatabasePath(value: string | undefined): string {
 
 function readFixture(value: string | undefined): InitialFixture {
   const fixture = value?.trim();
-  if (!fixture) return "crisis";
+  if (!fixture) return "calm";
   if (!FIXTURES.includes(fixture as InitialFixture)) {
     throw new Error(`INITIAL_FIXTURE must be one of ${FIXTURES.join(", ")}`);
   }

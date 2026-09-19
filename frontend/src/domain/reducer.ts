@@ -1,5 +1,5 @@
 import type { Action, CrisisState } from './types'
-import { createInitialState } from './initialState'
+import { createFixtureState } from './fixtures'
 import { SCRIPTS } from './script'
 import { applyIntervention, applyTwist } from './twists'
 
@@ -55,7 +55,7 @@ function tick(s: CrisisState, delta: number) {
 }
 
 export function reducer(state: CrisisState, action: Action): CrisisState {
-  if (action.type === 'RESET') return createInitialState()
+  if (action.type === 'RESET') return createFixtureState('calm')
   if (action.type === 'REPLACE') return action.state
   if (action.type === 'SELECT') return { ...state, selectedId: action.id }
   if (action.type === 'SET_SPEED') return { ...state, clock: { ...state.clock, speed: action.speed, paused: false } }

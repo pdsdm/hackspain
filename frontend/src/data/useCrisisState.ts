@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { CrisisState, Intervention, TwistId } from '../domain/types'
-import { createInitialState } from '../domain/initialState'
 import { createFixtureState, type FixtureName } from '../domain/fixtures'
 import { reducer } from '../domain/reducer'
 import { api } from './apiClient'
@@ -30,8 +29,8 @@ export interface CrisisController {
 const SOURCE: DataSource = import.meta.env.VITE_DATA_SOURCE === 'api' ? 'api' : 'sim'
 
 export function useCrisisState(): CrisisController {
-  const [state, dispatch] = useReducer(reducer, undefined, createInitialState)
-  const [reference, setReference] = useState<CrisisState | null>(() => SOURCE === 'sim' ? createFixtureState('normal') : null)
+  const [state, dispatch] = useReducer(reducer, undefined, () => createFixtureState('calm'))
+  const [reference, setReference] = useState<CrisisState | null>(() => SOURCE === 'sim' ? createFixtureState('calm') : null)
   const [selectedId, select] = useState<string | null>('principal')
   const [ready, setReady] = useState(SOURCE === 'sim')
   const [error, setError] = useState<string | null>(null)
@@ -127,7 +126,7 @@ export function useCrisisState(): CrisisController {
     select,
     reset: () => {
       if (SOURCE === 'sim') {
-        dispatch({ type: 'RESET' }); setReference(createFixtureState('normal')); select('principal'); setFeedback(null)
+        dispatch({ type: 'RESET' }); setReference(createFixtureState('calm')); select('principal'); setFeedback(null)
         return
       }
       if (requestInFlight.current) return
