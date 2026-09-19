@@ -12,6 +12,7 @@ Persistir cada ejecución de la crisis y ejecutar propuestas mediante reglas det
 - [x] El gasto superior a `budget.autonomousLimit` crea una decisión pendiente y no se compromete sin aprobación.
 - [x] Cambiar de plan incrementa la versión e invalida compromisos activos de versiones anteriores.
 - [x] Las tareas usan claves idempotentes; resultados duplicados o de otra ejecución/versión quedan como evidencia sin mutar el estado.
+- [x] La cola solo despacha tareas de la ejecución activa y del `planVersion` vigente; las de planes anteriores no generan llamadas.
 - [x] Tests y `make check` pasan.
 
 ## Fuera de alcance

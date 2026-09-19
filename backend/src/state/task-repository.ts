@@ -86,10 +86,13 @@ export class TaskRepository {
     try {
       const row = this.database
         .prepare(`
-          SELECT *
-          FROM dispatch_tasks
-          WHERE status = 'pending'
-          ORDER BY created_at, id
+          SELECT task.*
+          FROM dispatch_tasks AS task
+          JOIN demo_runs AS run ON run.id = task.run_id
+          WHERE task.status = 'pending'
+            AND run.active = 1
+            AND task.plan_version = json_extract(run.state_json, '$.planVersion')
+          ORDER BY task.created_at, task.id
           LIMIT 1
         `)
         .get() as TaskRow | undefined;

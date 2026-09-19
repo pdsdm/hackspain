@@ -81,6 +81,49 @@ test("duplicate and stale results remain evidence without being applied", () => 
   }
 });
 
+test("pending tasks from a stale plan or an inactive run are never dispatched", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const oldRun = states.ensureActiveRun();
+    tasks.enqueue({
+      runId: oldRun.id,
+      planVersion: oldRun.state.planVersion,
+      area: "espacios",
+      kind: "start_call",
+      payload: {},
+      idempotencyKey: "old-run-call",
+    });
+    const run = states.reset();
+    assert.equal(tasks.claimNext(), undefined);
+
+    tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "catering",
+      kind: "start_call",
+      payload: {},
+      idempotencyKey: "old-plan-call",
+    });
+    run.state.planVersion += 1;
+    states.saveState(run.id, run.state);
+    assert.equal(tasks.claimNext(), undefined);
+
+    const current = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "catering",
+      kind: "start_call",
+      payload: {},
+      idempotencyKey: "current-plan-call",
+    });
+    assert.equal(tasks.claimNext()?.id, current.id);
+  } finally {
+    database.close();
+  }
+});
+
 test("a current result mutates state once through its explicit adapter", () => {
   const database = openDatabase(":memory:");
   try {
