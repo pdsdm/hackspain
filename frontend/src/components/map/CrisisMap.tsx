@@ -34,7 +34,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-panel">
-      <MapContainer center={[40.4732, -3.6195]} zoom={15} zoomControl={false} attributionControl className="h-full w-full">
+      <MapContainer center={[40.4732, -3.6195]} zoom={15} zoomControl={false} attributionControl={false} className="h-full w-full">
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
         <Polygon positions={ZONE_SUR} pathOptions={{ color: '#1a1d24', weight: 1.5, fillColor: '#1a1d24', fillOpacity: 0.06, dashArray: '4 4' }} />
@@ -107,11 +107,6 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
           )
         })}
       </MapContainer>
-
-      <div className="absolute top-3 left-3 z-[1000] glass px-3 py-2">
-        <div className="label">Mapa · MADRING</div>
-        <div className="text-[12px]">Plan v{s.planVersion} · {vehicles.filter((v) => !v.done).length} vehículos en ruta · {s.twistsApplied.length} giro{s.twistsApplied.length === 1 ? '' : 's'}</div>
-      </div>
 
       <MapLayersControl layers={layers} onChange={setLayers} />
       {children}

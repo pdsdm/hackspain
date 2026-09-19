@@ -6,11 +6,15 @@ export function EventChat({
   pending,
   feedback,
   onSend,
+  className = 'bg-panel border border-line p-3',
+  placeholder = 'p. ej. no se puede entrar por el Acceso Sur',
 }: {
   disabled: boolean
   pending: boolean
   feedback: string | null
   onSend: (text: string) => Promise<boolean>
+  className?: string
+  placeholder?: string
 }) {
   const [text, setText] = useState('')
   const submit = async () => {
@@ -19,7 +23,7 @@ export function EventChat({
     if (await onSend(value)) setText('')
   }
   return (
-    <section className="bg-panel border border-line p-3">
+    <section className={className}>
       <h3 className="label mb-2">Evento libre</h3>
       <div className="flex gap-2">
         <input
@@ -28,7 +32,7 @@ export function EventChat({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
-          placeholder="p. ej. no se puede entrar por el Acceso Sur"
+          placeholder={placeholder}
           className="min-w-0 flex-1 h-9 px-2 bg-bg border border-line text-[12px] outline-none focus:border-ink"
         />
         <button

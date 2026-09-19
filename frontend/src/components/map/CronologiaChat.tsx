@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { CrisisState } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { EVENT_DOT } from '../ui/status'
@@ -6,7 +6,7 @@ import { Glass } from './Glass'
 
 const BORDER: Record<string, string> = { 'bg-red': '#e5484d', 'bg-amber': '#c47a00', 'bg-green': '#1f9d55', 'bg-ink': '#1a1d24', 'bg-line-2': '#b8b8b2', 'bg-muted': '#6b7079' }
 
-export function CronologiaChat({ s }: { s: CrisisState }) {
+export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
   const n = s.events.length
   useEffect(() => {
@@ -15,7 +15,7 @@ export function CronologiaChat({ s }: { s: CrisisState }) {
   }, [n])
   const items = s.events.slice(-40)
   return (
-    <Glass label="Cronología" className="w-[460px] h-[230px]">
+    <Glass label="Cronología" className={className}>
       <header className="flex items-center justify-between px-4 py-2 border-b border-line">
         <h2 className="label">Cronología</h2>
         <span className="text-[11px] text-muted num">{n} eventos</span>
@@ -32,6 +32,7 @@ export function CronologiaChat({ s }: { s: CrisisState }) {
           )
         })}
       </ul>
+      {footer}
     </Glass>
   )
 }
