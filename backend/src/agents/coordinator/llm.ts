@@ -160,6 +160,16 @@ async function post(
   body: unknown,
   signal?: AbortSignal,
 ): Promise<unknown> {
+  const response = await postRaw(url, headers, body, signal);
+  return response.json();
+}
+
+async function postRaw(
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<Response> {
   const timeout = AbortSignal.timeout(TIMEOUT_MS);
   const combined = signal ? AbortSignal.any([timeout, signal]) : timeout;
   const response = await fetch(url, {
@@ -173,7 +183,125 @@ async function post(
     throw new Error(`${response.status} ${response.statusText}: ${await response.text()}`);
   }
 
-  return response.json();
+  return response;
+}
+
+function llmVerbose(): boolean {
+  const value = process.env.COORDINATOR_VERBOSE?.trim().toLowerCase();
+  if (value === "0" || value === "false" || value === "off") return false;
+  return true;
+}
+
+function deltaText(delta: Record<string, unknown> | undefined, key: string): string {
+  const value = delta?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+export function takeSseDataEvents(buffer: string): { payloads: string[]; rest: string } {
+  const payloads: string[] = [];
+  const lines = buffer.split("\n");
+  const rest = lines.pop() ?? "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    payloads.push(trimmed.slice(5).trim());
+  }
+  return { payloads, rest };
+}
+
+class TokenPrinter {
+  private buffer = "";
+  private opened = false;
+
+  constructor(private readonly label: string) {}
+
+  push(chunk: string): void {
+    if (!chunk) return;
+    if (!this.opened) {
+      logCoord(`${this.label} ---`);
+      this.opened = true;
+    }
+    this.buffer += chunk;
+    while (this.buffer.includes("\n") || this.buffer.length >= 160) {
+      const newline = this.buffer.indexOf("\n");
+      const take = newline >= 0 && newline < 160 ? newline + 1 : 160;
+      process.stdout.write(`[coord] ${this.label} ${this.buffer.slice(0, take)}`);
+      if (!this.buffer.slice(0, take).endsWith("\n")) process.stdout.write("\n");
+      this.buffer = this.buffer.slice(take);
+    }
+  }
+
+  flush(): void {
+    if (this.buffer.length > 0) {
+      process.stdout.write(`[coord] ${this.label} ${this.buffer}\n`);
+      this.buffer = "";
+    }
+    if (this.opened) logCoord(`${this.label} fin`);
+  }
+}
+
+async function readChatStream(response: Response, verbose: boolean): Promise<ChatResult & { usage?: unknown }> {
+  if (!response.body) throw new Error("respuesta stream sin body");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let rest = "";
+  let content = "";
+  let reasoning = "";
+  const toolChunks: unknown[] = [];
+  let usage: unknown;
+  const thinkOut = verbose ? new TokenPrinter("think") : undefined;
+  const answerOut = verbose ? new TokenPrinter("answer") : undefined;
+
+  const applyPayload = (payload: string): boolean => {
+    if (payload === "[DONE]") return false;
+    const data = JSON.parse(payload) as {
+      usage?: unknown;
+      choices?: { delta?: Record<string, unknown>; message?: Record<string, unknown> }[];
+    };
+    if (data.usage !== undefined) usage = data.usage;
+    const choice = data.choices?.[0];
+    const delta = choice?.delta ?? choice?.message;
+    const think = deltaText(delta, "reasoning_content") || deltaText(delta, "reasoning");
+    const text = deltaText(delta, "content");
+    if (think) {
+      reasoning += think;
+      thinkOut?.push(think);
+    }
+    if (text) {
+      content += text;
+      answerOut?.push(text);
+    }
+    const calls = delta?.tool_calls;
+    if (Array.isArray(calls)) toolChunks.push(...calls);
+    return true;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    rest += decoder.decode(value, { stream: true });
+    const taken = takeSseDataEvents(rest);
+    rest = taken.rest;
+    for (const payload of taken.payloads) {
+      if (!applyPayload(payload)) {
+        thinkOut?.flush();
+        answerOut?.flush();
+        return {
+          content: content.length > 0 ? content : null,
+          tool_calls: asToolCalls(toolChunks),
+          usage,
+        };
+      }
+    }
+  }
+
+  thinkOut?.flush();
+  answerOut?.flush();
+  return {
+    content: content.length > 0 ? content : null,
+    tool_calls: asToolCalls(toolChunks),
+    usage,
+  };
 }
 
 function asToolCalls(value: unknown): ToolCall[] {
