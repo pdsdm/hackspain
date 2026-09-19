@@ -100,9 +100,11 @@
 
 | `COORDINATOR_REASONING_EFFORT` | Latencias | Válidas | Invitados asignados |
 |---|---|---|---|
-| `low` (recomendado) | 12,4 / 18,4 / 19,9 / 22,1 s | 4/4 | 600 en las cuatro |
-| vacío (por defecto) | 18,2 / 20,2 / 27,9 / 31,5 s | 4/4 | 600 en las cuatro |
+| `low` (por defecto con Helmcode desde el 19/09) | 12,4 / 18,4 / 19,9 / 22,1 s | 4/4 | 600 en las cuatro |
+| sin campo, el default del proveedor (lo que corría antes) | 18,2 / 20,2 / 27,9 / 31,5 s | 4/4 | 600 en las cuatro |
 | `none` (sin thinking) | 6,1 / 7,4 / 7,7 / 8,5 s | 4/4 | **90 / 90 / 450 / 0** |
+
+Con Helmcode, `COORDINATOR_REASONING_EFFORT` vacío ya significa `low`: lo pone `loadLlmConfig`, no el `.env`. A los demás proveedores no se les manda ningún campo de thinking salvo que se pida, porque OpenAI y Cognition no conocen ese parámetro.
 
 **No pongas `none`.** Va tres veces más rápido, pero los planes dejan a la mayoría de los
 600 invitados sin asignar, que es justo el criterio de la demo. En otras 15 llamadas

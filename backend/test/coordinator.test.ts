@@ -240,6 +240,20 @@ test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
   assert.equal(config.model, "deepseek-v4-flash");
   assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
   assert.equal(config.harness, "json");
+  assert.equal(config.reasoningEffort, "low");
+});
+
+test("el effort de Helmcode se puede sobrescribir y no se impone a otros proveedores", () => {
+  assert.equal(
+    loadLlmConfig({ HELMCODE_API_KEY: "sk-test", COORDINATOR_REASONING_EFFORT: "none" }).reasoningEffort,
+    "none",
+  );
+  assert.equal(loadLlmConfig({ OPENAI_API_KEY: "sk-test" }).reasoningEffort, undefined);
+  assert.equal(loadLlmConfig({ COGNITION_API_KEY: "sk-test" }).reasoningEffort, undefined);
+  assert.equal(
+    loadLlmConfig({ COGNITION_API_KEY: "sk-test", COORDINATOR_REASONING_EFFORT: "high" }).reasoningEffort,
+    "high",
+  );
 });
 
 test("el parser SSE del chat deja el trozo incompleto en rest", () => {
