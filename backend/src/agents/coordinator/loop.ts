@@ -71,14 +71,24 @@ async function runJsonLoop(
   for (let round = 0; round < 3; round += 1) {
     if (signal.aborted) return "unavailable";
     const input = snapshotInput(event, deps, { queryAnswers, previousErrors });
+    const ask = () =>
+      completeFn(deps.config ?? ({} as LlmConfig), SYSTEM_PROMPT, buildUserPrompt(input), { signal });
     let text: string;
     try {
-      text = await completeFn(deps.config ?? ({} as LlmConfig), SYSTEM_PROMPT, buildUserPrompt(input), {
-        signal,
-      });
+      text = await ask();
     } catch (error) {
+      // Un corte de red del proveedor tira el replan entero: se reintenta una vez antes de rendirse.
       logCoordError("LLM complete() falló", error instanceof Error ? error.message : String(error));
-      return "unavailable";
+      if (signal.aborted) return "unavailable";
+      try {
+        text = await ask();
+      } catch (retryError) {
+        logCoordError(
+          "LLM complete() falló también en el reintento",
+          retryError instanceof Error ? retryError.message : String(retryError),
+        );
+        return "unavailable";
+      }
     }
 
     const parsed = parseOutput(text, input);
