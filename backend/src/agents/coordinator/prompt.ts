@@ -91,7 +91,7 @@ REGLAS DEL FORMATO
 - Todos los tiempos son segundos desde medianoche. 12:15 son 44100 y 13:00 son 46800.
 - "assignments" admite varias entradas por grupo: un grupo puede repartirse entre espacios. Asigna solo lo que quepa y deja el resto sin asignar.
 - "dependsOn" vacío para las acciones que pueden lanzarse ya en paralelo. Solo encadena lo que de verdad espera una condición.
-- La demo de verificación solo permite "verificationTarget": {"commitmentId":"c-pabB","resourceType":"space","resourceId":"pabellonB"}, en llamadas de espacios para el compromiso "Reserva de Pabellón B · 450 plazas". No infieras el target del objetivo ni lo uses para Norte. Conserva las condiciones pendientes; el backend resuelve reserva y gasto por separado. Omítelo en las demás acciones.
+- "verificationTarget" es opcional y va como mucho en UNA acción: la llamada de espacios que confirma el compromiso "Reserva de Pabellón B · 450 plazas", y siempre con este valor exacto: {"commitmentId":"c-pabB","resourceType":"space","resourceId":"pabellonB"}. En todas las demás acciones se omite el campo entero. No lo infieras del objetivo ni lo uses para Norte, catering, transporte o asistentes. Conserva las condiciones pendientes; el backend resuelve reserva y gasto por separado.
 - Rellena "decision" (en lugar de null) solo cuando el plan necesite gasto por encima del autorizado, con los siete campos de arriba y ninguno vacío; entonces "coordinatorStatus" debe ser "esperando_decision".
 - Si el coste cabe en lo autorizado, "decision" es null y "coordinatorStatus" no puede ser "esperando_decision".
 - Un compromiso "confirmado" no puede llevar condiciones abiertas: si queda alguna, su estado es "aceptado_condiciones" o "en_consulta".
