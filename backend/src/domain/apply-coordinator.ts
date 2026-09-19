@@ -14,6 +14,7 @@ import {
   routeTo,
   type WorldModel,
 } from "../world/world.js";
+import { planTripCached } from "../world/locate.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -143,13 +144,58 @@ export function applyOperation(
         return { ok: false, error: `redirect_vehicle ${operation.id}: destino ${operation.destinationId} ${String(destination.status)}` };
       }
       if (operation.delayMin !== undefined) vehicle.delayMin = operation.delayMin;
-      const estimate = routeTo(world, String(vehicle.from ?? ""), operation.destinationId);
+      const fromQuery = String(vehicle.from ?? vehicle.origin ?? "");
+      const trip = planTripCached(world, fromQuery, operation.destinationId);
+      if (!trip) return { ok: false, error: `redirect_vehicle ${operation.id}: no hay ruta ${fromQuery} → ${operation.destinationId}` };
       vehicle.destinationId = operation.destinationId;
-      vehicle.route = estimate.route;
-      vehicle.arriveAt = Math.max(now, Number(vehicle.departAt ?? now)) + estimate.minutes * 60 + Number(vehicle.delayMin ?? 0) * 60;
+      vehicle.route = trip.route;
+      vehicle.origin = trip.from.name;
+      vehicle.from = trip.from.id;
+      vehicle.originPos = trip.from.pos;
+      vehicle.arriveAt = Math.max(now, Number(vehicle.departAt ?? now)) + trip.minutes * 60 + Number(vehicle.delayMin ?? 0) * 60;
       vehicle.status = operation.status ?? "desviado";
       if (operation.note !== undefined) vehicle.note = operation.note;
       draft.vehicles = records(draft, "vehicles");
+      return { ok: true };
+    }
+    case "spawn_vehicle": {
+      const destination = findById(records(draft, "spaces"), operation.destinationId);
+      if (!destination) return { ok: false, error: `spawn_vehicle: destino desconocido ${operation.destinationId}` };
+      if (destination.status === "cerrado" || destination.status === "descartado") {
+        return { ok: false, error: `spawn_vehicle: destino ${operation.destinationId} ${String(destination.status)}` };
+      }
+      const trip = planTripCached(world, operation.from, operation.destinationId);
+      if (!trip) return { ok: false, error: `spawn_vehicle: no encuentro origen «${operation.from}»; consulta route con fromId antes` };
+      const vehicles = records(draft, "vehicles");
+      const id = operation.id?.trim() || `MOV-${randomUUID().slice(0, 8)}`;
+      if (vehicles.some((item) => item.id === id)) {
+        return { ok: false, error: `spawn_vehicle: ya existe ${id}; usa redirect_vehicle` };
+      }
+      const kind = operation.kind ?? "repartidor";
+      if (!["taxi", "vip", "repartidor"].includes(kind)) {
+        return { ok: false, error: `spawn_vehicle: kind desconocido ${kind}` };
+      }
+      const delayMin = operation.delayMin ?? 0;
+      const departAt = now;
+      vehicles.push({
+        id,
+        kind,
+        name: id,
+        who: operation.who,
+        count: operation.count ?? 1,
+        from: trip.from.id,
+        origin: trip.from.name,
+        originPos: trip.from.pos,
+        destinationId: operation.destinationId,
+        route: trip.route,
+        departAt,
+        arriveAt: departAt + trip.minutes * 60 + delayMin * 60,
+        delayMin,
+        status: "en_ruta",
+        counterpart: operation.counterpart ?? "Transportista",
+        ...(operation.note ? { note: operation.note } : {}),
+      });
+      draft.vehicles = vehicles;
       return { ok: true };
     }
     case "set_group": {
@@ -265,7 +311,8 @@ export function persistCoordinatorOutput(input: {
         title: input.output.decision?.title ?? "Replan del coordinador",
         summary: input.output.decision?.summary ?? input.output.reading,
         rationale: input.output.decision?.rationale ?? input.output.reading,
-        cost: input.output.decision?.cost ?? 0,
+        cost: input.output.estimatedCost === undefined ? input.output.decision?.cost ?? null : input.output.estimatedCost,
+        ...(input.output.decision?.kind === "operational" ? { approval: { ...input.output.decision, kind: "operational" as const } } : {}),
         conditions: input.output.decision?.conditions ?? input.output.unverified,
         allocations,
         confirmedNorthGuestIds: [],
@@ -305,6 +352,9 @@ export function persistCoordinatorOutput(input: {
   const next = structuredClone(run.state);
   applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
+  if (!hasPlan && input.output.estimatedCost !== undefined && input.output.estimatedCost !== null) {
+    next.budget.forecast = input.output.estimatedCost;
+  }
   if (!next.waitingForDecision) next.coordinatorStatus = input.output.coordinatorStatus;
   input.states.saveState(run.id, next);
   return [];
