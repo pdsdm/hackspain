@@ -462,3 +462,79 @@ test("the HappyRobot door translates a native payload and applies it", async () 
     assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
   });
 });
+
+test("partial HappyRobot transcripts are authenticated, chronological and idempotent", async () => {
+  await withServer(async (base, states, tasks) => {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "Confirmar Pabellón B", counterpart: "Recinto" },
+      idempotencyKey: "live-transcript",
+    });
+    const state = structuredClone(run.state);
+    state.calls = [{
+      id: `call-${task.id}`,
+      agent: "espacios",
+      counterpart: "Recinto",
+      channel: "llamada",
+      startedAt: state.clock.simSeconds,
+      endsAfter: 90,
+      status: "en_curso",
+      simulated: false,
+      transcript: [],
+    }];
+    states.saveState(run.id, state);
+
+    const first = {
+      call_id: `call-${task.id}`,
+      session_id: "session-live-1",
+      transcript: [
+        { id: "message-2", role: "user", content: "Sí, lo tenemos libre.", at: 4 },
+        { id: "message-1", role: "assistant", content: "¿Está disponible el Pabellón B?", at: 1 },
+      ],
+    };
+    assert.equal((await post(base, "/workflow/happyrobot/transcript", first)).status, 401);
+    let response = await post(base, "/workflow/happyrobot/transcript", first, TOKEN);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true, duplicate: false, added: 2, total: 2 });
+
+    response = await post(base, "/workflow/happyrobot/transcript", first, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, duplicate: true, added: 0, total: 2 });
+
+    response = await post(base, "/workflow/happyrobot/transcript", {
+      ...first,
+      transcript: [
+        ...first.transcript,
+        { id: "message-3", role: "assistant", content: "Perfecto, queda reservado.", at: 7 },
+      ],
+    }, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, duplicate: false, added: 1, total: 3 });
+
+    const liveCall = (states.getPublicState().calls as Array<Record<string, unknown>>)[0];
+    assert.deepEqual(liveCall?.transcript, [
+      { who: "agente", text: "¿Está disponible el Pabellón B?", at: 1 },
+      { who: "humano", text: "Sí, lo tenemos libre.", at: 4 },
+      { who: "agente", text: "Perfecto, queda reservado.", at: 7 },
+    ]);
+
+    response = await post(base, "/workflow/happyrobot/results", {
+      call_id: `call-${task.id}`,
+      session_id: "session-live-1",
+      outcome: "accepted",
+      summary: "Pabellón B reservado",
+      transcript: [
+        { role: "assistant", content: "¿Está disponible el Pabellón B?", at: 1 },
+        { role: "user", content: "Sí, lo tenemos libre.", at: 4 },
+        { role: "assistant", content: "Perfecto, queda reservado.", at: 7 },
+      ],
+    }, TOKEN);
+    assert.equal(response.status, 200);
+    const finalCall = (states.getPublicState().calls as Array<Record<string, unknown>>)[0];
+    assert.equal(finalCall?.status, "terminada");
+    assert(Array.isArray(finalCall?.transcript));
+    assert.equal(finalCall.transcript.length, 3);
+  });
+});

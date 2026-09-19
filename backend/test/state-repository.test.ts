@@ -24,6 +24,11 @@ test("CrisisState survives restart without dropping future contract fields", () 
       rationale: "El coste supera el límite autónomo",
     });
     run.state.futureContractField = { preserved: true };
+    run.state.calls = [{
+      id: "call-live",
+      status: "en_curso",
+      transcript: [{ who: "humano", text: "Persisto tras reiniciar", at: 3 }],
+    }];
     firstRepository.saveState(run.id, run.state);
     firstDatabase.close();
 
@@ -34,6 +39,11 @@ test("CrisisState survives restart without dropping future contract fields", () 
     assert.equal((state.agents as Array<Record<string, unknown>>)[0]!.reason, "Prioridad por pérdida total de aforo");
     assert.equal(state.decisions[0]!.rationale, "El coste supera el límite autónomo");
     assert.deepEqual(state.futureContractField, { preserved: true });
+    assert.deepEqual(state.calls, [{
+      id: "call-live",
+      status: "en_curso",
+      transcript: [{ who: "humano", text: "Persisto tras reiniciar", at: 3 }],
+    }]);
     assert.equal(state.scriptId, "main");
     assert.equal(state.scriptCursor, 0);
     assert.equal(state.nextScriptAt, null);

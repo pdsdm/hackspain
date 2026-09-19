@@ -9,6 +9,7 @@ import {
   parseSpecialistResult,
   type SpecialistOutcome,
   type SpecialistResultEnvelope,
+  type TranscriptLine,
 } from "../../contracts/api.js";
 import type { DispatchTask } from "../../state/task-repository.js";
 
@@ -17,7 +18,6 @@ export interface TaskLookup {
 }
 
 type Scopes = Array<Record<string, unknown>>;
-type TranscriptLine = { who: "agente" | "humano"; text: string; at: number };
 
 const CONTAINER_KEYS = [
   "data",
@@ -262,6 +262,48 @@ function readTranscript(scopes: Scopes): TranscriptLine[] {
 function taskIdFromCallId(callId: string | undefined): string | undefined {
   const prefix = "call-";
   return callId?.startsWith(prefix) === true ? callId.slice(prefix.length) : undefined;
+}
+
+export interface HappyRobotTranscriptUpdate {
+  taskId: string;
+  callId: string;
+  sessionId?: string;
+  happyrobotRunId?: string;
+  transcript: TranscriptLine[];
+}
+
+export function translateHappyRobotTranscript(
+  body: unknown,
+  tasks: TaskLookup,
+): HappyRobotTranscriptUpdate {
+  if (!isRecord(body)) throw new ContractError("body must be an object");
+  const scopes = scopesOf(body);
+  const callId = firstString(scopes, ["callId", "call_id"]);
+  const taskId = firstString(scopes, ["taskId", "task_id"]) ?? taskIdFromCallId(callId);
+  if (taskId === undefined) {
+    throw new ContractError(
+      "No se puede identificar la tarea: falta taskId y callId no tiene la forma call-<taskId>",
+    );
+  }
+  const task = tasks.get(taskId);
+  if (!task) throw new ContractError(`Task not found: ${taskId}`, 404);
+  const expectedCallId = `call-${task.id}`;
+  if (callId !== undefined && callId !== expectedCallId) {
+    throw new ContractError("callId does not belong to taskId");
+  }
+  const sessionId = firstString(scopes, ["sessionId", "session_id", "conversationId", "conversation_id"]);
+  const happyrobotRunId = firstString(scopes, ["happyrobotRunId", "happyrobot_run_id", "workflowRunId", "workflow_run_id", "run_id"]);
+  const transcript = readTranscript(scopes);
+  if (transcript.length === 0 && sessionId === undefined && happyrobotRunId === undefined) {
+    throw new ContractError("El callback parcial necesita transcript, session_id o happyrobot_run_id");
+  }
+  return {
+    taskId: task.id,
+    callId: expectedCallId,
+    ...(sessionId ? { sessionId } : {}),
+    ...(happyrobotRunId ? { happyrobotRunId } : {}),
+    transcript,
+  };
 }
 
 export function translateHappyRobotResult(body: unknown, tasks: TaskLookup): SpecialistResultEnvelope {
