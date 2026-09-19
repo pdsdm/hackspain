@@ -266,6 +266,36 @@ Reglas:
 { "ok": true, "duplicate": false, "runId": "3bd0…", "planVersion": 2, "tasks": [{ "actionId": "consultar-pabellon-b", "taskId": "7a31…" }] }
 ```
 
+### Piloto HappyRobot como coordinador (T44)
+
+Tres endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los tres exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
+
+#### `POST /workflow/coordinator/happyrobot/consult`
+
+```json
+{ "correlation_id": "…", "run_id": "3bd0…", "plan_version": 1, "query": { "type": "affected_by", "placeId": "loungeSur" } }
+```
+
+`query.type`: `affected_by` (`placeId`), `alternatives_for` (`placeId`, `minCapacity?`), `route` (`destinationId` y `fromId` o `vehicleId`). Respuesta: `{ "ok": true, "answer": … }` o `{ "ok": false, "stale": true, "error": "…" }`. `stale: true` significa sesión inactiva, correlación ajena o `run_id`/`plan_version` obsoletos: el agente debe parar.
+
+#### `POST /workflow/coordinator/happyrobot/submit`
+
+```json
+{ "correlation_id": "…", "run_id": "3bd0…", "plan_version": 1, "plan": { "reading": "…", "planVersion": 1, "coordinatorStatus": "replanificando", "actions": [], "commitments": [], "assignments": [], "decision": null, "unverified": [], "operations": [], "done": true } }
+```
+
+`plan` es el `CoordinatorOutput` completo (objeto o string JSON). Pasa por `parseOutput` y el dry-run de `applyOperations`. Respuesta:
+
+```json
+{ "accepted": false, "retry": true, "errors": ["json_invalido: la respuesta no es JSON"], "plan_version": 1 }
+```
+
+`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan solo si `HAPPYROBOT_COORDINATOR_APPLY=true`; en shadow lo registra y no muta `CrisisState`.
+
+#### `POST /coordinator/happyrobot/shadow`
+
+Lanza una única ejecución shadow contra el run activo: `{ "text": "fuga en Acceso Sur", "source": "chat", "kind": "free_text" }`. Devuelve el informe: `provider`, `model`, `environment`, `happyrobotRunId`, `status` (`accepted` | `failed` | `timeout` | `unavailable`), `applied`, `latencyMs`, `consults`, `submissions`, `validationErrors[]`, `output` y `error?`. `503` sin configuración, `409` con otra ejecución o coordinador ocupado. No dispara llamadas, SMS ni email.
+
 ### `POST /workflow/results`
 
 Callback común, con el cuerpo exacto del contrato. HappyRobot no postea aquí: usa la

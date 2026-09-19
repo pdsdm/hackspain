@@ -12,6 +12,7 @@ import { worldSummary, type WorldModel } from "../../world/world.js";
 import { answerQuery } from "./queries.js";
 import { runToolHarness } from "./harness.js";
 import { runDevinSession } from "./devin.js";
+import { runHappyRobotCoordinator, summarizeReport } from "./happyrobot.js";
 import { logCoord, logCoordError } from "../../log.js";
 
 export type CompleteFn = (
@@ -158,6 +159,9 @@ export async function runCoordinatorLoop(
     logCoordError("sin config LLM ni completeFn (¿COORDINATOR_MODE=llm sin clave, o loadLlmConfig falló?)");
     return "unavailable";
   }
+  if (deps.config?.harness === "happyrobot" && !deps.completeFn) {
+    return runHappyRobotHarness(event, deps);
+  }
   const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 120_000;
   const timeout = AbortSignal.timeout(timeoutMs);
   logCoord("bucle", deps.config?.provider ?? "mock", deps.config?.harness ?? "json", `tope ${timeoutMs}ms`);
@@ -169,6 +173,36 @@ export async function runCoordinatorLoop(
     return await runToolHarness(event, deps, timeout);
   } catch (error) {
     logCoordError("excepción en harness", error);
+    return "unavailable";
+  }
+}
+
+async function runHappyRobotHarness(
+  event: { source: string; kind: string; text?: string },
+  deps: CoordinatorLoopDeps,
+): Promise<"ok" | "unavailable"> {
+  const config = deps.config?.happyrobot;
+  if (!config) {
+    logCoordError("harness happyrobot sin configuración (HAPPYROBOT_COORDINATOR_WORKFLOW_ID)");
+    return "unavailable";
+  }
+  logCoord("bucle", "happyrobot", config.model, config.apply ? "apply" : "shadow", `tope ${config.timeoutMs}ms`);
+  try {
+    const report = await runHappyRobotCoordinator({
+      config,
+      event,
+      deps: { world: deps.world, states: deps.states, tasks: deps.tasks, workflows: deps.workflows },
+      apply: config.apply,
+    });
+    logCoord("happyrobot informe\n" + summarizeReport(report));
+    if (report.status !== "accepted") return "unavailable";
+    if (!report.applied) {
+      logCoord("happyrobot shadow: plan válido no aplicado; sigue el fallback rules");
+      return "unavailable";
+    }
+    return "ok";
+  } catch (error) {
+    logCoordError("excepción en harness happyrobot", error);
     return "unavailable";
   }
 }

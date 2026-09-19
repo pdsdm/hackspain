@@ -86,7 +86,8 @@ function hasLlmKey(env: NodeJS.ProcessEnv): boolean {
       env.DEVIN_API_KEY?.trim() ||
       env.OPENAI_API_KEY?.trim() ||
       env.HELMCODE_API_KEY?.trim() ||
-      env.ANTHROPIC_API_KEY?.trim(),
+      env.ANTHROPIC_API_KEY?.trim() ||
+      (env.COORDINATOR_HARNESS?.trim() === "happyrobot" && env.HAPPYROBOT_COORDINATOR_WORKFLOW_ID?.trim()),
   );
 }
 

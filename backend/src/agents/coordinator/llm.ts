@@ -2,6 +2,11 @@
 // Sin SDK: solo fetch. Cognition/Devin es el proveedor por defecto (D12).
 
 import { logCoord } from "../../log.js";
+import {
+  HAPPYROBOT_COORDINATOR_MODEL,
+  loadHappyRobotCoordinatorConfig,
+  type HappyRobotCoordinatorConfig,
+} from "./happyrobot.js";
 
 const TIMEOUT_MS = 120_000;
 
@@ -10,6 +15,7 @@ const DEFAULT_MODELS = {
   openai: "gpt-4o-mini",
   anthropic: "claude-3-5-haiku-latest",
   helmcode: "deepseek-v4-flash",
+  happyrobot: HAPPYROBOT_COORDINATOR_MODEL,
 } as const;
 
 const DEFAULT_BASE_URLS = {
@@ -19,7 +25,7 @@ const DEFAULT_BASE_URLS = {
 } as const;
 
 export type Provider = keyof typeof DEFAULT_MODELS;
-export type CoordinatorHarness = "tools" | "json" | "devin";
+export type CoordinatorHarness = "tools" | "json" | "devin" | "happyrobot";
 
 export interface LlmConfig {
   provider: Provider;
@@ -32,6 +38,7 @@ export interface LlmConfig {
   sessionApiUrl: string;
   devinMode: string;
   reasoningEffort?: string;
+  happyrobot?: HappyRobotCoordinatorConfig;
 }
 
 export interface ToolCall {
@@ -78,12 +85,26 @@ function cognitionKey(env: NodeJS.ProcessEnv): string | undefined {
 
 function readHarness(value: string | undefined, provider: Provider): CoordinatorHarness {
   const harness = value?.trim();
-  if (harness === "tools" || harness === "json" || harness === "devin") return harness;
-  if (harness) throw new Error(`COORDINATOR_HARNESS must be tools, json or devin, received "${value}"`);
+  if (harness === "tools" || harness === "json" || harness === "devin" || harness === "happyrobot") return harness;
+  if (harness) throw new Error(`COORDINATOR_HARNESS must be tools, json, devin or happyrobot, received "${value}"`);
   return provider === "cognition" ? "tools" : "json";
 }
 
 export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
+  if (env.COORDINATOR_HARNESS?.trim() === "happyrobot") {
+    const happyrobot = loadHappyRobotCoordinatorConfig(env);
+    return {
+      provider: "happyrobot",
+      apiKey: happyrobot.apiKey,
+      model: happyrobot.model,
+      baseUrl: happyrobot.apiBase,
+      harness: "happyrobot",
+      jsonObject: false,
+      sessionApiUrl: "",
+      devinMode: "",
+      happyrobot,
+    };
+  }
   const cognition = cognitionKey(env);
   const openai = env.OPENAI_API_KEY?.trim();
   const helmcode = env.HELMCODE_API_KEY?.trim();
@@ -527,6 +548,9 @@ export async function complete(
     return result.content;
   }
 
+  if (config.provider === "happyrobot") {
+    throw new Error("complete() no soporta el proveedor happyrobot; usa COORDINATOR_HARNESS=happyrobot");
+  }
   const data = (await post(
     "https://api.anthropic.com/v1/messages",
     { "x-api-key": config.apiKey, "anthropic-version": "2023-06-01" },

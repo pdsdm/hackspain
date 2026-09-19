@@ -6,6 +6,14 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
 import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
+import {
+  happyrobotSessions,
+  loadHappyRobotCoordinatorConfig,
+  runHappyRobotCoordinator,
+  type FetchFn,
+  type HappyRobotCoordinatorConfig,
+  type HappyRobotSessionRegistry,
+} from "./agents/coordinator/happyrobot.js";
 import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
 import type { AppConfig } from "./config.js";
 import {
@@ -38,6 +46,7 @@ export interface AppOptions {
   config?: AppConfig;
   completeFn?: CompleteFn;
   jevEvaluateFn?: JevEvaluateFn;
+  happyrobot?: { config?: HappyRobotCoordinatorConfig; fetchFn?: FetchFn; registry?: HappyRobotSessionRegistry };
 }
 
 function defaultConfig(workflowToken: string | undefined): AppConfig {
@@ -122,6 +131,7 @@ export function createApp(
       llmVerbose() ? "verbose=sí" : "verbose=no",
     );
   }
+  const world = loadWorld();
   const engine = new Engine(
     stateRepository,
     controlService,
@@ -132,9 +142,10 @@ export function createApp(
       mode: options.completeFn ? "llm" : config.coordinatorMode,
       ...(llmConfig ? { llmConfig } : {}),
       ...(options.completeFn ? { completeFn: options.completeFn } : {}),
-      world: loadWorld(),
+      world,
     },
   );
+  const happyrobotRegistry = options.happyrobot?.registry ?? happyrobotSessions;
   engine.attachExecutor(executor);
   executor.attachEngine(engine);
 
@@ -305,6 +316,56 @@ export function createApp(
     } catch (error) {
       next(error);
     }
+  });
+
+  app.post("/workflow/coordinator/happyrobot/consult", authorizeWorkflow, (request, response, next) => {
+    happyrobotRegistry
+      .consult(request.body)
+      .then((result) => response.status(200).json(result))
+      .catch(next);
+  });
+
+  app.post("/workflow/coordinator/happyrobot/submit", authorizeWorkflow, (request, response, next) => {
+    try {
+      response.status(200).json(happyrobotRegistry.submit(request.body));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/coordinator/happyrobot/shadow", authorizeWorkflow, (request, response, next) => {
+    let happyrobotConfig: HappyRobotCoordinatorConfig;
+    try {
+      happyrobotConfig = options.happyrobot?.config ?? loadHappyRobotCoordinatorConfig();
+    } catch (error) {
+      response.status(503).json({ error: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    if (happyrobotRegistry.isActive()) {
+      response.status(409).json({ error: "Ya hay una ejecución de HappyRobot activa" });
+      return;
+    }
+    if (stateRepository.ensureActiveRun().state.coordinatorBusy !== undefined) {
+      response.status(409).json({ error: "El coordinador está ocupado" });
+      return;
+    }
+    const body = request.body && typeof request.body === "object" ? (request.body as Record<string, unknown>) : {};
+    const text = typeof body.text === "string" && body.text.trim() ? body.text.trim() : undefined;
+    const event = {
+      source: typeof body.source === "string" && body.source ? body.source : "chat",
+      kind: typeof body.kind === "string" && body.kind ? body.kind : "free_text",
+      ...(text ? { text } : {}),
+    };
+    runHappyRobotCoordinator({
+      config: happyrobotConfig,
+      event,
+      deps: { world, states: stateRepository, tasks: taskRepository, workflows: workflowService },
+      apply: false,
+      registry: happyrobotRegistry,
+      ...(options.happyrobot?.fetchFn ? { fetchFn: options.happyrobot.fetchFn } : {}),
+    })
+      .then((report) => response.status(200).json(report))
+      .catch(next);
   });
 
   // La puerta del contrato: cuerpo exacto, sin interpretación.
