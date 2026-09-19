@@ -312,6 +312,10 @@ function buildWorld(seed: SeedShape) {
       ...(resource.id === 'accesoNorte' ? { serves: ['norteC'] } : {}),
       ...(resource.id === 'muelleSur' ? { serves: ['principal'] } : {}),
       ...(resource.id === 'muelleEste' ? { serves: ['pabellonB', 'loungeSur'] } : {}),
+      ...(resource.id === 'accesoSur2' ? { serves: ['pabellonB', 'loungeSur', 'esperaSur'] } : {}),
+      ...(resource.id === 'accesoNorte2' ? { serves: ['norteC'] } : {}),
+      ...(resource.id === 'accesoPaddock' ? { serves: ['paddockNorte'] } : {}),
+      ...(resource.id === 'muelleNorte' ? { serves: ['norteC', 'paddockNorte'] } : {}),
       contactRef: resource.contactRef,
     })),
     ...gates.map((gate) => ({
@@ -344,6 +348,12 @@ function buildWorld(seed: SeedShape) {
     { from: 't4', to: 'esperaSur', kind: 'road', route: replaceEnd(ROUTE_T4, POS.esperaSur), minutes: 36 },
     { from: 'coslada', to: 'muelleSur', kind: 'road', route: ROUTE_COSLADA, minutes: 35 },
     { from: 'coslada', to: 'muelleEste', kind: 'road', route: replaceEnd(ROUTE_COSLADA, POS.muelleEste), minutes: 38 },
+    { from: 'coslada', to: 'muelleNorte', kind: 'road', route: [POS.coslada, [40.4500, -3.6000], [40.4700, -3.6060], [40.4790, -3.6110], POS.muelleNorte], minutes: 44 },
+    { from: 'parkingSur', to: 'accesoSur', kind: 'road', route: [POS.parkingSur, POS.accesoSur], minutes: 3 },
+    { from: 'parkingSur', to: 'accesoSur2', kind: 'road', route: [POS.parkingSur, POS.accesoSur2], minutes: 4 },
+    { from: 'parkingNorte', to: 'accesoNorte', kind: 'road', route: [POS.parkingNorte, POS.accesoNorte], minutes: 3 },
+    { from: 'parkingNorte', to: 'accesoPaddock', kind: 'road', route: [POS.parkingNorte, POS.accesoPaddock], minutes: 4 },
+    { from: 't4', to: 'parkingNorte', kind: 'road', route: [POS.t4, [40.4890, -3.6040], [40.4850, -3.6150], POS.parkingNorte], minutes: 28 },
     {
       from: 'accesoSur',
       to: 'accesoNorte',

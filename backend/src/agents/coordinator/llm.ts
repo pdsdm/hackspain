@@ -1,7 +1,9 @@
 // Único punto del coordinador que habla con un proveedor externo.
 // Sin SDK: solo fetch. Cognition/Devin es el proveedor por defecto (D12).
 
-const TIMEOUT_MS = 90_000;
+import { logCoord } from "../../log.js";
+
+const TIMEOUT_MS = 120_000;
 
 const DEFAULT_MODELS = {
   cognition: "swe-1.7",
@@ -160,6 +162,16 @@ async function post(
   body: unknown,
   signal?: AbortSignal,
 ): Promise<unknown> {
+  const response = await postRaw(url, headers, body, signal);
+  return response.json();
+}
+
+async function postRaw(
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<Response> {
   const timeout = AbortSignal.timeout(TIMEOUT_MS);
   const combined = signal ? AbortSignal.any([timeout, signal]) : timeout;
   const response = await fetch(url, {
@@ -173,7 +185,171 @@ async function post(
     throw new Error(`${response.status} ${response.statusText}: ${await response.text()}`);
   }
 
-  return response.json();
+  return response;
+}
+
+export function llmVerbose(): boolean {
+  const value = process.env.COORDINATOR_VERBOSE?.trim().toLowerCase();
+  if (value === "0" || value === "false" || value === "off") return false;
+  return true;
+}
+
+function deltaText(delta: Record<string, unknown> | undefined, key: string): string {
+  const value = delta?.[key];
+  return typeof value === "string" ? value : "";
+}
+
+export function extractJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  for (let end = text.lastIndexOf("}"); end > start; end -= 1) {
+    if (text[end] !== "}") continue;
+    const slice = text.slice(start, end + 1);
+    try {
+      JSON.parse(slice);
+      return slice;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function pickChatContent(content: string | null | undefined, reasoning?: string | null): string | null {
+  if (typeof content === "string" && content.trim().length > 0) return content;
+  if (typeof reasoning === "string") {
+    const salvaged = extractJsonObject(reasoning);
+    if (salvaged) return salvaged;
+  }
+  return typeof content === "string" && content.length > 0 ? content : null;
+}
+
+function isAbortLike(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+}
+
+function thinkingFields(config: LlmConfig): Record<string, unknown> {
+  const effort = config.reasoningEffort?.trim().toLowerCase();
+  if (!effort) return {};
+  if (effort === "none") {
+    return { reasoning_effort: "none", thinking: { type: "disabled" } };
+  }
+  return { reasoning_effort: effort, thinking: { type: "enabled" } };
+}
+
+export function takeSseDataEvents(buffer: string): { payloads: string[]; rest: string } {
+  const payloads: string[] = [];
+  const lines = buffer.split("\n");
+  const rest = lines.pop() ?? "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    payloads.push(trimmed.slice(5).trim());
+  }
+  return { payloads, rest };
+}
+
+class TokenPrinter {
+  private buffer = "";
+  private opened = false;
+
+  constructor(private readonly label: string) {}
+
+  push(chunk: string): void {
+    if (!chunk) return;
+    if (!this.opened) {
+      logCoord(`${this.label} ---`);
+      this.opened = true;
+    }
+    this.buffer += chunk;
+    while (this.buffer.includes("\n") || this.buffer.length >= 160) {
+      const newline = this.buffer.indexOf("\n");
+      const take = newline >= 0 && newline < 160 ? newline + 1 : 160;
+      process.stdout.write(`[coord] ${this.label} ${this.buffer.slice(0, take)}`);
+      if (!this.buffer.slice(0, take).endsWith("\n")) process.stdout.write("\n");
+      this.buffer = this.buffer.slice(take);
+    }
+  }
+
+  flush(): void {
+    if (this.buffer.length > 0) {
+      process.stdout.write(`[coord] ${this.label} ${this.buffer}\n`);
+      this.buffer = "";
+    }
+    if (this.opened) logCoord(`${this.label} fin`);
+  }
+}
+
+async function readChatStream(response: Response, verbose: boolean): Promise<ChatResult & { usage?: unknown }> {
+  if (!response.body) throw new Error("respuesta stream sin body");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let rest = "";
+  let content = "";
+  let reasoning = "";
+  const toolChunks: unknown[] = [];
+  let usage: unknown;
+  const thinkOut = verbose ? new TokenPrinter("think") : undefined;
+  const answerOut = verbose ? new TokenPrinter("answer") : undefined;
+
+  const applyPayload = (payload: string): boolean => {
+    if (payload === "[DONE]") return false;
+    const data = JSON.parse(payload) as {
+      usage?: unknown;
+      choices?: { delta?: Record<string, unknown>; message?: Record<string, unknown> }[];
+    };
+    if (data.usage !== undefined) usage = data.usage;
+    const choice = data.choices?.[0];
+    const delta = choice?.delta ?? choice?.message;
+    const think = deltaText(delta, "reasoning_content") || deltaText(delta, "reasoning");
+    const text = deltaText(delta, "content");
+    if (think) {
+      reasoning += think;
+      thinkOut?.push(think);
+    }
+    if (text) {
+      content += text;
+      answerOut?.push(text);
+    }
+    const calls = delta?.tool_calls;
+    if (Array.isArray(calls)) toolChunks.push(...calls);
+    return true;
+  };
+
+  const finish = (salvaged: boolean): ChatResult & { usage?: unknown } => {
+    thinkOut?.flush();
+    answerOut?.flush();
+    const picked = pickChatContent(content.length > 0 ? content : null, reasoning);
+    if (verbose) {
+      logCoord("think total", `${reasoning.length}c`);
+      if (salvaged && picked) logCoord("aviso", "JSON recuperado del thinking tras corte");
+    }
+    return {
+      content: picked,
+      tool_calls: asToolCalls(toolChunks),
+      usage,
+    };
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      rest += decoder.decode(value, { stream: true });
+      const taken = takeSseDataEvents(rest);
+      rest = taken.rest;
+      for (const payload of taken.payloads) {
+        if (!applyPayload(payload)) return finish(false);
+      }
+    }
+    return finish(false);
+  } catch (error) {
+    const picked = pickChatContent(content.length > 0 ? content : null, reasoning);
+    if (isAbortLike(error) && picked) return finish(true);
+    thinkOut?.flush();
+    answerOut?.flush();
+    throw error;
+  }
 }
 
 function asToolCalls(value: unknown): ToolCall[] {
@@ -205,28 +381,108 @@ export async function chat(
     throw new Error(`chat() no soporta el proveedor ${config.provider}`);
   }
 
+  const verbose = llmVerbose();
   const temperature = options.temperature ?? 0.3;
-  const data = (await post(
-    `${config.baseUrl}/chat/completions`,
-    { Authorization: `Bearer ${config.apiKey}` },
-    {
-      model: config.model,
-      temperature,
-      ...(config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
-      ...(options.nonce === undefined ? {} : { user: options.nonce }),
-      ...(config.jsonObject && !options.tools ? { response_format: { type: "json_object" } } : {}),
-      ...(options.tools && options.tools.length > 0 ? { tools: options.tools, tool_choice: "auto" } : {}),
-      messages,
-    },
-    options.signal,
-  )) as { choices?: { message?: { content?: string | null; tool_calls?: unknown } }[] };
-
-  const message = data.choices?.[0]?.message;
-  const content = message?.content;
-  return {
-    content: typeof content === "string" ? content : null,
-    tool_calls: asToolCalls(message?.tool_calls),
+  const useTools = Boolean(options.tools && options.tools.length > 0);
+  const stream = verbose && !useTools;
+  const body = {
+    model: config.model,
+    temperature,
+    ...thinkingFields(config),
+    ...(options.nonce === undefined ? {} : { user: options.nonce }),
+    ...(config.jsonObject && !useTools ? { response_format: { type: "json_object" } } : {}),
+    ...(useTools ? { tools: options.tools, tool_choice: "auto" as const } : {}),
+    ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
+    messages,
   };
+
+  if (verbose) {
+    const chars = messages.reduce((sum, message) => sum + (message.content?.length ?? 0), 0);
+    logCoord(
+      "llm",
+      config.provider,
+      config.model,
+      stream ? "stream" : "bloque",
+      config.reasoningEffort ? `effort=${config.reasoningEffort}` : "effort=default",
+      `${chars}c prompt`,
+    );
+    if (config.provider === "helmcode" && config.model.includes("deepseek")) {
+      const effort = config.reasoningEffort ?? "default";
+      logCoord("aviso", `deepseek thinking=${effort === "none" ? "disabled" : "enabled"} effort=${effort}`);
+    }
+  }
+
+  const started = Date.now();
+  const heartbeat = verbose
+    ? setInterval(() => {
+        logCoord("llm esperando", `${Math.round((Date.now() - started) / 1000)}s`, config.model);
+      }, 5_000)
+    : undefined;
+
+  try {
+    if (stream) {
+      const response = await postRaw(
+        `${config.baseUrl}/chat/completions`,
+        { Authorization: `Bearer ${config.apiKey}` },
+        body,
+        options.signal,
+      );
+      const result = await readChatStream(response, verbose);
+      if (verbose) {
+        logCoord(
+          "llm listo",
+          `${Math.round((Date.now() - started) / 1000)}s`,
+          `answer ${result.content?.length ?? 0}c`,
+          result.usage ?? "sin usage",
+        );
+      }
+      return { content: result.content, tool_calls: result.tool_calls };
+    }
+
+    const data = (await post(
+      `${config.baseUrl}/chat/completions`,
+      { Authorization: `Bearer ${config.apiKey}` },
+      body,
+      options.signal,
+    )) as {
+      usage?: unknown;
+      choices?: {
+        message?: {
+          content?: string | null;
+          reasoning_content?: string | null;
+          tool_calls?: unknown;
+        };
+      }[];
+    };
+
+    const message = data.choices?.[0]?.message;
+    if (verbose && message?.reasoning_content) {
+      logCoord("think ---");
+      for (const line of message.reasoning_content.split("\n")) logCoord("think", line);
+      logCoord("think fin");
+    }
+    if (verbose) {
+      logCoord(
+        "llm listo",
+        `${Math.round((Date.now() - started) / 1000)}s`,
+        `answer ${typeof message?.content === "string" ? message.content.length : 0}c`,
+        data.usage ?? "sin usage",
+      );
+      if (typeof message?.content === "string" && message.content.length > 0) {
+        logCoord("answer", message.content);
+      }
+    }
+    const content = pickChatContent(message?.content, message?.reasoning_content);
+    if (verbose && content && (!message?.content || message.content.trim().length === 0)) {
+      logCoord("aviso", "JSON recuperado del thinking (content vacío)");
+    }
+    return {
+      content,
+      tool_calls: asToolCalls(message?.tool_calls),
+    };
+  } finally {
+    if (heartbeat) clearInterval(heartbeat);
+  }
 }
 
 export async function complete(

@@ -4,13 +4,14 @@ import { timingSafeEqual } from "node:crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
 
 import { ActionExecutor } from "./actions/executor.js";
-import { loadLlmConfig } from "./agents/coordinator/llm.js";
+import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
 import type { AppConfig } from "./config.js";
 import {
   ContractError,
   parseCoordinatorProposal,
   parseEvent,
   parseIntervention,
+  parseLive,
   parseReset,
   parseSpecialistResult,
   parseTwist,
@@ -91,6 +92,7 @@ export function createApp(
       llmConfig.harness,
       llmConfig.model,
       llmConfig.orgId ? "org=sí" : "org=no",
+      llmVerbose() ? "verbose=sí" : "verbose=no",
     );
   }
   const engine = new Engine(
@@ -178,6 +180,15 @@ export function createApp(
         .handle({ source: "jury", kind: twist, payload: { twist } })
         .catch((error) => console.error("[twists] handle", error));
       response.status(200).json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/simulation/live", (request, response, next) => {
+    try {
+      const body = parseLive(request.body ?? {});
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
     } catch (error) {
       next(error);
     }

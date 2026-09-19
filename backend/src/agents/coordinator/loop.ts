@@ -84,11 +84,13 @@ async function runJsonLoop(
     const parsed = parseOutput(text, input);
     if (!parsed.output) {
       previousErrors = parsed.issues.map((issue) => `${issue.code}: ${issue.detail}`);
+      logCoordError(`ronda ${round + 1} parse`, previousErrors.join("; "));
       continue;
     }
 
     const output: CoordinatorOutput = parsed.output;
-    queryAnswers = (output.queries ?? []).map((query) =>
+    const queries = output.queries ?? [];
+    queryAnswers = queries.map((query) =>
       answerQuery(query, deps.states.ensureActiveRun().state, deps.world),
     );
     const run = deps.states.ensureActiveRun();
@@ -101,11 +103,16 @@ async function runJsonLoop(
     ).errors;
     if (dryErrors.length > 0) {
       previousErrors = dryErrors;
+      logCoordError(`ronda ${round + 1} operaciones`, dryErrors.join("; "));
       continue;
     }
-    if (output.done === false || (output.queries ?? []).length > 0) {
+    if (output.done === false) {
       previousErrors = [];
+      logCoord(`ronda ${round + 1}`, "done false", queries.length > 0 ? `${queries.length} queries` : "sin queries");
       continue;
+    }
+    if (queries.length > 0) {
+      logCoord("aviso", `ronda ${round + 1}: done true con ${queries.length} queries; persisto el plan`);
     }
     try {
       const persistErrors = persistCoordinatorOutput({
@@ -119,13 +126,16 @@ async function runJsonLoop(
       });
       if (persistErrors.length > 0) {
         previousErrors = persistErrors;
+        logCoordError(`ronda ${round + 1} persistir`, persistErrors.join("; "));
         continue;
       }
       return "ok";
     } catch (error) {
       previousErrors = [error instanceof Error ? error.message : String(error)];
+      logCoordError(`ronda ${round + 1} persistir`, previousErrors.join("; "));
     }
   }
+  logCoordError("bucle agotado", previousErrors.join("; ") || "sin detalle");
   return "unavailable";
 }
 
@@ -137,7 +147,7 @@ export async function runCoordinatorLoop(
     logCoordError("sin config LLM ni completeFn (¿COORDINATOR_MODE=llm sin clave, o loadLlmConfig falló?)");
     return "unavailable";
   }
-  const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 90_000;
+  const timeoutMs = deps.config?.harness === "devin" ? 180_000 : 120_000;
   const timeout = AbortSignal.timeout(timeoutMs);
   logCoord("bucle", deps.config?.provider ?? "mock", deps.config?.harness ?? "json", `tope ${timeoutMs}ms`);
   if (deps.completeFn || !deps.config || deps.config.harness === "json" || deps.config.provider === "anthropic") {

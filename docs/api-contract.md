@@ -64,6 +64,8 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 }
 ```
 
+`spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
+
 En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
 
 ### `POST /interventions`
@@ -106,6 +108,22 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 ```json
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
 ```
+
+### `POST /simulation/live` (T32)
+
+Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha elegido. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
+
+```json
+{ "enabled": true, "seed": 42 }
+```
+
+`seed` opcional (entero ≥ 1). Sin semilla, la primera activación elige una al azar y las siguientes reutilizan la anterior. Con semilla nueva la secuencia empieza de cero.
+
+```json
+{ "ok": true, "live": true, "seed": 42 }
+```
+
+`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo en `backend/src/domain/incidents.ts`). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
 
 ### `POST /events`
 

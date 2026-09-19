@@ -26,6 +26,14 @@ PRIORIDADES, EN ESTE ORDEN
 HONESTIDAD
 Si no existe una solución completa, dilo con números en "reading" y deja las plazas que faltan sin asignar. No declares cobertura completa que no tienes. Lo que todavía no esté verificado va en "unverified".
 
+CÓMO PENSAR
+El thinking son como mucho 8 viñetas, no la respuesta. En ellas solo:
+1. Qué ha cambiado y a cuántas personas o vehículos afecta.
+2. La alternativa inmediata que cabe (números).
+3. Hasta 5 acciones; en paralelo si no hay dependencia real.
+4. Dato del mundo que no está en la foto (quién está en un sitio, capacidad, ruta): queries y done false. Confirmación de una persona (apertura, desvío, acceso de entregas): llamada o SMS, queries [] y done true. No mezcles las dos. Si done es true, queries debe ser [].
+Prohibido redactar el JSON en el thinking, revalidar el esquema campo a campo o dudar en bucle. Cuando tengas el plan, para de pensar y escribe solo el JSON.
+
 FORMATO DE SALIDA
 Responde únicamente con un objeto JSON válido, sin texto ni markdown alrededor, con esta forma exacta:
 
@@ -85,7 +93,7 @@ REGLAS DEL FORMATO
 
 MAPA Y OPERACIONES
 Si el evento dice que un lugar cierra, se inunda, tiene una fuga o deja de servir, emite set_place con ese id y status "cerrado" en esta misma respuesta; y set_place con status "pendiente" para cada alternativa que pongas en consulta. Sin eso, el panel sigue mostrando el lugar como operativo.
-Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada. Si te falta un dato del mundo, emite queries y done: false.
+Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada.
 
 Amplía el JSON con:
 
@@ -213,7 +221,10 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     for (const error of input.previousErrors) lines.push(`- ${error}`);
   }
 
-  lines.push("", "Decide qué hacer ahora y responde solo con el JSON.");
+  lines.push(
+    "",
+    "Piensa en 8 líneas o menos. No escribas JSON en el thinking. Responde solo con el objeto JSON.",
+  );
 
   return lines.join("\n");
 }
