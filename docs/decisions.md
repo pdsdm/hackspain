@@ -51,7 +51,12 @@
 - **Por qué:** los vehículos circulan por calles reales y la ruta cambia sola cuando un evento cambia el destino (`destinationId` / `dockId`). Sin clave de API y sin servidor propio.
 - **Nota:** el servidor demo de OSRM no garantiza disponibilidad. La demo no depende de él: sin red, el mapa muestra las rutas rectas.
 
-### D9: `CrisisState` es el contrato del estado de la crisis
+### D9: plano operativo y comparación de estados (amplía D5)
+
+- **Qué:** vista esquemática sin dependencias de red como entrada al dashboard; Leaflet sigue disponible como mapa. Se conserva el diseño Zhivel. La comparación usa una referencia fija de la sesión que el operador puede actualizar.
+- **Por qué:** mostrar Norte/Sur, cambios y decisiones con claridad, incluso sin tiles. En API la referencia es el primer snapshot recibido; nunca se inventa un estado anterior. En simulación se usa el fixture normal de T5.
+
+### D10: `CrisisState` es el contrato del estado de la crisis
 
 - **Qué:** `frontend/src/domain/types.ts` define el estado público compartido por panel, backend y agentes. Los tiempos son segundos desde medianoche y la replanificación usa `planVersion`; el coordinador propone y el backend valida aforo y presupuesto. SQLite puede mantener tablas operativas internas fuera de `/state`.
 - **Por qué:** el panel y los fixtures ya usan ese formato; conservar el objeto completo evita traductores y pérdida de campos durante la demo.

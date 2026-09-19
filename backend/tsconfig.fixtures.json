@@ -12,5 +12,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["fixtures/madring.ts", "../scripts/generate-fixtures.mts", "test/fixtures.test.ts"]
+  "include": ["fixtures/madring.ts", "../scripts/generate-fixtures.mts", "test/fixtures.test.ts", "test/dashboard.test.ts"]
 }

@@ -9,19 +9,19 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
   const left = s.clock.openingAt - s.clock.simSeconds
   const late = left < 0
   return (
-    <header className="flex items-center gap-5 px-6 h-16 border-b border-line bg-bg flex-none">
-      <img src="/brand/zhivel-logo-dark.png" alt="Zhivel" className="h-9 w-auto" />
+    <header className="dashboard-topbar">
+      <img src="/brand/zhivel-logo-dark.png" alt="Zhivel" className="h-[26px] w-auto" />
       <span className="w-px h-6 bg-line-2" />
       <div className="flex flex-col gap-px">
         <span className="display font-bold text-[14px] uppercase tracking-[0.02em]">Centro de operaciones</span>
         <span className="text-[12px] text-muted">MADRING · Hospitalidad · Domingo de Gran Premio</span>
       </div>
-      {s.simulated && (
+      {(s.simulated || ctl.source === 'sim') && (
         <span className="ml-1 px-2 py-[3px] border border-line-2 text-muted display font-semibold text-[10px] tracking-[0.14em] uppercase">Simulación</span>
       )}
       {ctl.source === 'api' && (
-        <span className={`flex items-center gap-1 text-[11px] ${ctl.error ? 'text-red' : 'text-green'}`}>
-          <Radio size={12} /> {ctl.error ? 'Backend sin respuesta' : 'Backend conectado'}
+        <span className={`flex items-center gap-1 text-[11px] ${ctl.stale ? 'text-red' : 'text-green'}`}>
+          <Radio size={12} /> {ctl.stale ? 'Datos sin actualizar' : 'Backend conectado'}
         </span>
       )}
 
@@ -33,7 +33,7 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
         <span className="text-[12px] text-muted">→ {fmtClock(s.clock.openingAt)}</span>
       </div>
 
-      {s.simulated && (
+      {ctl.source === 'sim' && (
         <>
           <span className="w-px h-6 bg-line-2" />
           <div className="flex items-center gap-1">
@@ -55,7 +55,7 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
         </>
       )}
 
-      <button onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
+      <button disabled={ctl.pending || ctl.stale} onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
     </header>
   )
 }
