@@ -21,8 +21,8 @@ export function CoordinadorPanel({ s }: { s: CrisisState }) {
               <span className={`w-2 h-2 flex-none ${DOT[st.tone]} ${a.status === 'llamada' ? 'animate-pulse' : ''}`} />
               <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                 <div className="display font-bold text-[13px] leading-tight">{a.name}</div>
-                <div className="text-[11px] text-muted truncate" title={a.objective}>{a.objective}</div>
-                {a.lastResult && <div className="text-[11px] text-text/70 truncate" title={a.lastResult}>↳ {a.lastResult}</div>}
+                <div className="text-[11px] text-muted leading-relaxed">{a.objective}</div>
+                {a.lastResult && <div className="text-[11px] text-text/70 leading-relaxed">↳ {a.lastResult}</div>}
               </div>
               <Pill tone={st.tone} dot={false}>{st.label}</Pill>
             </li>
