@@ -293,6 +293,16 @@ test("el harness Devin cloud exige DEVIN_ORG_ID", () => {
   );
 });
 
+test("normaliza set_place sobre una puerta a set_gate", () => {
+  const plan = validPlan();
+  plan.operations = [{ op: "set_place", id: "gate-oeste", status: "cerrado" }];
+
+  const { output, issues } = parseOutput(JSON.stringify(plan), crisisInput("calm"));
+
+  assert.deepEqual(issues, []);
+  assert.equal(output?.operations?.[0]?.op, "set_gate");
+});
+
 test("acepta operations de Devin con placeId/estado/vehicleId", () => {
   const payload = JSON.stringify({
     reading: "Acceso Sur cerrado, shuttles a esperaSur.",

@@ -131,7 +131,7 @@ test("with an LLM the world agent invents the incident, applies its operations a
   const completeFn = async (_config: unknown, system: string) => {
     systems.push(system);
     if (system.startsWith("Eres el mundo")) {
-      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }] });
+      return JSON.stringify({ text: "Un camión de TV bloquea el Parking Sur: TX-01 no puede entrar", area: "transporte", operations: [{ op: "redirect_vehicle", id: "TX-01", destinationId: "accesoSur2", status: "retenido", note: "Bloqueado en Parking Sur" }, { op: "set_place", id: "parkingSur", status: "confirmado" }, { op: "set_place", id: "gate-oeste", status: "cerrado" }] });
     }
     return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "estable", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
   };
@@ -150,6 +150,8 @@ test("with an LLM the world agent invents the incident, applies its operations a
     assert.equal(taxi.destinationId, "accesoSur2");
     const parking = (state.spaces as Array<Record<string, unknown>>).find((item) => item.id === "parkingSur")!;
     assert.notEqual(parking.status, "confirmado");
+    const gate = (state.gates as Array<Record<string, unknown>>).find((item) => item.id === "gate-oeste")!;
+    assert.equal(gate.status, "cerrado");
     assert.ok((state.events as Array<{ kind: string; text: string }>).some((event) => event.kind === "incidencia" && event.text.includes("camión de TV")));
   } finally {
     clock.stop();
