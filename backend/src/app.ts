@@ -76,8 +76,20 @@ export function createApp(
   let llmConfig;
   try {
     llmConfig = config.coordinatorMode === "llm" ? loadLlmConfig() : undefined;
-  } catch {
+  } catch (error) {
+    console.error("[coord] loadLlmConfig falló:", error instanceof Error ? error.message : error);
     llmConfig = undefined;
+  }
+  if (config.coordinatorMode === "llm" && !llmConfig && !options.completeFn) {
+    console.error("[coord] COORDINATOR_MODE=llm pero no hay proveedor; POST /events acabará en «no disponible»");
+  } else if (llmConfig) {
+    console.log(
+      "[coord] listo",
+      llmConfig.provider,
+      llmConfig.harness,
+      llmConfig.model,
+      llmConfig.orgId ? "org=sí" : "org=no",
+    );
   }
   const engine = new Engine(
     stateRepository,
@@ -184,7 +196,8 @@ export function createApp(
     try {
       const event = parseEvent(request.body);
       const eventId = randomUUID();
-      void engine.handle({ ...event, id: eventId }).catch((error) => console.error(error));
+      console.log("[events] POST /events", event.source, event.kind, event.text ?? "", eventId);
+      void engine.handle({ ...event, id: eventId }).catch((error) => console.error("[events] handle", error));
       response.status(202).json({ ok: true, eventId });
     } catch (error) {
       next(error);

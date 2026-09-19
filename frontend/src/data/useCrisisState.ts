@@ -138,7 +138,11 @@ export function useCrisisState(): CrisisController {
         .finally(() => { requestInFlight.current = false; setPending(false) })
     },
     sendEvent: async (text) => {
-      if (SOURCE !== 'api' || requestInFlight.current || stale) return false
+      if (SOURCE !== 'api') return false
+      if (requestInFlight.current) {
+        setFeedback('Espera: hay un envío en curso (el coordinador va en serie).')
+        return false
+      }
       requestInFlight.current = true
       setPending(true)
       setFeedback(null)

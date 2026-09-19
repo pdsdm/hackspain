@@ -35,5 +35,6 @@
 | T23 | Rediseño UI del panel: tema claro con estética Zhivel | Pep | `feat/pepe-ui-zhivel` | - | doing |
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` | [T24](docs/specs/T24-motor-eventos.md) | review |
 | T25 | Robustez del motor: cola que no se envenena, reloj vivo tras reset, timeout de callbacks | Zhi | `fix/zhi-engine-robustez` | - | review |
+| T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` | - | doing |
 
 Plan, prioridades, estimaciones y dependencias: [`docs/plan-ejecucion.md`](docs/plan-ejecucion.md). T4 `done` significa documentación preparada y comprobada localmente, no mergeada ni implementada. T1 pasa a `review` porque el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.

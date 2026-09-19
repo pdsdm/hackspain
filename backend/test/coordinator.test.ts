@@ -196,4 +196,58 @@ test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
   assert.equal(config.provider, "helmcode");
   assert.equal(config.model, "deepseek-v4-flash");
   assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
+  assert.equal(config.harness, "json");
+});
+
+test("Cognition/Devin es el proveedor por defecto y usa el harness de tools", () => {
+  const config = loadLlmConfig({
+    COGNITION_API_KEY: "cog_test",
+    OPENAI_API_KEY: "sk-openai",
+  });
+
+  assert.equal(config.provider, "cognition");
+  assert.equal(config.model, "swe-1.7");
+  assert.equal(config.harness, "tools");
+  assert.equal(config.baseUrl, "https://api.cognition.ai/v1");
+});
+
+test("el harness Devin cloud exige DEVIN_ORG_ID", () => {
+  assert.throws(
+    () => loadLlmConfig({ COGNITION_API_KEY: "cog_test", COORDINATOR_HARNESS: "devin" }),
+    /DEVIN_ORG_ID/,
+  );
+});
+
+test("acepta operations de Devin con placeId/estado/vehicleId", () => {
+  const payload = JSON.stringify({
+    reading: "Acceso Sur cerrado, shuttles a esperaSur.",
+    planVersion: 2,
+    coordinatorStatus: "replanificando",
+    actions: [],
+    commitments: [],
+    assignments: [],
+    decision: null,
+    unverified: [],
+    operations: [
+      { op: "set_place", placeId: "accesoSur", estado: "cerrado" },
+      { op: "reroute_shuttle", vehicleId: "BUS-01", destinationId: "esperaSur" },
+      { op: "redirect_delivery", deliveryId: "CAT-01", muelleId: "muelleEste" },
+      { op: "redirect_delivery", destino: "sin-muelle" },
+      { op: "log_event", message: "Acceso Sur cortado" },
+    ],
+    done: true,
+  });
+  const { output, issues } = parseOutput(payload, crisisInput("calm"));
+  assert.deepEqual(issues, []);
+  assert.ok(output);
+  const first = output.operations?.[0];
+  const second = output.operations?.[1];
+  assert.equal(first?.op, "set_place");
+  assert.equal(first && "id" in first ? first.id : undefined, "accesoSur");
+  assert.equal(second && "id" in second ? second.id : undefined, "BUS-01");
+  const delivery = output.operations?.[2];
+  assert.equal(delivery && "op" in delivery ? delivery.op : undefined, "redirect_delivery");
+  assert.equal(delivery && "id" in delivery ? delivery.id : undefined, "CAT-01");
+  assert.equal(delivery && "dockId" in delivery ? delivery.dockId : undefined, "muelleEste");
+  assert.equal(output.operations?.length, 4);
 });

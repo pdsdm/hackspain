@@ -37,6 +37,67 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function pickString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim() !== "") return value;
+  }
+  return undefined;
+}
+
+function normalizeOperation(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const id = pickString(
+    raw.id,
+    raw.placeId,
+    raw.vehicleId,
+    raw.gateId,
+    raw.groupId,
+    raw.deliveryId,
+    raw.shipmentId,
+  );
+  const status = pickString(raw.status, raw.estado);
+  const text = pickString(raw.text, raw.message, raw.constraint);
+  const next: Record<string, unknown> = { ...raw };
+  if (id !== undefined) next.id = id;
+  if (status !== undefined) next.status = status;
+  if (raw.op === "log_event") {
+    next.text = text ?? pickString(raw.reason) ?? "";
+    if (typeof next.kind !== "string" || next.kind === "") next.kind = "incidencia";
+  }
+  if (raw.op === "add_constraint") next.text = text ?? pickString(raw.reason) ?? "";
+  if (raw.op === "set_group") {
+    const where = pickString(raw.where, raw.location);
+    const assigned = pickString(raw.assignedSpaceId, raw.spaceId);
+    if (where !== undefined) next.where = where;
+    if (assigned !== undefined) next.assignedSpaceId = assigned;
+  }
+  if (raw.op === "redirect_delivery") {
+    const dockId = pickString(raw.dockId, raw.dock, raw.muelleId, raw.muelle, raw.destinationDock);
+    if (dockId !== undefined) next.dockId = dockId;
+  }
+  return next;
+}
+
+function operationReady(raw: unknown): boolean {
+  if (!isRecord(raw) || typeof raw.op !== "string") return false;
+  if (raw.op === "set_place") return typeof raw.id === "string" && typeof raw.status === "string";
+  if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
+  if (raw.op === "redirect_delivery") return typeof raw.id === "string" && typeof raw.dockId === "string";
+  if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
+  if (raw.op === "set_group") return typeof raw.id === "string";
+  if (raw.op === "set_gate") return typeof raw.id === "string";
+  if (raw.op === "log_event") return typeof raw.text === "string";
+  if (raw.op === "add_constraint") return typeof raw.text === "string";
+  if (raw.op === "set_agent") return true;
+  return true;
+}
+
+function normalizePayload(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  if (!Array.isArray(value.operations)) return value;
+  return { ...value, operations: value.operations.map(normalizeOperation).filter(operationReady) };
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
@@ -289,7 +350,7 @@ export function parseOutput(
   input: CoordinatorInput,
 ): { output: CoordinatorOutput | null; issues: ValidationIssue[] } {
   try {
-    return validateOutput(JSON.parse(text), input);
+    return validateOutput(normalizePayload(JSON.parse(text)), input);
   } catch {
     return { output: null, issues: [{ code: "json_invalido", detail: "la respuesta no es JSON" }] };
   }

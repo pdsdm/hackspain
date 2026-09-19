@@ -71,3 +71,81 @@ test("the coordinator loop answers queries, feeds errors back and finishes", asy
     database.close();
   }
 });
+
+test("the Cognition tool harness consults the world and submits a plan", async () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(
+      states,
+      tasks,
+      new WorkflowEventRepository(database.connection),
+    );
+    let calls = 0;
+    const result = await runCoordinatorLoop(
+      { source: "chat", kind: "free_text", text: "tubería en Acceso Sur" },
+      {
+        world: loadWorld(),
+        states,
+        tasks,
+        workflows,
+        config: {
+          provider: "cognition",
+          apiKey: "cog_test",
+          model: "swe-1.7",
+          baseUrl: "https://example.invalid/v1",
+          harness: "tools",
+          jsonObject: false,
+          sessionApiUrl: "https://api.devin.ai/v3",
+          devinMode: "fast",
+        },
+        chatFn: async (_config, messages) => {
+          calls += 1;
+          const last = messages[messages.length - 1];
+          if (last?.role !== "tool") {
+            return {
+              content: null,
+              tool_calls: [
+                {
+                  id: "call-consult",
+                  type: "function",
+                  function: {
+                    name: "consult_world",
+                    arguments: JSON.stringify({ type: "affected_by", placeId: "accesoSur" }),
+                  },
+                },
+              ],
+            };
+          }
+          return {
+            content: null,
+            tool_calls: [
+              {
+                id: "call-submit",
+                type: "function",
+                function: {
+                  name: "submit_plan",
+                  arguments: JSON.stringify(
+                    baseOutput({
+                      operations: [
+                        { op: "log_event", kind: "incidencia", text: "Acceso Sur vía harness", area: "espacios" },
+                      ],
+                      done: true,
+                    }),
+                  ),
+                },
+              },
+            ],
+          };
+        },
+      },
+    );
+    assert.equal(result, "ok");
+    assert.equal(calls, 2);
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => String(event.text).includes("Acceso Sur vía harness")));
+  } finally {
+    database.close();
+  }
+});

@@ -2,7 +2,7 @@
 
 ## Qué y para qué
 
-El backend arranca en un estado usable (por defecto `crisis`; en demo, `calm` a las 12:00) y reacciona a cualquier entrada con un coordinador **en proceso**. El coordinador no usa SDK ni tool calling: pide JSON con operaciones y consultas, el backend las valida contra el mundo y las reglas T7, y HappyRobot solo habla con personas. El panel con `VITE_DATA_SOURCE=api` deja de ser una simulación guionizada detrás de `GET /state`.
+El backend arranca en un estado usable (por defecto `crisis`; en demo, `calm` a las 12:00) y reacciona a cualquier entrada con un coordinador **en proceso**. El coordinador no usa SDK. Con Cognition usa function calling (`consult_world`, `submit_plan`); si no, pide JSON. El backend valida contra el mundo y las reglas T7, y HappyRobot solo habla con personas. El panel con `VITE_DATA_SOURCE=api` deja de ser una simulación guionizada detrás de `GET /state`.
 
 ## Modelo
 
@@ -45,5 +45,5 @@ Las partes T10 (asignaciones, compromisos, acciones, decisión) se aplican reuti
 ## Notas
 
 - Contrato: `POST /events`, `GET /actions`, `fixture` opcional en reset, payload de salida hacia el hook de HappyRobot. `POST /workflow/results` no cambia. `CrisisState` no cambia.
-- Sin dependencias nuevas (D11). Variables: `INITIAL_FIXTURE`, `CLOCK_SPEED`, `COORDINATOR_MODE`, `HAPPYROBOT_HOOK_*`, `PUBLIC_BASE_URL`.
+- Sin dependencias nuevas (D11, D12). Variables: `INITIAL_FIXTURE`, `CLOCK_SPEED`, `COORDINATOR_MODE`, `COORDINATOR_HARNESS`, `COGNITION_API_KEY`, `DEVIN_ORG_ID`, `HAPPYROBOT_HOOK_*`, `PUBLIC_BASE_URL`.
 - Archivos: `src/world/world.ts`, `src/domain/{engine,clock,apply-coordinator}.ts`, `src/agents/coordinator/{loop,operations}.ts`, `src/actions/{executor,adapters/*}.ts`, `src/state/event-repository.ts`.

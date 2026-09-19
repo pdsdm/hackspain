@@ -121,7 +121,7 @@ Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre 
 
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica; si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
 
 ### `GET /actions`
 
