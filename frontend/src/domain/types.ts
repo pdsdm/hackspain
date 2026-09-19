@@ -90,6 +90,7 @@ export interface Vehicle {
   count: number
   from: string
   origin: string
+  originPos?: LatLng
   destinationId: string
   route: LatLng[]
   departAt: number
