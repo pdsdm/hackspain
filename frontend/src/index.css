@@ -58,24 +58,26 @@ html, body, #root {
 .map-overlays { position: absolute; inset: 0; z-index: 1000; pointer-events: none; }
 .map-overlays > * { pointer-events: auto; }
 /* Timeline uses the dashboard glass surface, typography and semantic accents. */
-.chronology-panel { overflow: hidden; border-radius: 0; flex: 0 1 auto; }
+.chronology-panel { overflow: hidden; border-radius: 0; flex: 0 1 auto; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.chronology-panel .chronology-heading, .chronology-panel .event-chat { background: rgba(255,255,255,.55); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3); border: 1px solid rgba(255,255,255,.7); box-shadow: 0 8px 28px rgba(26,29,36,.08); }
+.chronology-panel .chronology-heading { border-bottom: 1px solid rgba(255,255,255,.7); }
 .chronology-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid rgba(26,29,36,.08); flex: none; }
 .chronology-heading h2 { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
 .chronology-heading p { font-size: 11px; color: var(--color-muted); margin-top: 3px; }
 .chronology-count { font-size: 10px; white-space: nowrap; color: var(--color-muted); padding: 3px 0; text-transform: uppercase; letter-spacing: .04em; }
 .chat-log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0; padding: 4px 12px 12px 12px; scroll-padding: 16px; }
-.timeline-hour { position: sticky; top: 0; z-index: 2; margin: 0 -12px; padding-left: 12px; padding-right: 12px; background: linear-gradient(rgba(244,244,242,.92), rgba(244,244,242,.75)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--color-muted); }
+.timeline-hour { position: sticky; top: 0; z-index: 2; margin: 0 -12px; padding-left: 12px; padding-right: 12px; background: rgba(244,244,242,.8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--color-muted); }
 .timeline-hour::after { content: ""; flex: 1; height: 1px; background: rgba(26,29,36,.1); }
 .timeline-item { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 10px; padding: 4px 0; }
-.timeline-item::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: rgba(26,29,36,.08); }
+.timeline-item::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(26,29,36,.08); }
 .timeline-item:first-of-type::before, .timeline-hour + .timeline-item::before { top: 18px; }
 .timeline-item:last-child::before { bottom: auto; height: 18px; }
-.timeline-node { position: relative; z-index: 1; width: 18px; height: 18px; margin-top: 10px; display: grid; place-items: center; background: var(--event-accent, #b8b8b2); color: #fff; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,.75); }
+.timeline-node { position: relative; z-index: 1; width: 18px; height: 18px; margin-top: 10px; display: grid; place-items: center; background: var(--event-accent, #b8b8b2); color: #fff; border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,255,255,.9); }
 .timeline-node svg { width: 10px; height: 10px; }
-.timeline-card { flex: none; min-width: 0; padding: 10px 12px 10px 12px; border: 1px solid rgba(26,29,36,.09); border-left: 3px solid var(--event-accent, #b8b8b2); border-radius: 2px; color: var(--color-text); background: rgba(255,255,255,.62); transition: transform .15s, box-shadow .15s; }
+.timeline-card { flex: none; min-width: 0; padding: 10px 12px 10px 12px; border: 1px solid rgba(26,29,36,.09); border-left: 3px solid var(--event-accent, #b8b8b2); border-radius: 2px; color: var(--color-text); background: rgba(255,255,255,.82); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 16px rgba(26,29,36,.08); transition: transform .15s, box-shadow .15s; }
 .timeline-card:hover { transform: translateX(2px); box-shadow: 0 4px 14px rgba(26,29,36,.08); }
-.timeline-item--white { --event-accent: #7d828c; }.timeline-item--mint { --event-accent: var(--color-green); }.timeline-item--mint .timeline-card { background: rgba(240,248,242,.72); }.timeline-item--lilac { --event-accent: #7c6fb0; }.timeline-item--rose { --event-accent: var(--color-red); }.timeline-item--rose .timeline-card { background: rgba(253,243,242,.78); }.timeline-item--sand { --event-accent: var(--color-amber); }.timeline-item--sand .timeline-card { background: rgba(252,247,235,.78); }
-.timeline-item--intervencion { --event-accent: var(--color-ink); }.timeline-item--intervencion .timeline-card { background: rgba(26,29,36,.06); }
+.timeline-item--white { --event-accent: #7d828c; }.timeline-item--mint { --event-accent: var(--color-green); }.timeline-item--mint .timeline-card { background: rgba(240,248,242,.88); }.timeline-item--lilac { --event-accent: #7c6fb0; }.timeline-item--rose { --event-accent: var(--color-red); }.timeline-item--rose .timeline-card { background: rgba(253,243,242,.9); }.timeline-item--sand { --event-accent: var(--color-amber); }.timeline-item--sand .timeline-card { background: rgba(252,247,235,.9); }
+.timeline-item--intervencion { --event-accent: var(--color-ink); }.timeline-item--intervencion .timeline-card { background: rgba(236,236,233,.9); }
 .timeline-item.is-new { animation: rise .45s cubic-bezier(.2,.8,.3,1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 .timeline-item.is-new .timeline-node { animation: node-pop .5s ease-out both; }
