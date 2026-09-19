@@ -216,6 +216,32 @@ Estos endpoints exigen `Authorization: Bearer <HAPPYROBOT_WEBHOOK_TOKEN>`. El se
 
 `eventId` identifica globalmente un mensaje y permite reintentos seguros. `runId` y `planVersion` son los entregados por el backend; no se sustituyen por IDs de sesión de HappyRobot.
 
+### `POST /workflow/happyrobot/events`
+
+Entrada autenticada y estricta para incidentes reales detectados por workflows de voz y SMS:
+
+```json
+{
+  "eventId": "hr-incident-018f…",
+  "channel": "call",
+  "actor": "Responsable de recinto",
+  "incidentId": "principal_pipe_burst",
+  "summary": "Una tubería rota obliga a cerrar el Pabellón Principal",
+  "evidence": { "sessionId": "id-real-de-happyrobot" }
+}
+```
+
+- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `principal_pipe_burst` | `dock_blocked`.
+- El cuerpo y `evidence` no admiten campos adicionales: el workflow no puede enviar operaciones, parches ni versiones de estado.
+- `principal_pipe_burst` cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
+- Las solicitudes se serializan por orden de llegada. Cada efecto lee el run y la versión vigentes cuando alcanza la cola.
+- Repetir el mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`, sin aplicar ni coordinar de nuevo. Reutilizarlo con otro cuerpo devuelve `409`.
+- La línea añadida a `events[]` puede incluir los campos opcionales y retrocompatibles `channel`, `actor` y `provenance: { source: "happyrobot", eventId, sessionId }`.
+
+```json
+{ "ok": true, "duplicate": false, "eventId": "hr-incident-018f…", "incidentId": "principal_pipe_burst", "planVersion": 2 }
+```
+
 ### `POST /workflow/coordinator/proposals`
 
 Salida estructurada del coordinador sobre una versión concreta:

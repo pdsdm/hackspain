@@ -217,3 +217,15 @@ inferior del dashboard; en móvil se conserva solo la cronología.
 Solo presentación, sin cambios de backend ni contratos. `make check` OK: 316
 tests pasan, 7 live omitidos y 10 fixtures verificadas. Revisión visual local en
 localhost:5178. Pendiente de revisión humana, sin commit ni push.
+
+## Entrada de incidentes HappyRobot T46 · revisión local
+
+En `feat/zhi-happyrobot-event-ingress` (`47ab322`), el endpoint autenticado
+`POST /workflow/happyrobot/events` acepta solo los incidentes congelados de voz y SMS,
+los serializa sobre el estado vigente y conserva canal, actor y sesión en la cronología.
+Los duplicados no vuelven a mutar ni coordinar; reutilizar un `eventId` con otro cuerpo
+responde `409`.
+
+Verificación local: 5 pruebas focalizadas pasan; `make check` OK con 321 pruebas pasando,
+7 live omitidas y 10 fixtures. Quedan pendientes los workflows reales T47 y el E2E T52;
+no se ha probado todavía un canal HappyRobot real contra este endpoint.

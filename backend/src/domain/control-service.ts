@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { ContractError, type Intervention, type TwistId } from "../contracts/api.js";
+import { ContractError, type HappyRobotIncidentId, type Intervention, type TwistId } from "../contracts/api.js";
 import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import { findIncident } from "./incidents.js";
@@ -20,9 +20,27 @@ function findById(values: Array<Record<string, unknown>>, id: string) {
   return values.find((value) => value.id === id);
 }
 
-function addEvent(state: CrisisStateDocument, kind: string, text: string, area?: string): void {
+export interface IncidentProvenance {
+  channel: "call" | "sms";
+  actor: string;
+  eventId: string;
+  sessionId: string;
+}
+
+function addEvent(state: CrisisStateDocument, kind: string, text: string, area?: string, provenance?: IncidentProvenance): void {
   const events = records(state, "events");
-  events.push({ id: `event-${randomUUID()}`, time: state.clock.simSeconds, kind, text, ...(area ? { area } : {}) });
+  events.push({
+    id: `event-${randomUUID()}`,
+    time: state.clock.simSeconds,
+    kind,
+    text,
+    ...(area ? { area } : {}),
+    ...(provenance ? {
+      channel: provenance.channel,
+      actor: provenance.actor,
+      provenance: { source: "happyrobot", eventId: provenance.eventId, sessionId: provenance.sessionId },
+    } : {}),
+  });
   state.events = events.slice(-80);
 }
 
@@ -40,7 +58,7 @@ function twists(state: CrisisStateDocument): string[] {
     : [];
 }
 
-export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
+export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId, provenance?: IncidentProvenance): void {
   const spaces = records(state, "spaces");
   const shuttles = records(state, "shuttles");
   const deliveries = records(state, "deliveries");
@@ -95,7 +113,7 @@ export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): vo
       if (dock) Object.assign(dock, { status: "cerrado", note: "Bloqueado por un vehículo de TV" });
       invalidate(state, "c-muelle", "Muelle Este bloqueado");
       for (const delivery of deliveries) if (delivery.status !== "entregada") delivery.status = "bloqueada";
-      addEvent(state, "incidencia", "Muelle Este Sur bloqueado", "catering");
+      addEvent(state, "incidencia", "Muelle Este Sur bloqueado", "catering", provenance);
       break;
     }
     case "provider_silent": {
@@ -208,6 +226,44 @@ export class ControlService {
     const state = structuredClone(run.state);
     applyTwistEffect(state, twist);
     this.states.saveState(run.id, state);
+  }
+
+  applyHappyRobotIncident(incidentId: HappyRobotIncidentId, summary: string, provenance: IncidentProvenance): boolean {
+    const run = this.states.ensureActiveRun();
+    if (incidentId === "dock_blocked") {
+      if (twists(run.state).includes(incidentId)) return false;
+      const state = structuredClone(run.state);
+      applyTwistEffect(state, incidentId, provenance);
+      this.states.saveState(run.id, state);
+      return true;
+    }
+
+    const principal = findById(records(run.state, "spaces"), "principal");
+    if (principal?.status === "cerrado") return false;
+    const state = structuredClone(run.state);
+    const nextVersion = state.planVersion + 1;
+    const space = findById(records(state, "spaces"), "principal");
+    if (space) Object.assign(space, { status: "cerrado", note: "Avería de agua · sin hora de reapertura" });
+    for (const id of ["c-principal", "c-entrega1", "c-entrega2"]) {
+      invalidate(state, id, id === "c-principal" ? "Pabellón cerrado por avería" : "El plan original queda invalidado");
+      const commitment = findById(state.commitments, id);
+      if (commitment?.status === "invalidado") commitment.planVersion = nextVersion;
+    }
+    for (const group of records(state, "guestGroups")) {
+      if (group.assignedSpaceId !== "principal") continue;
+      group.confirmedCount = 0;
+      group.informedCount = 0;
+      group.acceptedCount = 0;
+      delete group.assignedSpaceId;
+    }
+    state.planVersion = nextVersion;
+    state.waitingForDecision = null;
+    state.coordinatorStatus = "replanificando";
+    state.resolved = false;
+    delete state.closureSummary;
+    addEvent(state, "incidencia", summary, "espacios", provenance);
+    this.states.saveState(run.id, state);
+    return true;
   }
 
   setLive(enabled: boolean, seed?: number, mode?: "open" | "catalog"): { live: boolean; seed: number; mode: "open" | "catalog" } {
