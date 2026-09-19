@@ -37,4 +37,4 @@
 | T25 | Robustez del motor: cola que no se envenena, reloj vivo tras reset, timeout de callbacks | Zhi | `fix/zhi-engine-robustez` (PR #16, mergeada) | - | done |
 | T26 | Cognition/Devin como inferencia y harness del coordinador | Pep | `feat/pep-cognition-devin` (PR #17, mergeada) | - | done |
 
-Alcance de la demo, encaje con el track y siguientes tareas propuestas: [`docs/resumen-alcance-demo.md`](docs/resumen-alcance-demo.md). T1 sigue en `review`: el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.
+T1 sigue en `review`: el escenario y README existen; queda su revisión humana. Los responsables de las demás tareas deben cambiar su propia fila al comenzar.
