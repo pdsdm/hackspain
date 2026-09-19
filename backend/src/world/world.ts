@@ -40,6 +40,7 @@ export interface RouteEstimate {
 
 export interface VehicleLike {
   origin?: string;
+  from?: string;
   destinationId?: string;
   dockId?: string;
   departAt: number;
@@ -47,18 +48,6 @@ export interface VehicleLike {
 }
 
 const WORLD_URL = new URL("../../fixtures/madring/world.json", import.meta.url);
-
-const ORIGIN_STOPS: Record<string, string> = {
-  Chamartín: "chamartin",
-  "Plaza de Castilla": "castilla",
-  "Aeropuerto T4": "t4",
-  Coslada: "coslada",
-  "Hub DHL Coslada": "coslada",
-  DHL: "coslada",
-  "Concesionario McLaren Madrid": "dealerMclaren",
-  "McLaren Madrid": "dealerMclaren",
-  McLaren: "dealerMclaren",
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -135,21 +124,13 @@ export function affectedBy(state: CrisisStateDocument, world: WorldModel, placeI
   return { shuttles, deliveries, guestGroups, gates, commitments };
 }
 
-export function originStopId(origin: string | undefined, fallbackId: string): string {
-  if (!origin) return fallbackId;
-  if (ORIGIN_STOPS[origin]) return ORIGIN_STOPS[origin];
-  const key = Object.keys(ORIGIN_STOPS).find((name) => name.toLowerCase() === origin.toLowerCase());
-  if (key) return ORIGIN_STOPS[key];
-  return origin;
-}
-
 export function routeTo(
   world: WorldModel,
   fromId: string,
   toPlaceId: string,
 ): RouteEstimate {
-  const resolvedFrom = originStopId(fromId, fromId);
-  const from = placeById(world, resolvedFrom);
+  const from = placeById(world, fromId) ?? world.places.find((place) => place.name.toLowerCase() === fromId.toLowerCase());
+  const resolvedFrom = from?.id ?? fromId;
   const to = placeById(world, toPlaceId);
   const direct = world.links.find((link) => link.from === resolvedFrom && link.to === toPlaceId);
   if (direct) {
@@ -186,8 +167,7 @@ export function etaFor(
   toPlaceId: string,
   now: number,
 ): RouteEstimate & { arriveAt: number } {
-  const fromId =
-    originStopId(vehicle.origin, vehicle.destinationId ?? vehicle.dockId ?? toPlaceId);
+  const fromId = vehicle.from ?? vehicle.origin ?? vehicle.destinationId ?? vehicle.dockId ?? toPlaceId;
   const estimate = routeTo(world, fromId, toPlaceId);
   const delay = (vehicle.delayMin ?? 0) * 60;
   return {
