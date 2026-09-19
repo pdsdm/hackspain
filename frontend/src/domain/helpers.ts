@@ -63,7 +63,7 @@ export function openDecision(s: CrisisState, d: Omit<Decision, 'status' | 'creat
   s.waitingForDecision = id
   s.coordinatorStatus = 'esperando_decision'
   s.budget.forecast = d.cost
-  pushEvent(s, 'decision', `Decisión pendiente: ${d.title} (${d.cost.toLocaleString('es-ES')} €)`)
+  pushEvent(s, 'decision', `Decisión operativa pendiente: ${d.title}`)
   return id
 }
 

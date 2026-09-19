@@ -103,7 +103,11 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
     if (harness === "devin" && !orgId) {
       throw new Error("COORDINATOR_HARNESS=devin requiere DEVIN_ORG_ID (Settings → Service Users).");
     }
-    return { ...config, harness, ...(orgId ? { orgId } : {}), ...(reasoningEffort ? { reasoningEffort } : {}) };
+    // Helmcode/DeepSeek razona por defecto y tarda 8-10 s más por plan que con "low", sin
+    // ganar calidad (medido en D15). El resto de proveedores no reciben campos de thinking
+    // salvo que se pidan: a OpenAI o Cognition les llegaría un parámetro que no conocen.
+    const effort = reasoningEffort ?? (config.provider === "helmcode" ? "low" : undefined);
+    return { ...config, harness, ...(orgId ? { orgId } : {}), ...(effort ? { reasoningEffort: effort } : {}) };
   };
 
   if (cognition) {

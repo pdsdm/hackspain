@@ -4,6 +4,7 @@ import { ContractError, type Intervention, type TwistId } from "../contracts/api
 import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import { findIncident } from "./incidents.js";
+import { createSimulationSeed } from "./random.js";
 import type { StateRepository } from "../state/state-repository.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -103,16 +104,11 @@ function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
       addEvent(state, "fallo", "El transportista no responde", "transporte");
       break;
     }
-    case "reject_spend": {
-      const pending =
-        (typeof state.waitingForDecision === "string" ? findById(state.decisions, state.waitingForDecision) : undefined) ??
-        state.decisions.find((decision) => decision.status === "pendiente");
-      if (pending && pending.status === "pendiente") pending.status = "rechazada";
-      state.waitingForDecision = null;
-      addEvent(state, "intervencion", "El responsable rechaza el gasto adicional");
-      break;
-    }
     case "reject_split": {
+      for (const decision of state.decisions) {
+        if (decision.status === "pendiente") decision.status = "rechazada";
+      }
+      state.waitingForDecision = null;
       for (const id of ["pabellonB", "loungeSur"]) {
         const space = findById(spaces, id);
         if (space) space.status = "descartado";
@@ -137,7 +133,11 @@ function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
 }
 
 export class ControlService {
-  constructor(private readonly states: StateRepository) {}
+  constructor(
+    private readonly states: StateRepository,
+    private readonly simSeed?: number,
+    private readonly clockSpeed = 1,
+  ) {}
 
   applyIntervention(intervention: Intervention): void {
     const run = this.states.ensureActiveRun();
@@ -178,18 +178,24 @@ export class ControlService {
       }
       case "approve_spend":
       case "reject_spend":
-      case "reject_split": {
+        throw new ContractError("Economic approvals are disabled", 409);
+      case "reject_split":
+        if (!twists(state).includes("reject_split")) applyTwistEffect(state, "reject_split");
+        break;
+      case "approve_plan":
+      case "reject_plan": {
         const decisionId = intervention.payload!.decisionId!;
         const decision = findById(state.decisions, decisionId);
         if (!decision) throw new ContractError(`Decision not found: ${decisionId}`, 404);
-        if (decision.status !== "pendiente") throw new ContractError(`Decision is already resolved: ${decisionId}`, 409);
-        const approved = intervention.type === "approve_spend";
+        if (decision.kind !== "operational" || decision.status !== "pendiente" || state.waitingForDecision !== decisionId) {
+          throw new ContractError(`Decision is not a pending operational decision: ${decisionId}`, 409);
+        }
+        const approved = intervention.type === "approve_plan";
         decision.status = approved ? "aprobada" : "rechazada";
+        if (!approved) state.rejectedPlanVersion = state.planVersion;
         state.waitingForDecision = null;
-        if (approved) state.budget.authorized = Math.max(state.budget.authorized, Number(decision.cost ?? 0));
-        addEvent(state, "intervencion", `El responsable ${approved ? "autoriza" : "rechaza"} ${String(decision.title)}`);
+        addEvent(state, "intervencion", `El responsable ${approved ? "acepta" : "rechaza"} ${String(decision.title)}`);
         state.coordinatorStatus = "replanificando";
-        if (intervention.type === "reject_split") applyTwistEffect(state, "reject_split");
         break;
       }
     }
@@ -263,8 +269,11 @@ export class ControlService {
     const mode = previous.liveMode === "catalog" ? "catalog" : "open";
 
     const run = this.states.reset(fixture);
+    const state = structuredClone(run.state);
+    state.clock.speed = this.clockSpeed;
+    state.clock.seed = this.simSeed ?? createSimulationSeed();
+    delete state.clock.attendanceSeed;
     if (live) {
-      const state = structuredClone(run.state);
       state.clock.live = true;
       state.clock.liveSeed = seed > 0 ? seed : 1 + Math.floor(Math.random() * 99_999);
       state.clock.liveMode = mode;
@@ -272,9 +281,8 @@ export class ControlService {
       state.clock.liveIndex = 0;
       state.clock.liveLastAt = 0;
       addEvent(state, "info", `Modo vivo mantenido tras el reinicio · semilla ${state.clock.liveSeed}`);
-      this.states.saveState(run.id, state);
-      return { runId: run.id, planVersion: state.planVersion };
     }
-    return { runId: run.id, planVersion: run.state.planVersion };
+    this.states.saveState(run.id, state);
+    return { runId: run.id, planVersion: state.planVersion };
   }
 }

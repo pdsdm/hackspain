@@ -141,6 +141,7 @@ export class TaskRepository {
           WHERE task.status = 'pending'
             AND run.active = 1
             AND COALESCE(json_extract(run.state_json, '$.agentsPaused'), 0) = 0
+            AND COALESCE(json_extract(run.state_json, '$.rejectedPlanVersion'), -1) != task.plan_version
             AND task.plan_version = json_extract(run.state_json, '$.planVersion')
             AND NOT EXISTS (
               SELECT 1

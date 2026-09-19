@@ -37,7 +37,7 @@ adoptar o descartar.
 | `delivery_delay` | CAT-02 +25 min, estado `retrasada` | No |
 | `dock_blocked` | Muelle Este `cerrado`, invalida `c-muelle`, entregas a `bloqueada` | No |
 | `provider_silent` | Agente de Transporte a `incidencia` | No |
-| `reject_spend` | La decisión pendiente pasa a `rechazada` | No |
+| `reject_spend` (retirado por T38) | No es un giro válido; el presupuesto no limita la recuperación | No |
 | `guest_need` | Añade necesidades no registradas al grupo «por sus medios» | No |
 
 El recuento de `pabellon_b_400` no cuenta como contingencia: es aritmética (si el aforo

@@ -66,6 +66,13 @@ export class Engine {
     return Boolean(this.options.llmConfig || this.options.completeFn);
   }
 
+  llmDeps(): { config?: LlmConfig; completeFn?: CompleteFn } {
+    return {
+      ...(this.options.llmConfig ? { config: this.options.llmConfig } : {}),
+      ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
+    };
+  }
+
   private applyGenerated(incident: GeneratedIncident): void {
     const run = this.states.ensureActiveRun();
     const draft = structuredClone(run.state);
@@ -155,7 +162,7 @@ export class Engine {
             mode = await this.runCoordinator(event);
           }
         }
-      } else if (event.source === "jury") {
+      } else if (event.source === "jury" || (event.source === "clock" && event.kind === "twist")) {
         const twist = parseTwist({ twist: event.payload?.twist ?? event.kind });
         const before = this.states.ensureActiveRun().state;
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
@@ -195,7 +202,9 @@ export class Engine {
         this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (callResultChangesPlan(event.payload)) mode = await this.runCoordinator(event);
+        if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
+          mode = await this.runCoordinator(event);
+        }
       } else {
         mode = await this.runCoordinator(event);
       }
@@ -363,6 +372,14 @@ export class Engine {
   }
 }
 
+function callResultMatchesPlan(
+  payload: Record<string, unknown> | undefined,
+  runId: string,
+  planVersion: number,
+): boolean {
+  return payload?.runId === runId && payload.planVersion === planVersion;
+}
+
 function callResultChangesPlan(payload: Record<string, unknown> | undefined): boolean {
   const status = payload?.status;
   if (status !== "completed") return true;
@@ -372,5 +389,5 @@ function callResultChangesPlan(payload: Record<string, unknown> | undefined): bo
 }
 
 function shouldCoordinateIntervention(type: Intervention["type"]): boolean {
-  return type === "approve_spend" || type === "reject_spend" || type === "reject_split" || type === "set_constraint";
+  return type === "approve_plan" || type === "reject_plan" || type === "reject_split" || type === "set_constraint";
 }
