@@ -7,6 +7,7 @@ import type { Engine } from "../domain/engine.js";
 import type { WorkflowService } from "../domain/workflow-service.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
+import { logAction, logActionError } from "../log.js";
 import { dispatchHappyRobot } from "./adapters/happyrobot.js";
 import { scheduleSimResult } from "./adapters/sim.js";
 
@@ -81,11 +82,15 @@ export class ActionExecutor {
 
   pump(): void {
     const run = this.states.ensureActiveRun();
-    if (run.state.agentsPaused) return;
+    if (run.state.agentsPaused || run.state.waitingForDecision) return;
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
-      this.dispatch(task).catch(() => {
+      this.dispatch(task).catch((error) => {
+        logActionError("dispatch failed", {
+          taskId: task.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
         this.tasks.markDispatchOutcome(task.id, "unknown");
       });
     }
@@ -97,6 +102,8 @@ export class ActionExecutor {
     const callId = `call-${task.id}`;
     const state = structuredClone(run.state);
     const calls = records(state, "calls");
+    const hook = this.config.hooks[task.area as AreaHook];
+    const real = Boolean(hook && this.config.happyrobotApiKey);
     calls.push({
       id: callId,
       agent: task.area,
@@ -105,6 +112,7 @@ export class ActionExecutor {
       startedAt: state.clock.simSeconds,
       endsAfter: 90,
       status: "en_curso",
+      simulated: !real,
       transcript: [],
     });
     state.calls = calls;
@@ -113,7 +121,15 @@ export class ActionExecutor {
     state.agents = records(state, "agents");
     this.states.saveState(run.id, state);
 
-    const hook = this.config.hooks[task.area as AreaHook];
+    const adapter = hook && this.config.happyrobotApiKey ? "happyrobot" : "sim";
+    logAction("dispatch", {
+      taskId: task.id,
+      runId: run.id,
+      planVersion: task.planVersion,
+      area: task.area,
+      kind: task.kind,
+      adapter,
+    });
     if (hook && this.config.happyrobotApiKey) {
       const outcome = await dispatchHappyRobot({
         hookUrl: hook,
@@ -123,9 +139,11 @@ export class ActionExecutor {
         planVersion: task.planVersion,
         callId,
         publicBaseUrl: this.config.publicBaseUrl,
+        testPhone: this.config.happyrobotTestPhone,
         state,
       });
       this.tasks.markDispatchOutcome(task.id, outcome);
+      logAction("dispatch outcome", { taskId: task.id, adapter, outcome });
       if (outcome === "dispatched") {
         this.due.push({
           at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
@@ -144,12 +162,23 @@ export class ActionExecutor {
       planVersion: task.planVersion,
       callId,
       eventId: `sim-${randomUUID()}`,
+      guestGroups: records(state, "guestGroups"),
+      deliveries: records(state, "deliveries"),
+      spaces: records(state, "spaces"),
     });
     this.due.push({ at: Number(state.clock.simSeconds) + delay, envelope });
+    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay });
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {
     const recorded = this.workflows.recordSpecialistResult(envelope);
+    logAction("result", {
+      taskId: envelope.taskId,
+      eventId: envelope.eventId,
+      status: envelope.status,
+      applied: recorded.applied,
+      duplicate: recorded.duplicate,
+    });
     if (recorded.applied && !recorded.duplicate) {
       void this.engine?.handle({
         source: "happyrobot",

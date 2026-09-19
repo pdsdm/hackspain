@@ -18,6 +18,7 @@ export interface CrisisController {
   setReference: () => void
   intervene: (i: Intervention) => Promise<boolean>
   twist: (t: TwistId) => void
+  setLive: (enabled: boolean, seed?: number) => void
   setSpeed: (n: number) => void
   togglePause: () => void
   select: (id: string | null) => void
@@ -119,6 +120,19 @@ export function useCrisisState(): CrisisController {
       void api.twist(twist)
         .then(() => setFeedback('Giro enviado al backend.'))
         .catch((e) => setFeedback('No se pudo enviar el giro: ' + (e instanceof Error ? e.message : 'error')))
+        .finally(() => { requestInFlight.current = false; setPending(false) })
+    },
+    setLive: (enabled, seed) => {
+      if (SOURCE !== 'api') {
+        setFeedback('El Modo vivo solo funciona contra el backend (VITE_DATA_SOURCE=api).')
+        return
+      }
+      if (requestInFlight.current) return
+      requestInFlight.current = true
+      setPending(true)
+      void api.live(enabled, seed)
+        .then((r) => setFeedback(r.live ? `Modo vivo activado · semilla ${r.seed}.` : 'Modo vivo desactivado.'))
+        .catch((e) => setFeedback('No se pudo cambiar el Modo vivo: ' + (e instanceof Error ? e.message : 'error')))
         .finally(() => { requestInFlight.current = false; setPending(false) })
     },
     setSpeed: (speed) => { if (SOURCE === 'sim') dispatch({ type: 'SET_SPEED', speed }) },

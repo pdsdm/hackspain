@@ -43,6 +43,36 @@ test("rules mode applies a jury twist without calling the LLM", async () => {
   }
 });
 
+test("human call_request enqueues one deterministic call without an LLM", async () => {
+  const { database, states, tasks, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    await instance.handle({
+      id: "manual-call-1",
+      source: "human",
+      kind: "call_request",
+      text: "Llamar al recinto",
+      payload: {
+        area: "espacios",
+        counterpart: "Responsable de recinto - MADRING",
+        objective: "Confirmar Pabellón B para 450 invitados",
+      },
+    });
+    const queued = tasks.listOpen(run.id);
+    assert.equal(queued.length, 1);
+    assert.equal(queued[0]?.area, "espacios");
+    assert.equal(queued[0]?.kind, "call");
+    assert.deepEqual(queued[0]?.payload, {
+      objective: "Confirmar Pabellón B para 450 invitados",
+      counterpart: "Responsable de recinto - MADRING",
+      reason: "Solicitud manual del responsable",
+      data: {},
+    });
+  } finally {
+    database.close();
+  }
+});
+
 test("human approve invokes the coordinator when a complete function is injected", async () => {
   let called = 0;
   const { database, states, instance } = engine(openDatabase(":memory:"), async () => {
@@ -143,6 +173,67 @@ test("stored events record whether the coordinator ran as llm, rules or none", a
     await instance.handle({ id: "evt-pause", source: "human", kind: "pause" });
     const rows = database.connection.prepare("SELECT id, mode FROM events ORDER BY created_at, id").all() as Array<{ id: string; mode: string }>;
     assert.deepEqual(Object.fromEntries(rows.map((row) => [row.id, row.mode])), { "evt-llm": "llm", "evt-pause": "none" });
+  } finally {
+    database.close();
+  }
+});
+
+test("an accepted call_result does not call the coordinator; a rejected one does", async () => {
+  let calls = 0;
+  const completeFn = async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  };
+  const { database, instance } = engine(undefined, completeFn);
+  try {
+    const base = { taskId: "t1", runId: "r", planVersion: 1, result: { summary: "ok", conditions: [], evidence: {}, data: {} } };
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "accepted_with_conditions" } } });
+    assert.equal(calls, 0);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "rejected" } } });
+    assert.equal(calls, 1);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
+    assert.equal(calls, 2);
+  } finally {
+    database.close();
+  }
+});
+
+test("the coordinator status shows replanificando while the LLM works and the busy flag stays private", async () => {
+  let statusDuringCall = "";
+  let publicDuringCall: Record<string, unknown> = {};
+  let statesRef: StateRepository | undefined;
+  const { database, states, instance } = engine(openDatabase(":memory:"), async () => {
+    statusDuringCall = String(statesRef?.ensureActiveRun().state.coordinatorStatus);
+    publicDuringCall = statesRef?.getPublicState() ?? {};
+    throw new Error("llm caído");
+  });
+  statesRef = states;
+  try {
+    await instance.handle({ source: "chat", kind: "free_text", text: "Pabellon principal se cierra" });
+    assert.equal(statusDuringCall, "replanificando");
+    assert.equal(publicDuringCall.coordinatorBusy, undefined);
+    assert.equal(states.ensureActiveRun().state.coordinatorBusy, undefined);
+  } finally {
+    database.close();
+  }
+});
+
+test("a coordinator run interrupted by a restart leaves a fallo event on boot", () => {
+  const { database, states, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    states.saveState(run.id, {
+      ...structuredClone(run.state),
+      coordinatorBusy: { eventId: "e1", text: "Pabellon principal se cierra" },
+    });
+    assert.equal(instance.recoverInterruptedCoordinator(), true);
+    const state = states.ensureActiveRun().state;
+    assert.equal(state.coordinatorBusy, undefined);
+    const events = state.events as Array<{ kind: string; text: string }>;
+    const last = events.at(-1);
+    assert.equal(last?.kind, "fallo");
+    assert.match(last?.text ?? "", /interrumpido.*Pabellon principal se cierra/);
+    assert.equal(instance.recoverInterruptedCoordinator(), false);
   } finally {
     database.close();
   }

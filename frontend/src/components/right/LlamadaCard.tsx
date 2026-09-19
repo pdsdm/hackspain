@@ -33,7 +33,7 @@ export function LlamadaCard({ s, call, onTake, disabled }: { s: CrisisState; cal
         {sms ? <MessageSquareText size={14} className="text-ink" /> : <PhoneCall size={14} className={active ? 'text-ink' : 'text-muted'} />}
         <h2 className="label">{sms ? 'Mensajes' : 'Llamada'} · {AGENT_NAME[call.agent]}</h2>
         <span className="ml-auto text-[11px] text-muted">
-          {call.status === 'en_curso' ? 'en curso' : call.status === 'sin_respuesta' ? 'sin respuesta' : 'terminada'} · {s.simulated ? 'simulada' : 'vía HappyRobot'}
+          {call.status === 'en_curso' ? 'en curso' : call.status === 'sin_respuesta' ? 'sin respuesta' : 'terminada'} · {s.simulated || call.simulated ? 'simulada' : 'vía HappyRobot'}
         </span>
       </div>
       <div className="text-[11px] text-muted mt-0.5 truncate">{call.counterpart}</div>

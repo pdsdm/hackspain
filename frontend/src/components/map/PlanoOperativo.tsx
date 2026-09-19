@@ -12,7 +12,7 @@ export function PlanoOperativo({ s, changes, onSelect }: { s: CrisisState; chang
     return <button key={sp.id} onClick={() => onSelect(sp.id)} aria-pressed={s.selectedId === sp.id} className={`site-node ${changed.has(sp.id) ? 'site-changed' : ''} ${s.selectedId === sp.id ? 'site-selected' : ''}`}>
       <span className="flex justify-between gap-2"><span className={`site-status status-${status.tone}`}>{status.label}</span>{changed.has(sp.id) && <span className="change-tag">Cambio</span>}</span>
       <strong>{sp.name}</strong>
-      <span className="text-muted text-[12px]">{sp.capacity ? `${sp.capacity} ${sp.kind === 'espera' ? 'en espera' : 'plazas'}` : sp.kind === 'muelle' ? 'Descarga de catering' : 'Control de acceso'}{sp.readyAt ? ` · ${fmtClock(sp.readyAt)}` : ''}</span>
+      <span className="text-muted text-[12px]">{sp.capacity ? `${sp.capacity} ${sp.kind === 'espera' ? 'en espera' : sp.kind === 'parking' ? 'vehículos' : 'plazas'}` : sp.kind === 'muelle' ? 'Descarga de catering' : 'Control de acceso'}{sp.readyAt ? ` · ${fmtClock(sp.readyAt)}` : ''}</span>
     </button>
   }
   return <div className="operative-plan">

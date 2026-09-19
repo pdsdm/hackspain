@@ -138,7 +138,10 @@ export function applyOperation(
       const group = findById(records(draft, "guestGroups"), operation.id);
       if (!group) return { ok: false, error: `set_group: grupo desconocido ${operation.id}` };
       if (operation.where !== undefined) group.where = operation.where;
-      if (operation.assignedSpaceId !== undefined) group.assignedSpaceId = operation.assignedSpaceId;
+      if (operation.assignedSpaceId !== undefined) {
+        if (operation.assignedSpaceId === "") delete group.assignedSpaceId;
+        else group.assignedSpaceId = operation.assignedSpaceId;
+      }
       if (operation.needs !== undefined) group.needs = operation.needs;
       draft.guestGroups = records(draft, "guestGroups");
       return { ok: true };
@@ -286,5 +289,71 @@ export function persistCoordinatorOutput(input: {
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
   if (!next.waitingForDecision) next.coordinatorStatus = input.output.coordinatorStatus;
   input.states.saveState(run.id, next);
+  return [];
+}
+
+export function persistReplan(input: {
+  runId: string;
+  output: CoordinatorOutput;
+  world: WorldModel;
+  tasks: TaskRepository;
+  states: StateRepository;
+}): string[] {
+  const open = input.tasks.listOpen(input.runId);
+  const openTaskIds = new Set(open.map((task) => task.id));
+  const current = input.states.ensureActiveRun();
+  const next = structuredClone(current.state);
+  const { errors, cancelled } = applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
+  if (errors.length > 0) return errors;
+
+  const now = Number(next.clock.simSeconds);
+  const commitments = new Map(next.commitments.map((commitment) => [commitment.id, commitment]));
+  for (const commitment of input.output.commitments) {
+    commitments.set(commitment.id, {
+      ...commitments.get(commitment.id),
+      ...commitment,
+      planVersion: next.planVersion,
+      updatedAt: now,
+    });
+  }
+  next.commitments = [...commitments.values()];
+
+  const agents = records(next, "agents");
+  for (const action of input.output.actions) {
+    const agent = agents.find((item) => item.id === action.area);
+    if (!agent) continue;
+    agent.objective = action.objective;
+    agent.reason = action.reason;
+    agent.status = next.agentsPaused ? "pausado" : "activo";
+  }
+  next.agents = agents;
+  next.lastCoordinatorUnverified = input.output.unverified;
+  next.coordinatorStatus = input.output.coordinatorStatus;
+  next.resolved = false;
+  input.states.saveState(current.id, next);
+  const dropped = new Set(cancelled);
+  for (const taskId of dropped) input.tasks.cancel(taskId, "invalidated by coordinator");
+  // Una tarea que el giro no invalida sigue valiendo, pero claimNext solo despacha
+  // la versión vigente del plan: sin esto se quedaría abierta y sin ejecutarse nunca.
+  for (const task of open) {
+    if (!dropped.has(task.id)) input.tasks.carryToPlan(task.id, next.planVersion);
+  }
+  const prefix = `replan-${next.planVersion}`;
+  for (const action of input.output.actions) {
+    input.tasks.enqueue({
+      runId: input.runId,
+      planVersion: next.planVersion,
+      area: action.area,
+      kind: CHANNEL_KIND[action.channel],
+      payload: {
+        objective: action.objective,
+        counterpart: action.counterpart,
+        dueAt: Math.min(86_399, Math.max(0, action.dueAt)),
+        reason: action.reason,
+        dependsOnKeys: action.dependsOn.map((dependency) => `${prefix}:${dependency}`),
+      },
+      idempotencyKey: `${prefix}:${action.id}`,
+    });
+  }
   return [];
 }

@@ -20,6 +20,7 @@ export interface InputSpace {
   id: string;
   name: string;
   zone: Zone;
+  kind?: string;
   capacity?: number;
   status: string;
   readyAt?: number;
@@ -32,6 +33,7 @@ export interface InputGuestGroup {
   count: number;
   where: string;
   assignedSpaceId?: string;
+  informedCount?: number;
   needs?: string;
 }
 

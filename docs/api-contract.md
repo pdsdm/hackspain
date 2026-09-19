@@ -49,7 +49,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "title": "…", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
-  "calls": [],
+  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "simulated": true, "transcript": [] }],
   "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
   "constraints": ["Norte y Sur sin conexión interior"],
@@ -64,7 +64,9 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 }
 ```
 
-En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`.
+`spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
+
+En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
 
 ### `POST /interventions`
 
@@ -77,7 +79,7 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 - `set_constraint`: requiere `payload.text`.
 - `take_call`: requiere `payload.callId` de una llamada `en_curso`.
 
-Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Mientras haya una decisión pendiente no se despachan acciones nuevas; las ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
 
 **Respuesta 200**: `{ "ok": true }`.
 
@@ -107,6 +109,22 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
 ```
 
+### `POST /simulation/live` (T32)
+
+Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha elegido. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
+
+```json
+{ "enabled": true, "seed": 42 }
+```
+
+`seed` opcional (entero ≥ 1). Sin semilla, la primera activación elige una al azar y las siguientes reutilizan la anterior. Con semilla nueva la secuencia empieza de cero.
+
+```json
+{ "ok": true, "live": true, "seed": 42 }
+```
+
+`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo en `backend/src/domain/incidents.ts`). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+
 ### `POST /events`
 
 Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre en proceso.
@@ -119,9 +137,28 @@ Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre 
 - `kind`: texto no vacío (`free_text`, `call_result`, un giro, un tipo de intervención…).
 - `text`, `payload` y `actorId` son opcionales.
 
+Una solicitud manual de llamada usa un payload validado y encola una tarea aunque el coordinador esté en modo `rules`:
+
+```json
+{
+  "source": "human",
+  "kind": "call_request",
+  "actorId": "responsable",
+  "text": "Llamar al recinto para confirmar el Pabellón B",
+  "payload": {
+    "area": "espacios",
+    "counterpart": "Responsable de recinto - MADRING",
+    "objective": "Confirmar Pabellón B para 450 invitados",
+    "commitmentId": "c-pabB-v2"
+  }
+}
+```
+
+`area`, `counterpart` y `objective` son obligatorios. `commitmentId` es opcional y permite aplicar el resultado al compromiso correspondiente.
+
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Cognition/SWE con harness de tools por defecto; `COORDINATOR_HARNESS=json` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `COORDINATOR_REASONING_EFFORT=low`: unos 20-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
 
 ### `GET /actions`
 
@@ -189,7 +226,8 @@ Reglas:
 
 ### `POST /workflow/results`
 
-Callback común al que T9 traduce el payload de HappyRobot:
+Callback común, con el cuerpo exacto del contrato. HappyRobot no postea aquí: usa la
+puerta traducida de abajo.
 
 ```json
 {
@@ -224,7 +262,7 @@ Callback común al que T9 traduce el payload de HappyRobot:
 
 Solo si `applied && !duplicate`, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador. Un duplicado puede devolver `applied: true` por el resultado original, sin generar efectos nuevos. Resultados nuevos para tareas ya completadas, fallidas o canceladas se conservan con `applied: false`; reutilizar un `eventId` de otra tarea devuelve `409`.
 
-#### Verificación opcional JEV (T29)
+#### Verificación opcional JEV (T34)
 
 No cambia el JSON del callback ni su autenticación. El handler evalúa antes de persistir, fuera de SQLite, con límite de 1.500 ms, sin reintentos y fallback conservador. El simulador no utiliza JEV.
 
@@ -258,6 +296,40 @@ Reproducir desde `backend/`, con `TYPESAFE_API_KEY` en el entorno: `JEV_LIVE_EVA
 
 **Criterio para avanzar:** mantener `JEV_APPLY_CONFIRMATIONS` vacío/false hasta tener revisión humana del corpus y privacidad, comparación emparejada contra HappyRobot que demuestre mejora, ausencia de falsas confirmaciones en los casos críticos y latencia/fallback aceptados por el flujo del sponsor. El éxito en este corpus sintético no autoriza efectos.
 
+Campos de `result.data` que el backend aplica al estado:
+
+- `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
+- `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
+- `deliveries[]` (área `catering`, T12): `{ "id": "CAT-02", "status": "confirmada", "dockId": "muelleEste", "arriveAt": 47700, "services": 240, "note": "pendiente: recepción abre el muelle" }`. Solo con `status: "completed"`. `status` admite `confirmada`, `programada` o `bloqueada`; nunca `entregada` ni `invalidada`. `dockId` solo se aplica si el muelle existe y no está `cerrado`/`descartado`; una `confirmada` sobre un muelle cerrado queda en `programada`. Una entrega ya `entregada` no cambia.
+- Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` **no** relanza al coordinador: aplica su efecto y el plan sigue. `rejected`, `no_answer` y `failed` sí lo relanzan. Sin esta regla cada plan generaba 4-7 replanificaciones en cascada y la cola bloqueaba giros e intervenciones.
+- El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot, y `deliveries[]` para las tareas `catering` (`confirmada` si el muelle está abierto, `bloqueada` si está cerrado; la entrega nombrada en el objetivo, o todas las no entregadas).
+
+### `POST /workflow/happyrobot/results`
+
+Misma autorización, misma respuesta y mismos efectos que `/workflow/results`, pero acepta el cuerpo nativo del workflow. Es la URL que el backend manda en `callbackUrl`, y el adaptador de T9 (`backend/src/actions/adapters/happyrobot-inbound.ts`) lo traduce al sobre de arriba antes de aplicarlo.
+
+```json
+{
+  "call_id": "call-7a31…",
+  "session_id": "id-real-de-happyrobot",
+  "data": {
+    "outcome": "aceptado con condiciones",
+    "summary": "Lounge disponible desde las 13:15 por 900 €.",
+    "conditions": ["Montaje termina a las 13:15"],
+    "transcript": [{ "role": "assistant", "content": "¿Tienen libre el Lounge?", "at": 4 }]
+  }
+}
+```
+
+Qué tolera y qué no:
+
+- Los campos valen sueltos o anidados hasta dos niveles en `data`, `output`, `result`, `payload`, `extracted`, `variables`, `evidence`, `call` o `context`. El sobre estricto de `/workflow/results` también se acepta aquí.
+- `taskId` vale también como `task_id`; si no viene, se recupera del `callId` (`call-<taskId>`). Sin ninguno de los dos, `400`.
+- `runId` y `planVersion` **se ignoran del cuerpo** y se leen de la tarea: una sesión de HappyRobot no sabe en qué ejecución vive. Una tarea de otra ejecución o versión responde `200` con `applied: false`.
+- Sin `eventId`, la clave de idempotencia es `hr-<sessionId>`, o `hr-<taskId>` si tampoco hay sesión. Reenviar el mismo webhook devuelve `duplicate: true` sin aplicarlo dos veces.
+- `outcome` se normaliza desde texto libre en español o inglés (`aceptado`, `con condiciones`, `rechazado`, `no contesta`, `buzón`, `error`) y también desde `accepted: true|false` o `answered: false`. `status` se deriva del `outcome`. Si no hay nada clasificable, `400`: no se inventa un acuerdo.
+- La transcripción admite `{ role | speaker | who }` con `{ content | text | message }`, o un texto plano con `Agente: …` por líneas.
+
 ### Salida del backend hacia HappyRobot
 
 Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL con `Authorization: Bearer <HAPPYROBOT_API_KEY>`:
@@ -272,10 +344,18 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "counterpart": "Transportes Ibéricos",
   "reason": "El Acceso Sur está cerrado",
   "callId": "call-7a31…",
-  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": null, "email": null },
+  "phone_number": "+34600000000",
+  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": "+34600000000", "email": null },
+  "data": { "commitmentId": "c-transporte-v2" },
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
-  "callbackUrl": "https://demo.example/workflow/results"
+  "contact.phone": "+34600000000",
+  "situation.simSeconds": 43200,
+  "callbackUrl": "https://demo.example/workflow/happyrobot/results"
 }
 ```
 
-El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+
+Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
+
+`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). El formato se valida al arrancar: un número mal formado, o su ausencia habiendo hooks configurados, impide el arranque en vez de fallar en mitad de la demo.

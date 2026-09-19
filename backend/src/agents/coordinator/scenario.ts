@@ -46,6 +46,7 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
       id: space.id,
       name: space.name,
       zone: space.zone,
+      kind: space.kind,
       status: space.status,
       ...(space.capacity === undefined ? {} : { capacity: space.capacity }),
       ...(space.readyAt === undefined ? {} : { readyAt: space.readyAt }),
@@ -57,6 +58,7 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
       count: group.count,
       where: group.where,
       ...(group.assignedSpaceId === undefined ? {} : { assignedSpaceId: group.assignedSpaceId }),
+      ...(group.informedCount === undefined ? {} : { informedCount: group.informedCount }),
       ...(group.needs === undefined ? {} : { needs: group.needs }),
     })),
     commitments: state.commitments.map((commitment) => ({
@@ -90,6 +92,7 @@ export function liveCoordinatorInput(
     name: String(space.name ?? space.id),
     zone: space.zone === "norte" ? "norte" as const : "sur" as const,
     status: String(space.status ?? ""),
+    ...(typeof space.kind === "string" ? { kind: space.kind } : {}),
     ...(typeof space.capacity === "number" ? { capacity: space.capacity } : {}),
     ...(typeof space.readyAt === "number" ? { readyAt: space.readyAt } : {}),
     ...(typeof space.note === "string" ? { note: space.note } : {}),
@@ -100,6 +103,7 @@ export function liveCoordinatorInput(
     count: Number(group.count ?? 0),
     where: String(group.where ?? ""),
     ...(typeof group.assignedSpaceId === "string" ? { assignedSpaceId: group.assignedSpaceId } : {}),
+    ...(typeof group.informedCount === "number" ? { informedCount: group.informedCount } : {}),
     ...(typeof group.needs === "string" ? { needs: group.needs } : {}),
   }));
   const commitments = asRecords(state.commitments).map((commitment) => ({

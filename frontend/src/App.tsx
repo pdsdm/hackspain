@@ -13,6 +13,7 @@ import { CrisisMap } from './components/map/CrisisMap'
 import { EstadoGlobal } from './components/center/EstadoGlobal'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
 import { LlamadaCard } from './components/right/LlamadaCard'
+import { AvisarPanel } from './components/right/AvisarPanel'
 import { DecisionCard } from './components/right/DecisionCard'
 import { Cronologia } from './components/right/Cronologia'
 import { IntervenirModal } from './components/right/IntervenirModal'
@@ -70,6 +71,7 @@ export default function App() {
           <DecisionCard d={decision} authorized={s.budget.authorized} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_spend', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: decision?.id === 'd-plan-sur' ? 'reject_split' : 'reject_spend', payload: { decisionId: decision!.id } })} />
           <CoordinadorPanel s={s} />
           <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+          {ctl.source === 'api' && <AvisarPanel disabled={disabled} />}
           {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
           <Cronologia s={s} />
           <button onClick={() => setModal('decisiones')} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>
@@ -81,7 +83,7 @@ export default function App() {
               <label className="block text-[12px]">Cargar un momento de la demo<select aria-label="Cargar estado de demo" className="fixture-select" value="" onChange={(e) => { if (e.target.value) ctl.loadFixture(e.target.value as FixtureName) }}><option value="">Elige un estado…</option><option value="calm">Estable · 12:00</option><option value="normal">Antes de la crisis · 600 plazas</option><option value="crisis">Cierre del Principal · 0 plazas</option><option value="proposal">Propuesta · aprobación pendiente</option><option value="recovered">Plan Sur confirmado · 600 plazas</option><option value="lounge_unavailable">Lounge no disponible · 450 plazas</option><option value="pabellon_b_400">Aforo B reducido · 550 plazas</option></select></label>
             </>
           )}
-          <SimulacionPanel s={s} onTwist={ctl.twist} />
+          <SimulacionPanel s={s} onTwist={ctl.twist} onLive={ctl.setLive} />
         </aside>
       </main>
 

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import type { CrisisStateDocument } from "../domain/crisis-state.js";
 
 export type LatLng = [number, number];
-export type PlaceKind = "pabellon" | "lounge" | "espera" | "acceso" | "muelle" | "puerta" | "parada";
+export type PlaceKind = "pabellon" | "lounge" | "espera" | "acceso" | "muelle" | "paddock" | "parking" | "puerta" | "parada";
 export type PlaceZone = "norte" | "sur" | null;
 
 export interface WorldPlace {

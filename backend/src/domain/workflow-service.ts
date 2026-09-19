@@ -115,6 +115,55 @@ function applySpecialistState(
     next.calls = calls;
   }
 
+  const groupUpdates = envelope.result.data.guestGroups;
+  if (envelope.status === "completed" && Array.isArray(groupUpdates)) {
+    const groups = records(next, "guestGroups");
+    for (const raw of groupUpdates) {
+      if (typeof raw !== "object" || raw === null) continue;
+      const update = raw as Record<string, unknown>;
+      const group = groups.find((item) => item.id === update.id);
+      if (!group) continue;
+      const total = typeof group.count === "number" ? group.count : Number.POSITIVE_INFINITY;
+      if (typeof update.informedCount === "number") {
+        group.informedCount = Math.min(total, Math.max(Number(group.informedCount ?? 0), update.informedCount));
+      }
+      if (typeof update.acceptedCount === "number") {
+        group.acceptedCount = Math.min(total, Math.max(Number(group.acceptedCount ?? 0), update.acceptedCount));
+      }
+      if (typeof update.needs === "string" && update.needs.trim() !== "") group.needs = update.needs;
+    }
+    next.guestGroups = groups;
+  }
+
+  const deliveryUpdates = envelope.result.data.deliveries;
+  if (envelope.status === "completed" && Array.isArray(deliveryUpdates)) {
+    const deliveries = records(next, "deliveries");
+    const docks = records(next, "spaces");
+    for (const raw of deliveryUpdates) {
+      if (typeof raw !== "object" || raw === null) continue;
+      const update = raw as Record<string, unknown>;
+      const delivery = deliveries.find((item) => item.id === update.id);
+      if (!delivery || delivery.status === "entregada") continue;
+      if (typeof update.dockId === "string") {
+        const dock = docks.find((item) => item.id === update.dockId && item.kind === "muelle");
+        if (dock && dock.status !== "cerrado" && dock.status !== "descartado") delivery.dockId = update.dockId;
+      }
+      if (typeof update.arriveAt === "number" && Number.isFinite(update.arriveAt) && update.arriveAt > 0) {
+        delivery.arriveAt = update.arriveAt;
+      }
+      if (typeof update.services === "number" && Number.isInteger(update.services) && update.services > 0) {
+        delivery.services = update.services;
+      }
+      if (update.status === "confirmada" || update.status === "programada" || update.status === "bloqueada") {
+        const dock = docks.find((item) => item.id === delivery.dockId);
+        const dockClosed = dock !== undefined && (dock.status === "cerrado" || dock.status === "descartado");
+        delivery.status = update.status === "confirmada" && dockClosed ? "programada" : update.status;
+      }
+      if (typeof update.note === "string" && update.note.trim() !== "") delivery.note = update.note;
+    }
+    next.deliveries = deliveries;
+  }
+
   const commitmentId = verification?.target?.commitmentId ?? envelope.result.data.commitmentId;
   if (typeof commitmentId === "string") {
     const commitment = next.commitments.find((item) => item.id === commitmentId);

@@ -114,6 +114,17 @@ export class TaskRepository {
     return result.changes === 1;
   }
 
+  carryToPlan(taskId: string, planVersion: number): boolean {
+    const result = this.database
+      .prepare(`
+        UPDATE dispatch_tasks
+        SET plan_version = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status IN ('pending', 'dispatching', 'dispatched')
+      `)
+      .run(planVersion, taskId);
+    return result.changes === 1;
+  }
+
   claimNext(): DispatchTask | undefined {
     this.database.exec("BEGIN IMMEDIATE");
     try {

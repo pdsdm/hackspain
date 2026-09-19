@@ -74,14 +74,30 @@
 - **Por qué:** SWE está entrenado en el harness de Devin; las sesiones cloud tardan de más para un replan de <60 s. El tool loop local da el mismo estilo de agente a tiempo de demo.
 - **Descartado:** LiteLLM u otro proxy, y usar Devin cloud como camino por defecto.
 
-### Propuesta T29: JEV verifica evidencia; el backend conserva los efectos
+### D13: los giros rompen el mundo; los planes de contingencia son del recinto, no del agente
+
+- **Qué:** el efecto determinista de un giro se limita al daño y a sus consecuencias mecánicas. Dos de los nueve (`lounge_unavailable`, `reject_split`) activan además el plan de contingencia del recinto (Norte C `propuesto`), que el coordinador puede adoptar o descartar. Todo estado que active una contingencia lleva nota de origen para que se distinga de una propuesta del coordinador. Detalle en [`giros-y-contingencias.md`](giros-y-contingencias.md).
+- **Por qué:** un recinto de GP tiene contingencias escritas; modelarlo así es más realista y prueba mejor el criterio del agente, que es elegir o rechazar la alternativa obvia con un motivo. Además abre la cadena `lounge_unavailable` → `provider_silent`, donde la propia contingencia se queda sin transporte.
+- **Descartado:** quitar la contingencia y que el agente invente Norte C desde cero (menos realista y no prueba criterio); y dejarla sin nota de origen, que impide distinguir la contingencia de una decisión del coordinador y disimula una caída del LLM.
+
+### D14: HappyRobot se lanza solo desde el backend (resuelve T28)
+
+- **Qué:** el panel envía eventos e intervenciones al backend; `ActionExecutor` llama al trigger de HappyRobot y `/workflow/results` recibe el resultado. El panel solo lee el estado resultante.
+- **Por qué:** deja un único camino auditable y evita que Vite maneje credenciales o cree una segunda verdad. Descartado: `/api/happyrobot/call` en el servidor de Vite.
+
+### D15: Helmcode con DeepSeek V4 Flash para el coordinador de la demo
+
+- **Qué:** mientras se valida Cognition, el backend usa Helmcode con `deepseek-v4-flash` y harness JSON. Es independiente del modelo de voz, que se elige dentro de HappyRobot.
+- **Por qué:** prioriza latencia de replanificación y mantiene `rules` como respaldo. Descartado: confundir `COORDINATOR_MODEL` con el LLM de la llamada en tiempo real.
+
+### Propuesta T34: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.
 - **Por qué:** un «sí» no resuelve gasto, acceso, dependencias o condiciones. Se revalidan dentro de SQLite; no se incrementan invitados ubicados. El texto fuera del vocabulario revisado no sale a JEV.
 - **Pendiente de revisión humana antes de mergear:** corpus real, latencia aceptable de HappyRobot, política de privacidad y activación. Descartados Norte, confirmación física, borrado indiscriminado de condiciones y cambios automáticos por defecto.
 
-### Actualización T29: candidato `evidence-v2` y revisión local
+### Actualización T34: candidato `evidence-v2` y revisión local
 
-- **Qué:** preguntas sobre evidencia verbal y términos estructurados, con los mismos umbrales; amplía la propuesta T29 con huellas de transcripciones completas revisadas previamente por privacidad, configuradas solo en servidor. No añade anonimización automática ni reaplicación de callbacks.
+- **Qué:** preguntas sobre evidencia verbal y términos estructurados, con los mismos umbrales; amplía la propuesta T34 con huellas de transcripciones completas revisadas previamente por privacidad, configuradas solo en servidor. No añade anonimización automática ni reaplicación de callbacks.
 - **Por qué:** el primer prompt descartaba todas las aceptaciones; el candidato congelado acertó 30 casos sintéticos nuevos, repetidos dos veces. Hubo dos timeouts en una regresión adicional; el fallback y los efectos desactivados se conservan.
 - **Pendiente:** comparación con callbacks reales de HappyRobot anonimizados y etiquetados, revisión humana y sincronización con main. No activar confirmaciones ni interpretar el corpus sintético como garantía de seguridad.

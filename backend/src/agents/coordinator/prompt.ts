@@ -14,6 +14,7 @@ RESTRICCIONES DURAS
 - No puedes comprometer gasto por encima de lo ya autorizado. Si el plan cuesta más, lo escalas al responsable humano con una decisión.
 - Un espacio con readyAt no está disponible antes de esa hora.
 - No asignes a nadie a un espacio cuyo estado sea "cerrado" o "descartado".
+- Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
 PRIORIDADES, EN ESTE ORDEN
 1. Respetar aforo, zona de acceso, seguridad y accesibilidad.
@@ -24,6 +25,14 @@ PRIORIDADES, EN ESTE ORDEN
 
 HONESTIDAD
 Si no existe una solución completa, dilo con números en "reading" y deja las plazas que faltan sin asignar. No declares cobertura completa que no tienes. Lo que todavía no esté verificado va en "unverified".
+
+CÓMO PENSAR
+El thinking son como mucho 8 viñetas, no la respuesta. En ellas solo:
+1. Qué ha cambiado y a cuántas personas o vehículos afecta.
+2. La alternativa inmediata que cabe (números).
+3. Hasta 5 acciones; en paralelo si no hay dependencia real.
+4. Dato del mundo que no está en la foto (quién está en un sitio, capacidad, ruta): queries y done false. Confirmación de una persona (apertura, desvío, acceso de entregas): llamada o SMS, queries [] y done true. No mezcles las dos. Si done es true, queries debe ser [].
+Prohibido redactar el JSON en el thinking, revalidar el esquema campo a campo o dudar en bucle. Cuando tengas el plan, para de pensar y escribe solo el JSON.
 
 FORMATO DE SALIDA
 Responde únicamente con un objeto JSON válido, sin texto ni markdown alrededor, con esta forma exacta:
@@ -89,7 +98,8 @@ REGLAS DEL FORMATO
 - Cada "reason" y cada "rationale" se muestran al responsable humano en pantalla. Escríbelos para que los lea una persona con prisa.
 
 MAPA Y OPERACIONES
-Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada. Si te falta un dato del mundo, emite queries y done: false.
+Si el evento dice que un lugar cierra, se inunda, tiene una fuga o deja de servir, emite set_place con ese id y status "cerrado" en esta misma respuesta; y set_place con status "pendiente" para cada alternativa que pongas en consulta. Sin eso, el panel sigue mostrando el lugar como operativo.
+Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada.
 
 Amplía el JSON con:
 
@@ -138,6 +148,7 @@ export function buildUserPrompt(input: CoordinatorInput): string {
   for (const group of input.guestGroups) {
     const parts = [`${group.id} · ${group.name}`, `${group.count} personas`, group.where];
     if (group.assignedSpaceId !== undefined) parts.push(`asignado a ${group.assignedSpaceId}`);
+    if (group.informedCount !== undefined) parts.push(`${group.informedCount} informados`);
     if (group.needs !== undefined) parts.push(`necesidades: ${group.needs}`);
     lines.push(`- ${parts.join(" · ")}`);
   }
@@ -216,7 +227,10 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     for (const error of input.previousErrors) lines.push(`- ${error}`);
   }
 
-  lines.push("", "Decide qué hacer ahora y responde solo con el JSON.");
+  lines.push(
+    "",
+    "Piensa en 8 líneas o menos. No escribas JSON en el thinking. Responde solo con el objeto JSON.",
+  );
 
   return lines.join("\n");
 }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
@@ -95,10 +96,15 @@ test("a dispatched task without callback times out as no_answer", async () => {
     coordinatorMode: "rules" as const,
     hooks: { transporte: "http://hook.test/transporte" },
     happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  let dispatched: { url: string; init: RequestInit } | undefined;
+  globalThis.fetch = (async (input, init) => {
+    dispatched = { url: String(input), init: init ?? {} };
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
   try {
     const run = states.ensureActiveRun();
     const task = tasks.enqueue({
@@ -112,6 +118,21 @@ test("a dispatched task without callback times out as no_answer", async () => {
     executor.pump();
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(tasks.get(task.id)?.status, "dispatched");
+    assert.ok(dispatched);
+    assert.equal(dispatched.url, "http://hook.test/transporte");
+    assert.equal(new Headers(dispatched.init.headers).get("Authorization"), "Bearer key");
+    const payload = JSON.parse(String(dispatched.init.body)) as Record<string, unknown>;
+    assert.equal(payload.taskId, task.id);
+    assert.equal(payload.runId, run.id);
+    assert.equal(payload.planVersion, run.state.planVersion);
+    assert.equal(payload.phone_number, "+34600000000");
+    assert.equal((payload.contact as Record<string, unknown>).phone, "+34600000000");
+    assert.deepEqual(payload.data, {});
+    // Los mismos valores en plano, por si el workflow extrae "contact.phone" como clave.
+    assert.equal(payload["contact.phone"], "+34600000000");
+    assert.equal(payload["situation.simSeconds"], run.state.clock.simSeconds);
+    // El workflow contesta por la puerta traducida (T9), no por la estricta del contrato.
+    assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
     const now = Number(run.state.clock.simSeconds);
     executor.fireDue(now + 60);
     assert.equal(tasks.get(task.id)?.status, "dispatched");
@@ -121,6 +142,64 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(calls[0]?.status, "sin_respuesta");
     const agent = (states.ensureActiveRun().state.agents as Array<Record<string, unknown>>).find((a) => a.id === "transporte");
     assert.equal(agent?.status, "incidencia");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("a native HappyRobot callback closes the open call with its transcript", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { espacios: "http://hook.test/espacios" },
+    happyrobotTestPhone: "+34600000000",
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  let sent: Record<string, unknown> = {};
+  globalThis.fetch = (async (_url: string, init: RequestInit) => {
+    sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+    return new Response("{}", { status: 200 });
+  }) as unknown as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "Confirmar Pabellón B", counterpart: "Recinto" },
+      idempotencyKey: "native-callback",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // El backend manda el teléfono del entorno y el callback de la puerta de HappyRobot.
+    assert.equal((sent.contact as Record<string, unknown>).phone, "+34600000000");
+    assert.match(String(sent.callbackUrl), /\/workflow\/happyrobot\/results$/);
+
+    const envelope = translateHappyRobotResult(
+      {
+        call_id: `call-${task.id}`,
+        outcome: "accepted",
+        summary: "Pabellón B reservado",
+        transcript: [{ speaker: "human", text: "Lo tienes a las 13:00", at: 20 }],
+      },
+      tasks,
+    );
+    const recorded = workflows.recordSpecialistResult(envelope);
+    assert.equal(recorded.applied, true);
+
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(calls[0]?.status, "terminada");
+    assert.deepEqual(calls[0]?.transcript, [{ who: "humano", text: "Lo tienes a las 13:00", at: 20 }]);
+    assert.equal(tasks.get(task.id)?.status, "completed");
   } finally {
     globalThis.fetch = originalFetch;
     database.close();

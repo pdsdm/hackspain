@@ -4,7 +4,7 @@ const AREAS = ["espacios", "catering", "transporte", "asistentes"] as const;
 const ACTION_KINDS = ["call", "sms", "email", "manual"] as const;
 const COMMITMENT_STATUSES = ["propuesto", "en_consulta", "aceptado_condiciones"] as const;
 const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
-const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_spend", "reject_split", "guest_need"] as const;
+export const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_spend", "reject_split", "guest_need"] as const;
 const EVENT_SOURCES = ["chat", "happyrobot", "jury", "human"] as const;
 const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
@@ -286,14 +286,35 @@ export interface IntakeEvent {
   actorId?: string;
 }
 
+export interface CallRequest {
+  area: Area;
+  counterpart: string;
+  objective: string;
+  commitmentId?: string;
+}
+
+export function parseCallRequest(value: unknown): CallRequest {
+  const input = record(value, "payload");
+  const commitmentId = optionalString(input.commitmentId, "payload.commitmentId");
+  return {
+    area: enumValue(input.area, "payload.area", AREAS),
+    counterpart: string(input.counterpart, "payload.counterpart"),
+    objective: string(input.objective, "payload.objective"),
+    ...(commitmentId ? { commitmentId } : {}),
+  };
+}
+
 export function parseEvent(value: unknown): IntakeEvent {
   const input = record(value, "body");
   const payload = input.payload === undefined ? {} : record(input.payload, "payload");
   const text = optionalString(input.text, "text");
   const actorId = optionalString(input.actorId, "actorId");
+  const source = enumValue(input.source, "source", EVENT_SOURCES);
+  const kind = string(input.kind, "kind");
+  if (source === "human" && kind === "call_request") parseCallRequest(payload);
   return {
-    source: enumValue(input.source, "source", EVENT_SOURCES),
-    kind: string(input.kind, "kind"),
+    source,
+    kind,
     payload,
     ...(text ? { text } : {}),
     ...(actorId ? { actorId } : {}),
@@ -309,6 +330,16 @@ const FIXTURE_NAMES = [
   "lounge_unavailable",
   "pabellon_b_400",
 ] as const;
+
+export function parseLive(value: unknown): { enabled: boolean; seed?: number } {
+  const input = record(value, "body");
+  if (typeof input.enabled !== "boolean") throw new ContractError("enabled must be a boolean", 400);
+  if (input.seed === undefined) return { enabled: input.enabled };
+  if (typeof input.seed !== "number" || !Number.isInteger(input.seed) || input.seed < 1) {
+    throw new ContractError("seed must be a positive integer", 400);
+  }
+  return { enabled: input.enabled, seed: input.seed };
+}
 
 export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {
   if (value === undefined || value === null || (isRecord(value) && Object.keys(value).length === 0)) {

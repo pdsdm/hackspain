@@ -4,7 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
 
 import { ActionExecutor } from "./actions/executor.js";
-import { loadLlmConfig } from "./agents/coordinator/llm.js";
+import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
 import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
 import type { AppConfig } from "./config.js";
 import {
@@ -12,6 +12,7 @@ import {
   parseCoordinatorProposal,
   parseEvent,
   parseIntervention,
+  parseLive,
   parseReset,
   parseSpecialistResult,
   parseTwist,
@@ -28,6 +29,7 @@ import { TaskRepository } from "./state/task-repository.js";
 import { WorkflowEventRepository } from "./state/workflow-event-repository.js";
 import { loadWorld } from "./world/world.js";
 import type { CompleteFn } from "./agents/coordinator/loop.js";
+import { logWorkflow } from "./log.js";
 
 export interface AppOptions {
   workflowToken: string | undefined;
@@ -43,6 +45,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     port: 8000,
     workflowToken,
     happyrobotApiKey: undefined,
+    happyrobotTestPhone: undefined,
     initialFixture: "calm",
     clockSpeed: 1,
     coordinatorMode: "rules",
@@ -110,6 +113,7 @@ export function createApp(
       llmConfig.harness,
       llmConfig.model,
       llmConfig.orgId ? "org=sí" : "org=no",
+      llmVerbose() ? "verbose=sí" : "verbose=no",
     );
   }
   const engine = new Engine(
@@ -135,6 +139,7 @@ export function createApp(
   app.locals.engine = engine;
   app.locals.executor = executor;
   stateRepository.ensureActiveRun();
+  engine.recoverInterruptedCoordinator();
 
   app.use((_request, response, next) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
@@ -182,8 +187,8 @@ export function createApp(
           kind: intervention.type,
           payload: intervention.payload ?? {},
         })
-        .then(() => response.status(200).json({ ok: true }))
-        .catch(next);
+        .catch((error) => console.error("[interventions] handle", error));
+      response.status(200).json({ ok: true });
     } catch (error) {
       next(error);
     }
@@ -194,8 +199,17 @@ export function createApp(
       const twist = parseTwist(request.body);
       void engine
         .handle({ source: "jury", kind: twist, payload: { twist } })
-        .then(() => response.status(200).json({ ok: true }))
-        .catch(next);
+        .catch((error) => console.error("[twists] handle", error));
+      response.status(200).json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/simulation/live", (request, response, next) => {
+    try {
+      const body = parseLive(request.body ?? {});
+      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed) });
     } catch (error) {
       next(error);
     }
@@ -248,6 +262,13 @@ export function createApp(
       void verifyCallAcceptance(task, envelope, evaluator, active.state, config.jevApplyConfirmations, config.jevReviewedTranscriptHashes)
         .then((verification) => {
           const recorded = workflowService.recordSpecialistResult(envelope, config.jevEnabled ? verification : undefined);
+          logWorkflow("result", {
+            taskId: envelope.taskId,
+            eventId: envelope.eventId,
+            status: envelope.status,
+            applied: recorded.applied,
+            duplicate: recorded.duplicate,
+          });
           if (recorded.applied && !recorded.duplicate) {
             void engine.handle({
               source: "happyrobot",

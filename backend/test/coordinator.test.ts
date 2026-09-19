@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { loadLlmConfig } from "../src/agents/coordinator/llm.js";
-import { buildUserPrompt } from "../src/agents/coordinator/prompt.js";
+import { extractJsonObject, loadLlmConfig, takeSseDataEvents } from "../src/agents/coordinator/llm.js";
+import { SYSTEM_PROMPT, buildUserPrompt } from "../src/agents/coordinator/prompt.js";
 import { hm, crisisInput } from "../src/agents/coordinator/scenario.js";
 import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
 import { parseOutput, validateOutput } from "../src/agents/coordinator/validate.js";
@@ -164,6 +164,15 @@ test("rechaza asignar personas a un espacio cerrado o descartado", () => {
   assert.equal(issues[0]?.code, "espacio_no_utilizable");
 });
 
+test("rechaza asignar invitados a un parking, paddock, acceso o muelle", () => {
+  const plan = validPlan();
+  plan.assignments = [{ groupId: "g-acceso", spaceId: "parkingSur", count: 90 }];
+
+  const { issues } = validateOutput(plan, crisisInput());
+
+  assert.equal(issues[0]?.code, "espacio_no_hospitalidad");
+});
+
 test("carga los estados de demo de T5", () => {
   const crisis = crisisInput();
   const total = crisis.guestGroups.reduce((sum, group) => sum + group.count, 0);
@@ -197,6 +206,27 @@ test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
   assert.equal(config.model, "deepseek-v4-flash");
   assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
   assert.equal(config.harness, "json");
+});
+
+test("el parser SSE del chat deja el trozo incompleto en rest", () => {
+  const { payloads, rest } = takeSseDataEvents(
+    'data: {"choices":[{"delta":{"reasoning_content":"hola"}}]}\ndata: {"choices":[{"delta":{"content":"{"}}]}\ndata: {parcial',
+  );
+  assert.equal(payloads.length, 2);
+  assert.equal(rest, "data: {parcial");
+});
+
+test("el prompt corta el thinking y no pide queries por confirmaciones humanas", () => {
+  assert.match(SYSTEM_PROMPT, /Prohibido redactar el JSON en el thinking/);
+  assert.match(SYSTEM_PROMPT, /Hasta 5 acciones/);
+  assert.match(buildUserPrompt(crisisInput()), /No escribas JSON en el thinking/);
+});
+
+test("recupera un JSON embebido en el thinking", () => {
+  const salvaged = extractJsonObject('plan listo {"reading":"ok","done":true} fin');
+  assert.equal(salvaged, '{"reading":"ok","done":true}');
+  assert.equal(extractJsonObject("todavía pensando"), null);
+  assert.equal(extractJsonObject('{"reading":"ok","done":true}\n}'), '{"reading":"ok","done":true}');
 });
 
 test("Cognition/Devin es el proveedor por defecto y usa el harness de tools", () => {
