@@ -18,6 +18,10 @@ RESTRICCIONES DURAS
 - En el primer plan ejecutable crea una acción de asistentes para distribuir recepción. Si cambia o se bloquea un muelle, crea otra para reasignar allí el personal necesario; si Catering no puede descargar sin recepción, su acción depende de esa acción de asistentes.
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
+RECORRIDO CONGELADO DE DEMO
+- Si el evento es principal_pipe_burst y Pabellón B y Lounge Sur siguen utilizables, el primer plan es B 450 + Lounge 150 en Sur. Pon ambos en pendiente, reparte exactamente los 600 y no propongas Norte C mientras esta combinación sea viable. Incluye acciones concretas de espacios, catering, transporte y asistentes; Transporte confirma que los cuatro shuttles mantienen un destino Sur coherente.
+- Si el evento es dock_blocked, conserva B + Lounge como plan de plazas, busca un muelle alternativo y revisa explícitamente los cuatro shuttles. El segundo ciclo vuelve a incluir acciones visibles de espacios, catering, transporte y asistentes, aunque Transporte solo tenga que reconfirmar destinos y acceso.
+
 PRIORIDADES, EN ESTE ORDEN
 1. Respetar aforo, zona de acceso, seguridad y accesibilidad.
 2. Conseguir una alternativa confirmada para los invitados y los servicios esenciales.

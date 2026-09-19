@@ -192,13 +192,15 @@ async function runHappyRobotHarness(
     logCoord("happyrobot", reason, `continúa ${primary.provider}/${primary.model}`);
     return runJsonLoop(event, { ...deps, config: primary }, AbortSignal.timeout(120_000));
   };
-  logCoord("bucle", "happyrobot", config.model, config.apply ? "apply" : "shadow", `tope ${config.timeoutMs}ms`);
+  const state = deps.states.ensureActiveRun().state;
+  const apply = config.apply || (state.forceSimActions === true && state.e2eCoordinatorApply === true);
+  logCoord("bucle", "happyrobot", config.model, apply ? "apply" : "shadow", `tope ${config.timeoutMs}ms`);
   try {
     const report = await runHappyRobotCoordinator({
       config,
       event,
       deps: { world: deps.world, states: deps.states, tasks: deps.tasks, workflows: deps.workflows },
-      apply: config.apply,
+      apply,
     });
     logCoord("happyrobot informe\n" + summarizeReport(report));
     if (report.status !== "accepted") return runPrimary(`estado ${report.status}`);
