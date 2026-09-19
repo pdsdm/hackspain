@@ -131,9 +131,13 @@ panel.
 DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=real ./scripts/demo.sh up
 ```
 
-`up` levanta además un Quick Tunnel de Cloudflare y le pasa la URL al backend como
-`PUBLIC_BASE_URL`. El preflight comprueba que existan las variables antes de arrancar nada,
-sin mostrar sus valores.
+`up` levanta además un túnel y le pasa la URL al backend como `PUBLIC_BASE_URL`. El
+preflight comprueba que existan las variables antes de arrancar nada, sin mostrar sus
+valores; `./scripts/demo.sh doctor` lo dice sin arrancar.
+
+Por defecto usa un Quick Tunnel de Cloudflare. **En la wifi de la ETSIT no sirve**: su DNS
+no resuelve `trycloudflare.com` y bloquea los resolvers externos. Ahí va
+`DEMO_TUNNEL=lhr`, que abre el túnel por SSH contra `localhost.run` sin cuenta.
 
 ### Qué exige cada modo
 
@@ -172,8 +176,9 @@ https://workflows.platform.eu.happyrobot.ai/hooks/<id>
 1. **Reiniciar durante una llamada simulada.** Los resultados `sim` están programados solo
    en memoria: al reiniciar se pierden y la llamada se queda `en_curso` para siempre. Haz
    `reset` antes de ensayar.
-2. **El túnel caduca.** Los Quick Tunnel cambian de URL al arrancar. Por eso el workflow
-   debe usar el `callbackUrl` que viene en el payload y nunca una URL copiada a mano.
+2. **El túnel caduca.** Tanto los Quick Tunnel como `localhost.run` cambian de URL al
+   arrancar. Por eso el workflow debe usar el `callbackUrl` que viene en el payload y nunca
+   una URL copiada a mano.
 3. **`agentsPaused` no cancela.** Pausar impide despachos nuevos, pero lo que ya salió
    sigue su curso.
 

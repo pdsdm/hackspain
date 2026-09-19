@@ -57,16 +57,26 @@ Arregla lo que impedía grabar un recorrido con final:
   espacio en `confirmado`, y con JEV apagado el indicador se quedaba en 0/600 toda la demo.
 - Tarjeta de resultado en el mapa con el desenlace, y `log_event` sin texto ya no ensucia
   la cronología.
-- `./scripts/demo.sh doctor` dice qué falta para llamar de verdad sin imprimir ningún valor.
+- `./scripts/demo.sh doctor` dice qué falta para llamar de verdad sin imprimir ningún valor,
+  incluido si la red resuelve `trycloudflare.com`.
+- `DEMO_TUNNEL=cloudflared|lhr`: túnel alternativo por `localhost.run` para redes que
+  bloquean Cloudflare. Y el descubrimiento de la URL ya no confunde `api.trycloudflare.com`
+  (la que aparece en la línea de error) con la URL pública.
 
 ## Qué falta, por riesgo para la demo
 
 1. Revisar y mergear T40. Roza el trabajo de `fix/zhi-demo-readiness`, que también toca
    `engine.ts` y `workflow-service.ts`: conviene mergear una y rebasar la otra, en ese orden.
-2. **Llamada real: este portátil no está listo.** El `.env` no tiene ningún
-   `HAPPYROBOT_HOOK_*` (obligatorio), ni `OPENAI_BASE_URL`, `COORDINATOR_MODEL` o
-   `COORDINATOR_HARNESS`, y `cloudflared` no está en el `PATH`. Con eso, `demo.sh up` en
-   modo `real` falla en el preflight. Compruébalo con `./scripts/demo.sh doctor`.
+2. **Llamada real: falta `HAPPYROBOT_TEST_PHONE` en el `.env`.** El resto está puesto
+   (API key, webhook token, hook de Espacios con el host bueno de `workflows.platform.eu`,
+   y la configuración de Helmcode). Sin el teléfono el backend **no arranca**: lanza una
+   excepción en `config.ts` cuando hay hooks y API key sin número. Compruébalo con
+   `./scripts/demo.sh doctor`.
+   `cloudflared` ya está instalado (2026.9.1, binario oficial en `/usr/local/bin`), pero
+   **en la wifi de la ETSIT el Quick Tunnel es inútil**: el DNS `138.100.x.x` devuelve
+   SERVFAIL para todo `trycloudflare.com` y bloquea 8.8.8.8 y 1.1.1.1. Verificado que sí
+   funciona `DEMO_TUNNEL=lhr` (localhost.run por SSH): `/health` público OK y el backend
+   recibe la URL correcta. HappyRobot y Helmcode sí resuelven en esta red.
 3. Sincronizar el prompt desplegado de HappyRobot con el guion actualizado del repo;
    comprobar el extractor `result.data.committedCost` con evidencia real (sin verificar).
 4. Ensayar el recorrido con LLM y HappyRobot reales; T17/T18 no se cierran por

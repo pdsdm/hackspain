@@ -123,7 +123,23 @@ Resultado esperado: el backend registra `[actions]`, HappyRobot realiza la llama
 
 ## 6. Operación repetible de la demo
 
-Requisitos: Node 22 o superior, dependencias instaladas con `./scripts/setup.sh` y `cloudflared` disponible en `PATH` para el modo público. El script no instala herramientas ni escribe secretos.
+Requisitos: Node 22 o superior, dependencias instaladas con `./scripts/setup.sh` y un túnel para el modo público. El script no instala herramientas ni escribe secretos.
+
+Antes de nada, comprueba el entorno:
+
+```bash
+./scripts/demo.sh doctor
+```
+
+Dice qué variables faltan (solo el nombre, nunca el valor), si hay túnel y si la red resuelve `trycloudflare.com`.
+
+**Ojo con la red.** La wifi de la ETSIT (DNS `138.100.x.x`) devuelve SERVFAIL para todo `trycloudflare.com` y bloquea los resolvers externos: los Quick Tunnel de Cloudflare no funcionan ahí por mucho que `cloudflared` esté instalado. Alternativa verificada, sin cuenta ni instalación:
+
+```bash
+DEMO_TUNNEL=lhr DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=real ./scripts/demo.sh up
+```
+
+`lhr` abre el túnel por SSH contra `localhost.run`. La URL cambia en cada arranque, igual que con Cloudflare. La otra salida es compartir datos desde un móvil y usar `cloudflared`.
 
 Prueba local segura, sin LLM ni llamadas reales:
 
@@ -153,7 +169,7 @@ El estado persiste en `backend/data/demo.db`. Los logs y PID quedan en `.demo/`,
 | Fallo | Recuperación |
 |---|---|
 | Backend | `restart-backend`; conserva SQLite. Si se interrumpió una acción `sim`, ejecutar `reset calm` antes del ensayo. |
-| Quick Tunnel | `down` y repetir `up`; la URL nueva se vuelve a inyectar al backend. |
+| Quick Tunnel | `down` y repetir `up`; la URL nueva se vuelve a inyectar al backend. Si la red no resuelve `trycloudflare.com`, `DEMO_TUNNEL=lhr`. |
 | Helmcode | `down` y arrancar con `DEMO_COORDINATOR_MODE=rules`; el panel y los giros siguen operativos. |
 | HappyRobot | `down` y arrancar con `DEMO_CALL_MODE=sim`, o usar el Web call de respaldo. La pantalla lo etiqueta como simulado. |
 | Estado de ensayo sucio | `reset calm`; crea otra ejecución sin borrar la evidencia anterior de SQLite. |
