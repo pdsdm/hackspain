@@ -95,10 +95,40 @@ Repetir un giro es idempotente. El backend aplica el efecto inmediato comprobabl
 
 ### `POST /simulation/reset`
 
-Crea otra ejecución desde el fixture de crisis. La anterior queda inactiva y sus callbacks no alteran la nueva.
+Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (por defecto `crisis`). La anterior queda inactiva y sus callbacks no alteran la nueva.
+
+```json
+{ "fixture": "calm" }
+```
+
+`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`.
 
 ```json
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
+```
+
+### `POST /events`
+
+Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre en proceso.
+
+```json
+{ "source": "chat", "kind": "free_text", "text": "No se puede entrar por el Acceso Sur", "payload": {}, "actorId": "operador" }
+```
+
+- `source`: `chat` | `happyrobot` | `jury` | `human`. El reloj interno usa `clock` y no se envía por HTTP.
+- `kind`: texto no vacío (`free_text`, `call_result`, un giro, un tipo de intervención…).
+- `text`, `payload` y `actorId` son opcionales.
+
+**Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
+
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) siguen siendo síncronos (200) y además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica; si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+
+### `GET /actions`
+
+Tareas abiertas de la ejecución activa (`pending`, `dispatching`, `dispatched`), para depurar la cola en la demo.
+
+```json
+{ "tasks": [{ "taskId": "7a31…", "area": "transporte", "kind": "call", "status": "pending", "planVersion": 2, "objective": "Confirmar desvío" }] }
 ```
 
 ## Workflows
@@ -191,3 +221,27 @@ Callback común al que T9 traduce el payload de HappyRobot:
 ```json
 { "ok": true, "duplicate": false, "applied": true }
 ```
+
+Si `applied` es true, el motor encola un evento interno `source: happyrobot`, `kind: call_result` y vuelve a pasar el coordinador.
+
+### Salida del backend hacia HappyRobot
+
+Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL con `Authorization: Bearer <HAPPYROBOT_API_KEY>`:
+
+```json
+{
+  "taskId": "7a31…",
+  "runId": "3bd0…",
+  "planVersion": 2,
+  "area": "transporte",
+  "objective": "Confirmar el nuevo punto de parada",
+  "counterpart": "Transportes Ibéricos",
+  "reason": "El Acceso Sur está cerrado",
+  "callId": "call-7a31…",
+  "contact": { "id": "test-transport-manager", "role": "transport-manager", "phone": null, "email": null },
+  "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
+  "callbackUrl": "https://demo.example/workflow/results"
+}
+```
+
+El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después.
