@@ -1,10 +1,19 @@
-// Ejecuta el coordinador contra el estado inicial del escenario y comprueba los
-// criterios de T10. Uso: npm run coordinator -- --runs=10
+// Ejecuta el coordinador contra un estado del escenario y comprueba los criterios
+// de T10. Uso: npm run coordinator -- --runs=10 --fixture=lounge_unavailable
 
 import { complete, loadLlmConfig } from "./llm.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt.js";
-import { crisisInput } from "./scenario.js";
+import { crisisInput, type FixtureName } from "./scenario.js";
 import { parseOutput } from "./validate.js";
+
+const FIXTURES: readonly FixtureName[] = [
+  "normal",
+  "crisis",
+  "proposal",
+  "recovered",
+  "lounge_unavailable",
+  "pabellon_b_400",
+];
 
 function readRuns(argv: string[]): number {
   const flag = argv.find((argument) => argument.startsWith("--runs="));
@@ -12,14 +21,25 @@ function readRuns(argv: string[]): number {
   return Number.isInteger(value) && value > 0 ? value : 3;
 }
 
+function readFixture(argv: string[]): FixtureName {
+  const flag = argv.find((argument) => argument.startsWith("--fixture="));
+  const value = flag?.slice("--fixture=".length);
+  if (value === undefined) return "crisis";
+  if (!FIXTURES.includes(value as FixtureName)) {
+    throw new Error(`Fixture desconocido: ${value}. Disponibles: ${FIXTURES.join(", ")}`);
+  }
+  return value as FixtureName;
+}
+
 async function main(): Promise<void> {
   const runs = readRuns(process.argv.slice(2));
+  const fixture = readFixture(process.argv.slice(2));
   const config = loadLlmConfig();
-  const input = crisisInput();
+  const input = crisisInput(fixture);
   const userPrompt = buildUserPrompt(input);
 
   console.log(
-    `Coordinador · ${config.provider} · ${config.model} · ${config.baseUrl || "anthropic"} · ${runs} ejecuciones\n`,
+    `Coordinador · ${config.provider} · ${config.model} · ${fixture} · ${runs} ejecuciones\n`,
   );
 
   let valid = 0;

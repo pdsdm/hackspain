@@ -61,12 +61,25 @@ Responde únicamente con un objeto JSON válido, sin texto ni markdown alrededor
   "unverified": ["datos que cambian el plan y siguen sin verificar"]
 }
 
+Cuando haya que escalar, "decision" deja de ser null y toma esta forma completa:
+
+{
+  "title": "titular corto de la decisión",
+  "summary": "qué se pide autorizar y para qué",
+  "cost": <coste TOTAL del plan en euros, no el incremento: siempre mayor que el importe ya autorizado>,
+  "conditions": ["condiciones que siguen abiertas"],
+  "effectApprove": "qué pasa si el responsable aprueba",
+  "effectReject": "qué pasa si el responsable rechaza",
+  "rationale": "por qué merece la pena, en una frase"
+}
+
 REGLAS DEL FORMATO
 - Todos los tiempos son segundos desde medianoche. 12:15 son 44100 y 13:00 son 46800.
 - "assignments" admite varias entradas por grupo: un grupo puede repartirse entre espacios. Asigna solo lo que quepa y deja el resto sin asignar.
 - "dependsOn" vacío para las acciones que pueden lanzarse ya en paralelo. Solo encadena lo que de verdad espera una condición.
-- Rellena "decision" (en lugar de null) cuando el plan necesite gasto por encima del autorizado. Lleva "cost", "conditions", "effectApprove", "effectReject" y "rationale", y entonces "coordinatorStatus" debe ser "esperando_decision".
-- Si no hay decisión que escalar, "decision" es null y "coordinatorStatus" no puede ser "esperando_decision".
+- Rellena "decision" (en lugar de null) solo cuando el plan necesite gasto por encima del autorizado, con los siete campos de arriba y ninguno vacío; entonces "coordinatorStatus" debe ser "esperando_decision".
+- Si el coste cabe en lo autorizado, "decision" es null y "coordinatorStatus" no puede ser "esperando_decision".
+- Un compromiso "confirmado" no puede llevar condiciones abiertas: si queda alguna, su estado es "aceptado_condiciones" o "en_consulta".
 - Cada "reason" y cada "rationale" se muestran al responsable humano en pantalla. Escríbelos para que los lea una persona con prisa.`;
 
 function hhmm(seconds: number): string {
