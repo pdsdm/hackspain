@@ -6,14 +6,12 @@ const EXAMPLE = 'Un shuttle pincha una rueda de camino al evento'
 export function EventChat({
   disabled,
   pending,
-  feedback,
   onSend,
   className = 'event-chat',
   placeholder = 'Describe qué está pasando…',
 }: {
   disabled: boolean
   pending: boolean
-  feedback: string | null
   onSend: (text: string) => Promise<boolean>
   className?: string
   placeholder?: string
@@ -51,7 +49,6 @@ export function EventChat({
       <button type="button" id={hintId} className="event-example" disabled={disabled || pending} onClick={() => setText(EXAMPLE)}>
         <Plus size={13} aria-hidden="true" /><span>Prueba: «{EXAMPLE}»</span>
       </button>
-      {feedback && <p role="status" className="event-feedback">{feedback}</p>}
     </section>
   )
 }
