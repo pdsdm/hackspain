@@ -4,9 +4,9 @@ import test from 'node:test';
 import { buildMadringFixtures } from '../fixtures/madring.ts';
 import { createFixtureState, type FixtureName } from '../../frontend/src/domain/fixtures.ts';
 
-const { seed, manifest, fixtures } = buildMadringFixtures();
+const { seed, manifest, fixtures, world } = buildMadringFixtures();
 const guestById = new Map(seed.guests.map((g) => [g.id, g]));
-const expectedCoverage = { normal: 600, crisis: 0, proposal: 0, recovered: 600, lounge_unavailable: 450, pabellon_b_400: 550 };
+const expectedCoverage = { calm: 600, normal: 600, crisis: 0, proposal: 0, recovered: 600, lounge_unavailable: 450, pabellon_b_400: 550 };
 
 test('roster conserves 600 people across groups, buses and overlapping needs', () => {
   assert.equal(seed.guests.length, 600);
@@ -102,7 +102,7 @@ for (const [name, expected] of Object.entries(expectedCoverage)) {
     loaded.spaces[0]!.capacity = 1;
     loaded.shuttles[0]!.route[0]![0] = 0;
     assert.deepEqual(createFixtureState(name as FixtureName), json);
-    assert.equal(state.clock.paused, true);
+    assert.equal(state.clock.paused, name === 'calm' ? false : true);
     assert.equal(state.nextScriptAt, null);
     assert.equal(state.simulated, true);
     assert.ok(state.events.every((e) => e.time <= state.clock.simSeconds));
@@ -118,7 +118,11 @@ for (const [name, expected] of Object.entries(expectedCoverage)) {
     }
     for (const bus of state.shuttles) {
       assert.deepEqual(bus.route.at(-1), state.spaces.find((s) => s.id === bus.destinationId)!.pos);
-      assert.ok(bus.departAt < state.clock.simSeconds && state.clock.simSeconds < bus.arriveAt);
+      if (name === 'calm') {
+        assert.ok(state.clock.simSeconds < bus.arriveAt);
+      } else {
+        assert.ok(bus.departAt < state.clock.simSeconds && state.clock.simSeconds < bus.arriveAt);
+      }
     }
   });
 }
@@ -150,5 +154,12 @@ test('building or mutating a fixture cannot change a subsequent seed', () => {
   const first = buildMadringFixtures();
   first.fixtures.normal!.state.shuttles[0]!.route[0]![0] = 0;
   first.seed.resources[0]!.pos[0] = 0;
-  assert.deepEqual(buildMadringFixtures(), { seed, manifest, fixtures });
+  assert.deepEqual(buildMadringFixtures(), { seed, manifest, fixtures, world });
+});
+
+test('world.json covers places, Sur/Norte polygons and transfer links', () => {
+  assert.ok(world.places.some((place: { id: string }) => place.id === 'chamartin'));
+  assert.ok(world.places.some((place: { kind: string }) => place.kind === 'puerta'));
+  assert.ok(world.links.some((link: { kind: string }) => link.kind === 'external_transfer'));
+  assert.ok(world.zones.sur.length > 3 && world.zones.norte.length > 3);
 });

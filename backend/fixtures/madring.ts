@@ -1,6 +1,6 @@
 // Build-time only. The API can read the generated JSON without importing frontend code.
-import { createInitialState, POS, ROUTE_NORTE_FROM_SUR } from '../../frontend/src/domain/initialState.ts';
-import type { CrisisState, Commitment } from '../../frontend/src/domain/types.ts';
+import { createInitialState, POS, ROUTE_CASTILLA, ROUTE_CHAMARTIN, ROUTE_COSLADA, ROUTE_NORTE_FROM_SUR, ROUTE_T4, ZONE_NORTE, ZONE_SUR } from '../../frontend/src/domain/initialState.ts';
+import type { CrisisState, Commitment, LatLng } from '../../frontend/src/domain/types.ts';
 
 type GuestGroupId = 'g-acceso' | 'g-shuttles' | 'g-propios';
 export interface DemoGuest {
@@ -215,6 +215,19 @@ export function buildMadringFixtures() {
     fixtures[twist] = { state, allocations, description: `Giro con ${600 - missing} ubicaciones confirmadas y ${missing} pendientes. Gasto previo conservado.` };
   }
 
+  const calm = structuredClone(fixtures.normal!.state);
+  calm.clock = { ...calm.clock, simSeconds: 43200, speed: 1, paused: false };
+  calm.coordinatorStatus = 'estable';
+  for (const commitment of calm.commitments) {
+    commitment.updatedAt = Math.min(commitment.updatedAt, 43200);
+  }
+  calm.events = [{ id: 'calm-ready', time: 43200, kind: 'info', text: 'Operación estable una hora antes de la apertura · datos sintéticos' }];
+  fixtures.calm = {
+    state: calm,
+    allocations: structuredClone(fixtures.normal!.allocations),
+    description: '12:00: hospitalidad original confirmada; reloj en marcha, sin incidente.',
+  };
+
   for (const fixture of Object.values(fixtures)) applyAllocations(fixture.state, guests, fixture.allocations);
   const base = structuredClone(createInitialState());
   const seed = {
@@ -248,6 +261,7 @@ export function buildMadringFixtures() {
     transfers: [{ id: 'sur-norte-external', from: 'accesoSur', to: 'accesoNorte', via: 'external', route: ROUTE_NORTE_FROM_SUR, driveMinutes: 15, boardingMinutes: 10, alightingMinutes: 5, status: 'unconfirmed', confirmedTrips: [], requiresNorthAccess: true }],
     contacts: ['venue-manager', 'catering-manager', 'transport-manager', 'reception-manager', 'organizer'].map((role) => ({ id: `test-${role}`, role, phone: null, email: null })),
   };
+  const world = buildWorld(seed);
   const manifest = {
     schemaVersion: 1,
     scenarioId: seed.scenarioId,
@@ -255,11 +269,95 @@ export function buildMadringFixtures() {
     fixtures: Object.fromEntries(Object.entries(fixtures).map(([name, f]) => [name, {
       file: `states/${name}.json`, description: f.description, planVersion: f.state.planVersion,
       allocations: f.allocations,
-      accessibilityVerifiedSpaceIds: name === 'normal' ? ['principal']
+      accessibilityVerifiedSpaceIds: name === 'normal' || name === 'calm' ? ['principal']
         : f.state.commitments.some((c) => c.id === 'c-accesibilidad' && c.status === 'confirmado') ? ['pabellonB'] : [],
       confirmedGuests: f.allocations.filter((a) => a.status === 'confirmed').reduce((sum, a) => sum + a.guestIds.length, 0),
       unassignedGuestIds: guests.filter((g) => !f.allocations.some((a) => a.status === 'confirmed' && a.guestIds.includes(g.id))).map((g) => g.id),
     }])),
   };
-  return { seed, manifest, fixtures };
+  return { seed, manifest, fixtures, world };
+}
+
+type SeedResource = {
+  id: string;
+  name: string;
+  kind: string;
+  zone: 'norte' | 'sur';
+  capacity: number | null;
+  pos: LatLng;
+  contactRef: string;
+};
+
+type SeedShape = {
+  resources: SeedResource[];
+  transfers: Array<{ from: string; to: string; route: LatLng[]; driveMinutes: number; requiresNorthAccess: boolean }>;
+};
+
+function replaceEnd(route: LatLng[], pos: LatLng): LatLng[] {
+  return [...route.slice(0, -1), pos];
+}
+
+function buildWorld(seed: SeedShape) {
+  const gates = createInitialState().gates;
+  const places = [
+    ...seed.resources.map((resource) => ({
+      id: resource.id,
+      name: resource.name,
+      kind: resource.kind,
+      zone: resource.zone as 'norte' | 'sur' | null,
+      pos: resource.pos,
+      ...(resource.capacity ? { capacity: resource.capacity } : {}),
+      ...(resource.id === 'accesoSur' ? { serves: ['principal', 'pabellonB', 'loungeSur', 'esperaSur'] } : {}),
+      ...(resource.id === 'accesoNorte' ? { serves: ['norteC'] } : {}),
+      ...(resource.id === 'muelleSur' ? { serves: ['principal'] } : {}),
+      ...(resource.id === 'muelleEste' ? { serves: ['pabellonB', 'loungeSur'] } : {}),
+      contactRef: resource.contactRef,
+    })),
+    ...gates.map((gate) => ({
+      id: gate.id,
+      name: gate.name,
+      kind: 'puerta' as const,
+      zone: gate.zone as 'norte' | 'sur' | null,
+      pos: gate.pos,
+      capacity: gate.capacity,
+    })),
+    { id: 'chamartin', name: 'Chamartín', kind: 'parada' as const, zone: null, pos: POS.chamartin },
+    { id: 'castilla', name: 'Plaza de Castilla', kind: 'parada' as const, zone: null, pos: POS.castilla },
+    { id: 't4', name: 'Aeropuerto T4', kind: 'parada' as const, zone: null, pos: POS.t4 },
+    { id: 'coslada', name: 'Coslada', kind: 'parada' as const, zone: null, pos: POS.coslada },
+  ];
+
+  const links: Array<{
+    from: string;
+    to: string;
+    kind: 'road' | 'external_transfer';
+    route: LatLng[];
+    minutes: number;
+    requiresNorthAccess?: boolean;
+  }> = [
+    { from: 'chamartin', to: 'accesoSur', kind: 'road', route: ROUTE_CHAMARTIN, minutes: 40 },
+    { from: 'chamartin', to: 'esperaSur', kind: 'road', route: replaceEnd(ROUTE_CHAMARTIN, POS.esperaSur), minutes: 43 },
+    { from: 'castilla', to: 'accesoSur', kind: 'road', route: ROUTE_CASTILLA, minutes: 43 },
+    { from: 'castilla', to: 'esperaSur', kind: 'road', route: replaceEnd(ROUTE_CASTILLA, POS.esperaSur), minutes: 46 },
+    { from: 't4', to: 'accesoSur', kind: 'road', route: ROUTE_T4, minutes: 33 },
+    { from: 't4', to: 'esperaSur', kind: 'road', route: replaceEnd(ROUTE_T4, POS.esperaSur), minutes: 36 },
+    { from: 'coslada', to: 'muelleSur', kind: 'road', route: ROUTE_COSLADA, minutes: 35 },
+    { from: 'coslada', to: 'muelleEste', kind: 'road', route: replaceEnd(ROUTE_COSLADA, POS.muelleEste), minutes: 38 },
+    {
+      from: 'accesoSur',
+      to: 'accesoNorte',
+      kind: 'external_transfer',
+      route: ROUTE_NORTE_FROM_SUR,
+      minutes: seed.transfers[0]?.driveMinutes ?? 15,
+      requiresNorthAccess: true,
+    },
+  ];
+
+  return {
+    schemaVersion: 1,
+    scenarioId: 'madring-hospitality',
+    places,
+    links,
+    zones: { sur: ZONE_SUR, norte: ZONE_NORTE },
+  };
 }
