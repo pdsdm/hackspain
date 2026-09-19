@@ -155,7 +155,7 @@ export class Engine {
             mode = await this.runCoordinator(event);
           }
         }
-      } else if (event.source === "jury") {
+      } else if (event.source === "jury" || (event.source === "clock" && event.kind === "twist")) {
         const twist = parseTwist({ twist: event.payload?.twist ?? event.kind });
         const before = this.states.ensureActiveRun().state;
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
