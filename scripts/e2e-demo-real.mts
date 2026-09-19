@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -65,16 +66,49 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function resolveInputWorkflowId(apiBase: string, apiKey: string): Promise<string> {
+function literalToken(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  for (const paragraph of value) {
+    if (!paragraph || typeof paragraph !== "object") continue;
+    const children = (paragraph as Record<string, unknown>).children;
+    if (!Array.isArray(children)) continue;
+    for (const child of children) {
+      if (!child || typeof child !== "object") continue;
+      const text = (child as Record<string, unknown>).text;
+      if (typeof text === "string" && text.trim()) return text.trim();
+    }
+  }
+  return undefined;
+}
+
+async function resolveInputWorkflow(apiBase: string, apiKey: string): Promise<{ id: string; slug?: string; webhookToken?: string }> {
+  const headers = { Authorization: `Bearer ${apiKey}` };
   const configured = process.env.HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID?.trim();
-  if (configured) return configured;
-  const workflows = await json<{ data?: Array<{ id?: string; name?: string }> }>(`${apiBase}/workflows/?page_size=100`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
+  const workflows = await json<{ data?: Array<{ id?: string; name?: string; slug?: string; latest_version?: { id?: string } }> }>(`${apiBase}/workflows/?page_size=100`, {
+    headers,
     signal: AbortSignal.timeout(30_000),
   });
-  const workflow = workflows.data?.find((item) => item.name?.trim().toLowerCase() === "demo incident inputs");
-  if (!workflow?.id) throw new Error("No existe el workflow HappyRobot Demo Incident Inputs");
-  return workflow.id;
+  const workflow = workflows.data?.find((item) => configured
+    ? item.id === configured
+    : item.name?.trim().toLowerCase() === "demo incident inputs");
+  if (!workflow?.id) {
+    if (configured) return { id: configured };
+    throw new Error("No existe el workflow HappyRobot Demo Incident Inputs");
+  }
+  let webhookToken: string | undefined;
+  const versionId = workflow.latest_version?.id;
+  if (versionId) {
+    const nodes = await json<{ data?: Array<{ name?: string; configuration?: { token?: unknown } }> }>(`${apiBase}/versions/${versionId}/nodes`, {
+      headers,
+      signal: AbortSignal.timeout(30_000),
+    });
+    webhookToken = literalToken(nodes.data?.find((node) => node.name === "Webhook POST")?.configuration?.token);
+  }
+  return {
+    id: workflow.id,
+    ...(workflow.slug ? { slug: workflow.slug } : {}),
+    ...(webhookToken ? { webhookToken } : {}),
+  };
 }
 
 async function waitFor<T>(label: string, timeoutMs: number, read: () => Promise<T>, predicate: (value: T) => boolean): Promise<T> {
@@ -187,8 +221,12 @@ async function main(): Promise<void> {
   const apiKey = required("HAPPYROBOT_API_KEY");
   const token = required("HAPPYROBOT_WEBHOOK_TOKEN");
   const inputApiBase = (process.env.HAPPYROBOT_DEMO_INPUT_API_BASE?.trim() || "https://platform.eu.happyrobot.ai/api/v2").replace(/\/+$/, "");
-  const inputWorkflowId = await resolveInputWorkflowId(inputApiBase, apiKey);
+  const inputWorkflow = await resolveInputWorkflow(inputApiBase, apiKey);
   const inputEnvironment = process.env.HAPPYROBOT_DEMO_INPUT_ENVIRONMENT?.trim() || "development";
+  const configuredInputHook = process.env.HAPPYROBOT_DEMO_INPUT_HOOK_URL?.trim();
+  const inputHookUrl = configuredInputHook || (inputWorkflow.slug
+    ? `https://workflows.platform.eu.happyrobot.ai/hooks/${inputEnvironment === "production" ? "" : `${inputEnvironment}/`}${inputWorkflow.slug}`
+    : undefined);
   const timeoutMs = Number(process.env.E2E_DEMO_TIMEOUT_MS?.trim() || 480_000);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 30_000 || timeoutMs > 900_000) {
     throw new Error("E2E_DEMO_TIMEOUT_MS debe estar entre 30000 y 900000");
@@ -242,20 +280,38 @@ async function main(): Promise<void> {
       return response.json() as Promise<CoordinatorReport>;
     };
     const triggerInput = async (payload: ReturnType<typeof event>): Promise<string> => {
-      const result = await json<{ run_id?: string; status?: string }>(
-        `${inputApiBase}/workflows/${encodeURIComponent(inputWorkflowId)}/runs`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            environment: inputEnvironment,
-            payload: { ...payload, sessionId: payload.evidence.sessionId, backend_base_url: publicUrl },
-          }),
-          signal: AbortSignal.timeout(30_000),
-        },
-      );
-      if (!result.run_id) throw new Error(`HappyRobot no devolvió run_id (${result.status ?? "sin estado"})`);
-      return result.run_id;
+      const requestPayload = { ...payload, sessionId: payload.evidence.sessionId, backend_base_url: publicUrl };
+      const apiResponse = await fetch(`${inputApiBase}/workflows/${encodeURIComponent(inputWorkflow.id)}/runs`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ environment: inputEnvironment, payload: requestPayload }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (apiResponse.ok) {
+        const result = await apiResponse.json() as { run_id?: string; queued_run_ids?: string[]; id?: string };
+        const runId = result.run_id || result.queued_run_ids?.[0] || result.id;
+        if (!runId) throw new Error("HappyRobot no devolvió run_id");
+        return runId;
+      }
+      const apiError = await apiResponse.text();
+      if (apiResponse.status !== 404 || !inputHookUrl) {
+        throw new Error(`HappyRobot input API ${apiResponse.status}: ${apiError}`);
+      }
+      console.log("[E2E] API de runs no encuentra el workflow; usando hook directo publicado");
+      const hookResponse = await fetch(inputHookUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(requestPayload),
+        signal: AbortSignal.timeout(30_000),
+      });
+      const hookText = await hookResponse.text();
+      if (!hookResponse.ok) throw new Error(`HappyRobot input hook ${hookResponse.status}: ${hookText}`);
+      try {
+        const result = JSON.parse(hookText) as { run_id?: string; queued_run_ids?: string[]; id?: string };
+        return result.run_id || result.queued_run_ids?.[0] || result.id || `hook-${payload.eventId}`;
+      } catch {
+        return `hook-${payload.eventId}`;
+      }
     };
     const waitReport = (previous: string | undefined) => waitFor(
       "informe nuevo del coordinador HappyRobot",
@@ -264,9 +320,13 @@ async function main(): Promise<void> {
       (report) => Boolean(report && report.correlationId !== previous && report.status !== "timeout" && report.status !== "unavailable"),
     ) as Promise<CoordinatorReport>;
 
+    const inputTokenHash = inputWorkflow.webhookToken
+      ? createHash("sha256").update(inputWorkflow.webhookToken).digest("hex")
+      : undefined;
     const reset = await json<{ externalActions?: string }>(`${localUrl}/simulation/e2e/reset`, {
       method: "POST",
-      headers: authHeaders,
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify(inputTokenHash ? { inputTokenHash } : {}),
     });
     if (reset.externalActions !== "sim") throw new Error("El target no confirmó el aislamiento de acciones externas");
     const initial = await readState();
