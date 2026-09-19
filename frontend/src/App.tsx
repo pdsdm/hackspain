@@ -9,6 +9,7 @@ import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
 import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
+import { ActiveIncidents } from './components/map/ActiveIncidents'
 import { CronologiaChat } from './components/map/CronologiaChat'
 import { CierreCard } from './components/map/CierreCard'
 import { CoordinadorPanel } from './components/right/CoordinadorPanel'
@@ -56,8 +57,9 @@ export default function App() {
           <div className="flex-1 min-h-0">
           <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId}>
             <div className="map-overlays">
-              <div className="absolute top-3 left-3 w-[300px]">
+              <div className="absolute top-3 left-3 w-[300px] flex flex-col gap-3">
                 <AforoOverlay s={s} />
+                <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
                 <KpiOverlay s={s} />

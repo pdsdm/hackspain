@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
 import type { Area, CrisisState, EventKind } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { Glass } from './Glass'
@@ -21,6 +21,12 @@ const AREA: Record<Area, { label: string; icon: LucideIcon }> = {
   transporte: { label: 'Transporte', icon: Bus },
   asistentes: { label: 'Asistentes', icon: Users },
 }
+const CHANNEL = {
+  voice: { label: 'Voz', icon: Phone },
+  webcall: { label: 'Web Call', icon: Radio },
+  sms: { label: 'SMS', icon: MessageSquare },
+  api: { label: 'API', icon: Radio },
+} as const
 
 export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }: { s: CrisisState; className?: string; footer?: ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
@@ -49,8 +55,10 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
         {items.map((e) => {
           const look = EVENT[e.kind] ?? EVENT.info
           const area = e.area ? AREA[e.area] : undefined
-          const Icon = area?.icon ?? look.icon
-          const name = e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel')
+          const source = e.channel ? CHANNEL[e.channel] : undefined
+          const Icon = source?.icon ?? area?.icon ?? look.icon
+          const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
+          const sourceLabel = source ? `${source.label}${e.simulated ? ' · simulado' : ''}` : undefined
           return (
             <li key={e.id} className={`timeline-card timeline-card--${look.tone}`}>
               <div className="timeline-card-heading">
@@ -59,7 +67,7 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
                 <time className="timeline-time num">{fmtClock(e.time)}</time>
               </div>
               <p className="timeline-text">{e.text}</p>
-              <span className="timeline-kind"><look.icon size={11} aria-hidden="true" />{look.label}</span>
+              <span className="timeline-kind"><look.icon size={11} aria-hidden="true" />{sourceLabel ? `${sourceLabel} · ${look.label}` : look.label}</span>
             </li>
           )
         })}

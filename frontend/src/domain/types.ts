@@ -177,6 +177,9 @@ export interface TimelineEvent {
   kind: EventKind
   text: string
   area?: Area
+  channel?: 'voice' | 'sms' | 'webcall' | 'api'
+  actor?: string
+  simulated?: boolean
 }
 
 export interface Budget {
