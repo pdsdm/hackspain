@@ -173,3 +173,22 @@ la llamada real, la intervención humana, un giro, y el ensayo.
 - Cada uno: completar su `.env` con las variables nuevas de `.env.example`.
 - Añadir `Prueba-de-plataforma-y-llamada-real` al tablero o renombrarla a
   `feat/alvaro-prueba-voz`, que es la que dice `TASKS.md`.
+
+## 8. Mundo dinámico — T29 a T32 (añadido sábado 13:00)
+
+La demo parece un guion aunque no lo sea: mundo pequeño, afluencia lineal, un actor por
+área, y solo pasa lo que alguien pulsa. `docs/plan-mundo-dinamico.md` añade, sin tocar
+nada existente: más lugares (paddock, parkings, accesos, muelle Norte), afluencia con
+picos y semilla, taxis / VIP / repartidores, y un «Modo vivo» que lanza incidencias que
+nadie ha elegido.
+
+| Tarea | Cuándo | Condición |
+|---|---|---|
+| T29 mundo ampliado | Hoy, ya | Ninguna. Se ve con `rules` |
+| T30 afluencia con picos | Hoy, tras T29 | Ninguna. Se ve con `rules` |
+| T31 actores móviles | Tras el punto de control de las 14:00 | LLM en < 15 s |
+| T32 incidencias en vivo | Tras el recorrido de las 18:00 | El recorrido corre entero con LLM |
+
+**Regla:** se recorta T32 → T31 → T30 → T29 antes de recortar nada de la sección 6. La
+congelación de las 22:00 también aplica. El reparto está en el plan; sigue el mapa de
+propiedad de la sección 3.

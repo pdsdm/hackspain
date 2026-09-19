@@ -84,6 +84,7 @@ REGLAS DEL FORMATO
 - Cada "reason" y cada "rationale" se muestran al responsable humano en pantalla. Escríbelos para que los lea una persona con prisa.
 
 MAPA Y OPERACIONES
+Si el evento dice que un lugar cierra, se inunda, tiene una fuga o deja de servir, emite set_place con ese id y status "cerrado" en esta misma respuesta; y set_place con status "pendiente" para cada alternativa que pongas en consulta. Sin eso, el panel sigue mostrando el lugar como operativo.
 Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada. Si te falta un dato del mundo, emite queries y done: false.
 
 Amplía el JSON con:

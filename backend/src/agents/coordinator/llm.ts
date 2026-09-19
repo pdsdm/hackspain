@@ -29,6 +29,7 @@ export interface LlmConfig {
   orgId?: string;
   sessionApiUrl: string;
   devinMode: string;
+  reasoningEffort?: string;
 }
 
 export interface ToolCall {
@@ -93,13 +94,14 @@ export function loadLlmConfig(env: NodeJS.ProcessEnv = process.env): LlmConfig {
   const jsonFlag = env.COORDINATOR_JSON_OBJECT?.trim();
   const jsonObject = jsonFlag === "1" || jsonFlag === "true";
   const devinMode = env.DEVIN_MODE?.trim() || "fast";
+  const reasoningEffort = env.COORDINATOR_REASONING_EFFORT?.trim() || undefined;
 
   const withHarness = (config: Omit<LlmConfig, "harness">): LlmConfig => {
     const harness = readHarness(env.COORDINATOR_HARNESS, config.provider);
     if (harness === "devin" && !orgId) {
       throw new Error("COORDINATOR_HARNESS=devin requiere DEVIN_ORG_ID (Settings → Service Users).");
     }
-    return { ...config, harness, ...(orgId ? { orgId } : {}) };
+    return { ...config, harness, ...(orgId ? { orgId } : {}), ...(reasoningEffort ? { reasoningEffort } : {}) };
   };
 
   if (cognition) {
@@ -210,6 +212,7 @@ export async function chat(
     {
       model: config.model,
       temperature,
+      ...(config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
       ...(options.nonce === undefined ? {} : { user: options.nonce }),
       ...(config.jsonObject && !options.tools ? { response_format: { type: "json_object" } } : {}),
       ...(options.tools && options.tools.length > 0 ? { tools: options.tools, tool_choice: "auto" } : {}),
