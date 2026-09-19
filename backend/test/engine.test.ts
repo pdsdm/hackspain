@@ -177,3 +177,23 @@ test("stored events record whether the coordinator ran as llm, rules or none", a
     database.close();
   }
 });
+
+test("an accepted call_result does not call the coordinator; a rejected one does", async () => {
+  let calls = 0;
+  const completeFn = async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  };
+  const { database, instance } = engine(undefined, completeFn);
+  try {
+    const base = { taskId: "t1", runId: "r", planVersion: 1, result: { summary: "ok", conditions: [], evidence: {}, data: {} } };
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "accepted_with_conditions" } } });
+    assert.equal(calls, 0);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "rejected" } } });
+    assert.equal(calls, 1);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
+    assert.equal(calls, 2);
+  } finally {
+    database.close();
+  }
+});
