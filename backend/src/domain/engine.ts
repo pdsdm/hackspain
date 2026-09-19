@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { logCoord, logCoordError, logEvent } from "../log.js";
 
 import { runCoordinatorLoop, type CompleteFn, type CoordinatorLoopDeps } from "../agents/coordinator/loop.js";
 import type { LlmConfig } from "../agents/coordinator/llm.js";

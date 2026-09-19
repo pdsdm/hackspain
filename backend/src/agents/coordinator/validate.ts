@@ -33,8 +33,39 @@ const COORDINATOR_STATUSES: readonly CoordinatorStatus[] = [
   "pausado",
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function pickString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim() !== "") return value;
+  }
+  return undefined;
+}
+
+function normalizeOperation(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const id = pickString(raw.id, raw.placeId, raw.vehicleId, raw.gateId, raw.groupId);
+  const status = pickString(raw.status, raw.estado);
+  const text = pickString(raw.text, raw.message, raw.constraint);
+  const next: Record<string, unknown> = { ...raw };
+  if (id !== undefined) next.id = id;
+  if (status !== undefined) next.status = status;
+  if (raw.op === "log_event") {
+    next.text = text ?? pickString(raw.reason) ?? "";
+    if (typeof next.kind !== "string" || next.kind === "") next.kind = "incidencia";
+  }
+  if (raw.op === "add_constraint") next.text = text ?? pickString(raw.reason) ?? "";
+  if (raw.op === "set_group") {
+    const where = pickString(raw.where, raw.location);
+    const assigned = pickString(raw.assignedSpaceId, raw.spaceId);
+    if (where !== undefined) next.where = where;
+    if (assigned !== undefined) next.assignedSpaceId = assigned;
+  }
+  return next;
+}
+
+function normalizePayload(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  if (!Array.isArray(value.operations)) return value;
+  return { ...value, operations: value.operations.map(normalizeOperation) };
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -289,7 +320,7 @@ export function parseOutput(
   input: CoordinatorInput,
 ): { output: CoordinatorOutput | null; issues: ValidationIssue[] } {
   try {
-    return validateOutput(JSON.parse(text), input);
+    return validateOutput(normalizePayload(JSON.parse(text)), input);
   } catch {
     return { output: null, issues: [{ code: "json_invalido", detail: "la respuesta no es JSON" }] };
   }
