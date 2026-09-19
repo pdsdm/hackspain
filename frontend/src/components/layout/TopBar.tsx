@@ -10,7 +10,7 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
   const late = left < 0
   return (
     <header className="flex items-center gap-5 px-6 h-16 border-b border-line bg-bg flex-none">
-      <img src="/brand/zhivel-logo-dark.png" alt="Zhivel" className="h-[26px] w-auto" />
+      <img src="/brand/zhivel-logo-dark.png" alt="Zhivel" className="h-9 w-auto" />
       <span className="w-px h-6 bg-line-2" />
       <div className="flex flex-col gap-px">
         <span className="display font-bold text-[14px] uppercase tracking-[0.02em]">Centro de operaciones</span>
