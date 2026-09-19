@@ -123,7 +123,7 @@ Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha ele
 { "ok": true, "live": true, "seed": 42 }
 ```
 
-`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo en `backend/src/domain/incidents.ts`). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
+`GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo de 18 en `backend/src/domain/incidents.ts`; seis tocan `vehicles[]`, parkings y paddock). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
 
 ### Afluencia en los accesos (`gates[]`)
 
