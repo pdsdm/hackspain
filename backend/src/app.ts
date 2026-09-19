@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
@@ -186,6 +185,25 @@ export function createApp(
     next();
   };
 
+  const authorizeHappyRobotIncident = (request: Request, response: Response, next: NextFunction) => {
+    const authorization = request.get("authorization");
+    const prefix = "Bearer ";
+    const received = authorization?.startsWith(prefix) ? authorization.slice(prefix.length) : "";
+    const token = options.workflowToken ?? config.workflowToken;
+    if (received && token && sameToken(received, token)) {
+      next();
+      return;
+    }
+    const state = stateRepository.ensureActiveRun().state;
+    const e2eHash = typeof state.e2eInputTokenHash === "string" ? state.e2eInputTokenHash : "";
+    const receivedHash = received ? createHash("sha256").update(received).digest("hex") : "";
+    if (state.forceSimActions === true && e2eHash && receivedHash && sameToken(receivedHash, e2eHash)) {
+      next();
+      return;
+    }
+    response.status(token ? 401 : 503).json({ error: token ? "Invalid workflow token" : "Workflow integration is not configured" });
+  };
+
   const recordWorkflowResult = (
     envelope: SpecialistResultEnvelope,
     verification?: CallAcceptanceVerification,
@@ -303,7 +321,13 @@ export function createApp(
     }
   });
 
-  app.post("/simulation/e2e/reset", authorizeWorkflow, (_request, response, next) => {
+  app.post("/simulation/e2e/reset", authorizeWorkflow, (request, response, next) => {
+    const body = request.body && typeof request.body === "object" ? request.body as Record<string, unknown> : {};
+    const inputTokenHash = body.inputTokenHash;
+    if (inputTokenHash !== undefined && (typeof inputTokenHash !== "string" || !/^[a-f0-9]{64}$/.test(inputTokenHash))) {
+      response.status(400).json({ error: "inputTokenHash must be a SHA-256 hex digest" });
+      return;
+    }
     void engine
       .reset("calm")
       .then((result) => {
@@ -311,6 +335,7 @@ export function createApp(
         const state = structuredClone(run.state);
         state.forceSimActions = true;
         state.e2eMode = "production-isolated";
+        if (typeof inputTokenHash === "string") state.e2eInputTokenHash = inputTokenHash;
         state.agentsPaused = false;
         state.clock.paused = false;
         state.clock.live = false;
@@ -333,7 +358,7 @@ export function createApp(
     }
   });
 
-  app.post("/workflow/happyrobot/events", authorizeWorkflow, (request, response, next) => {
+  app.post("/workflow/happyrobot/events", authorizeHappyRobotIncident, (request, response, next) => {
     try {
       const envelope = parseHappyRobotIncident(request.body);
       const reservation = happyrobotEventRepository.reserve(envelope);

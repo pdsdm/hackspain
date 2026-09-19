@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
 
@@ -62,9 +63,12 @@ test("the authenticated E2E reset creates an isolated sim-only run", async () =>
     assert(address && typeof address !== "string");
     const base = `http://127.0.0.1:${address.port}`;
     assert.equal((await fetch(`${base}/simulation/e2e/reset`, { method: "POST" })).status, 401);
+    const legacyToken = "legacy-input-token";
+    const inputTokenHash = createHash("sha256").update(legacyToken).digest("hex");
     const reset = await fetch(`${base}/simulation/e2e/reset`, {
       method: "POST",
-      headers: { Authorization: "Bearer e2e-token" },
+      headers: { Authorization: "Bearer e2e-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ inputTokenHash }),
     });
     assert.equal(reset.status, 200);
     const result = await reset.json() as { externalActions: string };
@@ -72,8 +76,27 @@ test("the authenticated E2E reset creates an isolated sim-only run", async () =>
     const state = await (await fetch(`${base}/state`)).json() as Record<string, unknown>;
     assert.equal(state.forceSimActions, true);
     assert.equal(state.e2eMode, "production-isolated");
+    assert.equal(state.e2eInputTokenHash, inputTokenHash);
     assert.equal((state.clock as Record<string, unknown>).paused, false);
     assert.equal((state.clock as Record<string, unknown>).speed, 120);
+    const incident = {
+      eventId: "e2e-legacy-token",
+      channel: "call",
+      actor: "SIMULACIÓN · Responsable de recinto",
+      incidentId: "principal_pipe_burst",
+      summary: "Rotura de tubería",
+      evidence: { sessionId: "e2e-session" },
+    };
+    assert.equal((await fetch(`${base}/workflow/happyrobot/events`, {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong", "Content-Type": "application/json" },
+      body: JSON.stringify(incident),
+    })).status, 401);
+    assert.equal((await fetch(`${base}/workflow/happyrobot/events`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${legacyToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(incident),
+    })).status, 200);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database.close();
