@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import type { CoordinatorInput, InputCommitment, InputGuestGroup, InputSpace } from "./types.js";
 
 export type FixtureName =
+  | "calm"
   | "normal"
   | "crisis"
   | "proposal"
