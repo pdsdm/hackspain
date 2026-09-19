@@ -254,7 +254,27 @@ export class ControlService {
   }
 
   reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
+    // El modo vivo se configura al arrancar el servidor y vive en el reloj, que el
+    // fixture sobrescribe. Sin arrastrarlo, «Reiniciar simulación» dejaba un mundo
+    // quieto: el reloj corría pero no volvía a pasar nada.
+    const previous = this.states.ensureActiveRun().state.clock;
+    const live = previous.live === true;
+    const seed = Number(previous.liveSeed ?? 0);
+    const mode = previous.liveMode === "catalog" ? "catalog" : "open";
+
     const run = this.states.reset(fixture);
+    if (live) {
+      const state = structuredClone(run.state);
+      state.clock.live = true;
+      state.clock.liveSeed = seed > 0 ? seed : 1 + Math.floor(Math.random() * 99_999);
+      state.clock.liveMode = mode;
+      // La secuencia empieza de cero: mundo nuevo, incidencias desde la primera.
+      state.clock.liveIndex = 0;
+      state.clock.liveLastAt = 0;
+      addEvent(state, "info", `Modo vivo mantenido tras el reinicio · semilla ${state.clock.liveSeed}`);
+      this.states.saveState(run.id, state);
+      return { runId: run.id, planVersion: state.planVersion };
+    }
     return { runId: run.id, planVersion: run.state.planVersion };
   }
 }

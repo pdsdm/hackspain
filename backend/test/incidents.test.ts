@@ -213,3 +213,37 @@ test("POST /simulation/live toggles clock.live", async () => {
     database2.close();
   }
 });
+
+test("el modo vivo sobrevive a «Reiniciar simulación»", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const control = new ControlService(states);
+
+    const encendido = control.setLive(true, 4242);
+    assert.equal(encendido.live, true);
+
+    control.reset("calm");
+
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.equal(clock.live, true, "el mundo tiene que seguir emitiendo tras el reinicio");
+    assert.equal(clock.liveSeed, 4242, "la semilla se conserva: la demo es reproducible");
+    // La secuencia arranca de cero: mundo nuevo, incidencias desde la primera.
+    assert.equal(clock.liveIndex, 0);
+    assert.equal(clock.liveLastAt, 0);
+  } finally {
+    database.close();
+  }
+});
+
+test("si el modo vivo estaba apagado, un reinicio no lo enciende", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    new ControlService(states).reset("calm");
+    const clock = states.ensureActiveRun().state.clock as Record<string, unknown>;
+    assert.notEqual(clock.live, true);
+  } finally {
+    database.close();
+  }
+});
