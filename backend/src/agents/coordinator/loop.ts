@@ -76,8 +76,8 @@ async function runJsonLoop(
       text = await completeFn(deps.config ?? ({} as LlmConfig), SYSTEM_PROMPT, buildUserPrompt(input), {
         signal,
       });
-    } catch {
-      logCoordError("LLM complete() falló");
+    } catch (error) {
+      logCoordError("LLM complete() falló", error instanceof Error ? error.message : String(error));
       return "unavailable";
     }
 
