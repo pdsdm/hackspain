@@ -15,7 +15,8 @@ Los dos inputs son incidentes simulados lanzados mediante runs reales del workfl
 3. Muelle Este cerrado, CAT-01/CAT-02 bloqueadas y compromisos invalidados.
 4. Segundo plan con nuevo muelle, rutas, condiciones, staff y mensajes.
 5. Runs HappyRobot visibles para ambos inputs; las acciones de especialistas pueden usar `sim` etiquetado.
-6. Resultado `Plan cerrado` o `Plan condicionado`, con límites explícitos.
+6. Si se usa una negociación saliente real, su transcript crece durante la llamada y queda accesible al terminar.
+7. Resultado `Plan cerrado` o `Plan condicionado`, con límites explícitos.
 
 ## Carriles
 
@@ -24,6 +25,7 @@ Los dos inputs son incidentes simulados lanzados mediante runs reales del workfl
 | Relato y grabación | Ventura, revisión Carlos | T45, T48, T52 |
 | Ingesta y robustez | Zhi | T46, revisión T48, T52 |
 | HappyRobot y coordinación | Ventura | T47, T48, T50 |
+| Transcripción en directo | Devin | T22 |
 | Transporte | Álvaro | T13, parte de T51 |
 | Especialistas y UI | Ventura, revisión Carlos | T49, parte de T51 |
 
@@ -52,6 +54,7 @@ T47 puede preparar los workflows mientras se cierra el contrato T46. T48 puede p
 - Un run con canal `call` crea `principal_pipe_burst` una vez.
 - Un run con canal `sms` crea `dock_blocked` una vez.
 - Los actores indican `SIMULACIÓN`; evidencia y canal son visibles y los duplicados no mutan el estado.
+- Si se usa la negociación saliente, muestra turnos nuevos en pocos segundos y conserva el transcript completo al terminar (T22).
 
 ### G3 · Ejecución
 

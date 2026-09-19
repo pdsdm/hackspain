@@ -1,11 +1,12 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más el slice T52 de esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` más T22 en esta rama. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
 | **Foto tomada** | 20 de septiembre de 2026, 00:28 CEST |
-| **Base** | `85e7674` + rama T52 `feat/zhi-demo-recording-readiness` |
+| **Base** | `origin/main` actualizado + T22 en `feat/devin-transcripcion` |
+| **Trabajo en revisión** | Código y workflow development listos; E2E telefónico bloqueado por `user_missed_call` antes del audio |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, durante T52 |
 
@@ -13,9 +14,8 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` sobre `85e7674` + cambios T52 | **OK** |
-| Tests backend | 344: **337 pasan, 0 fallan, 7 live omitidos** |
-| Tests focalizados T46/T52 | 8: **8 pasan, 0 fallan** |
+| `make check` tras rebase de `feat/devin-transcripcion` | **OK** |
+| Tests backend | 345: **338 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 22.23.2; el repo exige ≥22.13 |
@@ -31,6 +31,14 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - Cuatro especialistas visibles: Espacios, Catering, Transporte y Asistentes.
 - Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
 - Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
+
+### T22 en `feat/devin-transcripcion`
+
+- `POST /workflow/happyrobot/transcript` acepta snapshots acumulativos autenticados, los ordena, fusiona sin duplicar y persiste en SQLite.
+- El callback final conserva las líneas recibidas en vivo y el panel mantiene accesible el transcript completo al terminar.
+- Las llamadas reales muestran las líneas recibidas aunque el reloj de simulación esté pausado; las simuladas conservan la revelación por `at`.
+- La cronología global conserva solo el resumen final de la llamada.
+- El workflow de development tiene `reportar_transcript`, callbacks dinámicos y usa `contact.phone`. Tres intentos llegaron al nodo de voz, pero la telefonía terminó como `user_missed_call` antes de iniciar audio.
 
 ### Camino de vídeo T45–T52
 
@@ -60,11 +68,13 @@ V4 en development y V6 en production de `Demo incident inputs` atravesaron Happy
 | Qué | Depende de | Externo |
 |---|---|---|
 | Rotar bearer | owner actualiza backend, development y production con el mismo valor oculto | Parcial |
+| Validar live transcript real | HappyRobot/telco inicia la run pero devuelve `user_missed_call` antes del audio | Sí |
 | Superar la puerta final T52 | `reason` y `lastResult` coherentes en los cuatro especialistas; cerrar Transporte T51 | No |
 | Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
 
 ## Ramas vivas sin mergear
 
+- `feat/devin-transcripcion` (local): T22 implementada y verificada localmente; E2E telefónico bloqueado antes del audio.
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.

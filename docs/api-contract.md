@@ -444,6 +444,24 @@ El workflow manda un snapshot **acumulativo desde el inicio de la llamada** desp
 { "ok": true, "duplicate": false, "added": 2, "total": 2 }
 ```
 
+Ejemplo reproducible, sin exponer el token en el historial del shell:
+
+```bash
+curl -sS -X POST "$PUBLIC_BASE_URL/workflow/happyrobot/transcript" \
+  -H "Authorization: Bearer $HAPPYROBOT_WEBHOOK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "call_id": "call-<taskId>",
+    "session_id": "<session real>",
+    "transcript": [
+      { "role": "assistant", "content": "¿Tienen libre el Lounge?", "at": 2 },
+      { "role": "user", "content": "Sí, desde las 13:15.", "at": 6 }
+    ]
+  }'
+```
+
+Una llamada real muestra inmediatamente todos los turnos que el backend ya haya recibido, aunque el reloj de la simulación esté pausado. Solo las llamadas simuladas usan `at` para revelar cada línea según `clock.simSeconds`. Al terminar, el transcript completo permanece en la tarjeta de llamada; la cronología global conserva únicamente el resumen final para no duplicar la conversación.
+
 El webhook `HAPPYROBOT_HOOK_*` actual no documenta `run_id` ni `session_id` en su respuesta. Aunque la Public API garantiza `run_id` al usar `POST /workflows/:id/runs`, esa no es la ruta de disparo vigente. Por ello T22 requiere configurar en el workflow desplegado una herramienta o webhook durante el nodo de voz que use `transcriptCallbackUrl`. Si el nodo solo entrega sesión y transcript al finalizar, no hay transcript en vivo: habría que habilitar emisión parcial o migrar el disparo a `triggerRun` y consumir `/runs/:id/sessions` más `/sessions/:id/stream`. El callback final de abajo sigue siendo obligatorio.
 
 ### `POST /workflow/happyrobot/results`

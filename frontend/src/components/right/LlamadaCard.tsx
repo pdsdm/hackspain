@@ -18,7 +18,9 @@ export function LlamadaCard({ s, call, onTake, disabled, className = '' }: { s: 
   if (!call) return null
   const elapsed = s.clock.simSeconds - call.startedAt
   const active = call.status === 'en_curso'
-  const lines = active ? call.transcript.filter((l) => l.at <= elapsed).slice(-3) : call.transcript
+  const simulated = s.simulated || call.simulated
+  const visible = active && simulated ? call.transcript.filter((l) => l.at <= elapsed) : call.transcript
+  const lines = active ? visible.slice(-3) : visible
   const sms = call.channel === 'sms'
   const title = active
     ? (sms ? 'Mensajes en curso' : 'Llamada en curso')
