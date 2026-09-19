@@ -2,7 +2,10 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
-import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
+import {
+  translateHappyRobotResult,
+  translateHappyRobotTranscript,
+} from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
 import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
 import {
@@ -486,6 +489,29 @@ export function createApp(
   app.post("/workflow/results", authorizeWorkflow, (request, response, next) => {
     try {
       verifyAndRecord(parseSpecialistResult(request.body), response, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/workflow/happyrobot/transcript", authorizeWorkflow, (request, response, next) => {
+    try {
+      const update = translateHappyRobotTranscript(request.body, taskRepository);
+      const task = taskRepository.get(update.taskId);
+      if (!task) throw new ContractError(`Task not found: ${update.taskId}`, 404);
+      const merged = stateRepository.appendCallTranscript({
+        runId: task.runId,
+        callId: update.callId,
+        transcript: update.transcript,
+        ...(update.sessionId ? { sessionId: update.sessionId } : {}),
+        ...(update.happyrobotRunId ? { happyrobotRunId: update.happyrobotRunId } : {}),
+      });
+      response.status(200).json({
+        ok: true,
+        duplicate: merged.added === 0,
+        added: merged.added,
+        total: merged.total,
+      });
     } catch (error) {
       next(error);
     }

@@ -94,6 +94,7 @@ export async function dispatchHappyRobot(input: {
         "situation.simSeconds": input.state.clock.simSeconds,
         "situation.coordinatorStatus": input.state.coordinatorStatus,
         callbackUrl: `${input.publicBaseUrl}/workflow/happyrobot/results`,
+        transcriptCallbackUrl: `${input.publicBaseUrl}/workflow/happyrobot/transcript`,
       }),
       signal: AbortSignal.timeout(10_000),
     });

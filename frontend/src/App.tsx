@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { WifiOff } from 'lucide-react'
 import { useCrisisState } from './data/useCrisisState'
-import { activeCall, pendingDecision } from './domain/selectors'
+import { displayCall, pendingDecision } from './domain/selectors'
 import type { FixtureName } from './domain/fixtures'
 import { TopBar } from './components/layout/TopBar'
 import { NavTabs } from './components/layout/NavTabs'
@@ -9,6 +9,7 @@ import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
 import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
+import { AgentDetailCard, type AgentFocus } from './components/map/AgentDetailCard'
 import { ActiveIncidents } from './components/map/ActiveIncidents'
 import { CronologiaChat } from './components/map/CronologiaChat'
 import { CierreCard } from './components/map/CierreCard'
@@ -30,8 +31,9 @@ export default function App() {
   const { state: s } = ctl
   const [modal, setModal] = useState<'intervenir' | 'decisiones' | null>(null)
   const [drawer, setDrawer] = useState(false)
+  const [openAgent, setOpenAgent] = useState<AgentFocus | null>(null)
   const decision = pendingDecision(s)
-  const call = activeCall(s)
+  const call = displayCall(s)
   const disabled = ctl.pending || ctl.stale
 
   if (!ctl.ready) return <main className="connection-screen">
@@ -57,8 +59,9 @@ export default function App() {
           <div className="flex-1 min-h-0">
           <CrisisMap s={s} onSelect={ctl.select} selected={s.selectedId}>
             <div className="map-overlays">
-              <div className="absolute top-3 left-3 w-[300px] flex flex-col gap-3">
+              <div className="absolute top-3 left-3 bottom-[calc(var(--footer-rail)+24px)] w-[300px] flex flex-col gap-3 min-h-0">
                 <AforoOverlay s={s} />
+                {openAgent && <AgentDetailCard s={s} id={openAgent} onClose={() => setOpenAgent(null)} />}
                 <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
@@ -67,14 +70,14 @@ export default function App() {
                 <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
               </div>
 
-              <CoordinadorPanel s={s} className="absolute left-3 right-[428px] bottom-3" />
+              <CoordinadorPanel s={s} selected={openAgent} onSelect={(id) => setOpenAgent((cur) => cur === id ? null : id)} className="absolute left-3 right-[428px] bottom-3 h-[var(--footer-rail)]" />
             </div>
           </CrisisMap>
           </div>
               <div className="absolute z-[1000] top-3 right-3 bottom-3 w-[404px] flex flex-col justify-end gap-3 pointer-events-none [&>*]:pointer-events-auto">
                 <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
                 <CronologiaChat s={s} className="min-h-0 max-h-full" footer={
-                  <EventChat className="event-chat border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
+                  <EventChat className="event-chat border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
                 } />
               </div>
         </main>
@@ -136,7 +139,7 @@ export default function App() {
           </div>
         )}
         <CronologiaChat s={s} className="mobile-chronology-panel" footer={
-          <EventChat className="event-chat border-t border-line p-4 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} feedback={ctl.feedback} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
+          <EventChat className="event-chat border-t border-line p-4 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
         } />
       </main>
     </div>

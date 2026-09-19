@@ -6,12 +6,14 @@ import type { DatabaseSync } from "node:sqlite";
 import { notifyRemote } from "./database.js";
 
 import type { InitialFixture } from "../config.js";
+import { ContractError, type TranscriptLine } from "../contracts/api.js";
 import {
   parseCrisisState,
   toPublicState,
   type CrisisStateDocument,
 } from "../domain/crisis-state.js";
 import type { GuestAllocation } from "../domain/plan-rules.js";
+import { mergeTranscriptLines } from "../domain/transcript.js";
 
 function stateUrl(fixture: string): URL {
   return new URL(`../../fixtures/madring/states/${fixture}.json`, import.meta.url);
@@ -141,6 +143,40 @@ export class StateRepository {
       throw new Error(`Active demo run not found: ${runId}`);
     }
     notifyRemote(this.database);
+  }
+
+  appendCallTranscript(input: {
+    runId: string;
+    callId: string;
+    transcript: TranscriptLine[];
+    sessionId?: string;
+    happyrobotRunId?: string;
+  }): { added: number; total: number } {
+    const active = this.ensureActiveRun();
+    if (active.id !== input.runId) return { added: 0, total: 0 };
+    const calls = Array.isArray(active.state.calls)
+      ? active.state.calls.filter((call): call is Record<string, unknown> => typeof call === "object" && call !== null)
+      : [];
+    const call = calls.find((candidate) => candidate.id === input.callId);
+    if (!call) throw new ContractError(`Call not found: ${input.callId}`, 404);
+    const currentSessionId = call._happyrobotSessionId;
+    if (input.sessionId && currentSessionId && currentSessionId !== input.sessionId) {
+      throw new ContractError("session_id belongs to another HappyRobot session", 409);
+    }
+    const currentRunId = call._happyrobotRunId;
+    if (input.happyrobotRunId && currentRunId && currentRunId !== input.happyrobotRunId) {
+      throw new ContractError("happyrobot_run_id belongs to another HappyRobot run", 409);
+    }
+    const current = Array.isArray(call.transcript) ? call.transcript as TranscriptLine[] : [];
+    const merged = mergeTranscriptLines(current, input.transcript);
+    call.transcript = merged.transcript;
+    if (input.sessionId) call._happyrobotSessionId = input.sessionId;
+    if (input.happyrobotRunId) call._happyrobotRunId = input.happyrobotRunId;
+    active.state.calls = calls;
+    if (merged.added > 0 || input.sessionId || input.happyrobotRunId) {
+      this.saveState(active.id, active.state);
+    }
+    return { added: merged.added, total: merged.transcript.length };
   }
 
   savePlan(

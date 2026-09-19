@@ -17,7 +17,7 @@ Trigger «Predefined request»  ──▶  Action «Webhook POST»  ──▶  P
 |---|---|
 | Nombre | `Demo Incident Inputs` (exacto: el instalador es idempotente por nombre) |
 | Icono | `bolt` |
-| Entorno a publicar | `development` |
+| Entorno a publicar | `development` para pruebas y `production` para la toma final |
 
 ## 2. Variable del workflow
 
@@ -26,7 +26,8 @@ Una sola, y **oculta**. Es el bearer con el que el backend autentica la entrada.
 | Clave | `HAPPYROBOT_DEMO_WEBHOOK_TOKEN` |
 |---|---|
 | Valor en `development` | el `HAPPYROBOT_WEBHOOK_TOKEN` del `.env` del equipo |
-| Valor en `staging` y `production` | **vacío** |
+| Valor en `production` | el mismo token, rotado antes de publicar la toma final |
+| Valor en `staging` | **vacío** |
 | Visibilidad | oculta en la UI (`is_hidden_in_ui`) |
 
 No escribas el token en el nodo ni en ninguna descripción: el criterio de aceptación de T47

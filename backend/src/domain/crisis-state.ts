@@ -76,6 +76,15 @@ export function parseCrisisState(value: unknown): CrisisStateDocument {
 
 export function toPublicState(state: CrisisStateDocument): CrisisStateDocument {
   const { coordinatorBusy: _busy, ...rest } = structuredClone(state);
+  if (Array.isArray(rest.calls)) {
+    rest.calls = rest.calls.map((value) => {
+      if (!isRecord(value)) return value;
+      const call = { ...value };
+      delete call._happyrobotSessionId;
+      delete call._happyrobotRunId;
+      return call;
+    });
+  }
   return {
     ...rest,
     simulated: false,

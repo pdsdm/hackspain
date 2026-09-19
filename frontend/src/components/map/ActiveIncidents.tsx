@@ -62,7 +62,7 @@ export function ActiveIncidents({ s }: { s: CrisisState }) {
   const active = incidents(s)
   if (active.length === 0) return null
   return (
-    <Glass label="Incidencias activas" className="w-[300px] max-h-[230px] overflow-hidden">
+    <Glass label="Incidencias activas" className="w-[300px] max-h-[230px] overflow-hidden flex-none">
       <header className="flex items-center gap-2 px-4 py-2.5 border-b border-line">
         <AlertTriangle size={13} className="text-red" />
         <h2 className="label">Incidencias activas</h2>
