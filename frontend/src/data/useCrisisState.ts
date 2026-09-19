@@ -43,7 +43,7 @@ export function useCrisisState(): CrisisController {
   const previous = useRef<CrisisState | null>(null)
   const pollInFlight = useRef(false)
   const ageSeconds = receivedAt === null ? 0 : Math.floor((now - receivedAt) / 1000)
-  const stale = SOURCE === 'api' && (!ready || !!error || ageSeconds >= 10)
+  const stale = SOURCE === 'api' && (!ready || ageSeconds >= 10)
 
   const receive = useCallback((s: CrisisState) => {
     // A server reset begins a new comparison. Do not compare two different runs.
@@ -80,10 +80,19 @@ export function useCrisisState(): CrisisController {
         if (alive) setError(e instanceof Error ? e.message : 'Backend no disponible')
       } finally { pollInFlight.current = false }
     }
+    const refresh = () => { if (document.visibilityState === 'visible') void poll() }
     void poll()
     const polling = setInterval(() => void poll(), 2000)
     const clock = setInterval(() => setNow(Date.now()), 1000)
-    return () => { alive = false; clearInterval(polling); clearInterval(clock) }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      alive = false
+      clearInterval(polling)
+      clearInterval(clock)
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+    }
   }, [receive])
 
   const intervene = async (i: Intervention) => {
