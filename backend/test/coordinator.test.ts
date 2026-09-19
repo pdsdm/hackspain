@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { loadLlmConfig } from "../src/agents/coordinator/llm.js";
 import { buildUserPrompt } from "../src/agents/coordinator/prompt.js";
 import { hm, crisisInput } from "../src/agents/coordinator/scenario.js";
 import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
@@ -187,4 +188,12 @@ test("el prompt lleva las horas en segundos y las restricciones del escenario", 
   assert.match(prompt, /Norte y Sur sin conexión interior/);
   assert.match(prompt, /pabellonB .* capacidad 450/);
   assert.match(prompt, /listo a las 13:45/);
+});
+
+test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {
+  const config = loadLlmConfig({ HELMCODE_API_KEY: "sk-test" });
+
+  assert.equal(config.provider, "helmcode");
+  assert.equal(config.model, "deepseek-v4-flash");
+  assert.equal(config.baseUrl, "https://api.helmcode.com/v1");
 });
