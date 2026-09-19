@@ -31,3 +31,5 @@ export function gateIcon(name: string, entered: number, waiting: number, status:
   const html = `<div class="gate-pin ${status}"><span class="gate-name">${name}</span><span class="gate-nums"><b>${k(entered)}</b> dentro · <b>${k(waiting)}</b> cola</span></div>`
   return L.divIcon({ html, className: '', iconAnchor: [0, 0] })
 }
+
+export const emptyIcon = L.divIcon({ html: '', className: '', iconSize: [0, 0], iconAnchor: [0, 0] })
