@@ -133,3 +133,33 @@ sin plan, con el respaldo determinista solo para giros.
 - **Qué:** preguntas sobre evidencia verbal y términos estructurados, con los mismos umbrales; amplía la propuesta T35 con huellas de transcripciones completas revisadas previamente por privacidad, configuradas solo en servidor. No añade anonimización automática ni reaplicación de callbacks.
 - **Por qué:** el primer prompt descartaba todas las aceptaciones; el candidato congelado acertó 30 casos sintéticos nuevos, repetidos dos veces. Hubo dos timeouts en una regresión adicional; el fallback y los efectos desactivados se conservan.
 - **Pendiente:** comparación con callbacks reales de HappyRobot anonimizados y etiquetados, revisión humana y sincronización con main. No activar confirmaciones ni interpretar el corpus sintético como garantía de seguridad.
+
+### T35 bis: JEV pasa de portero a observador, y se queda apagado por defecto
+
+- **Qué:** JEV ya no se plantea confirmar la reserva; cuando el resultado de la llamada
+  afirma «aceptado sin condiciones» y la transcripción no lo sostiene, escribe una
+  **incidencia** en la cronología explicando el desacuerdo. No toca el estado.
+  `JEV_ALLOW_UNREVIEWED_TRANSCRIPTS` (off) permite mandar transcripciones sin revisar, solo
+  para datos sintéticos, y `JEV_TIMEOUT_MS` (3000) sustituye al límite fijo de 1.500 ms.
+- **Por qué:** medido con 36 llamadas generadas por el sim-world (contraparte LLM, prompt y
+  semilla distintos de JEV) sobre el camino real de `/workflow/results`:
+
+| | |
+|---|---|
+| Bloqueadas por la regla determinista (no `accepted` o con condiciones) | 32 de 36 |
+| Candidatas que llegaban a JEV | 4 de 36 |
+| Evaluadas de verdad | 2 (935 ms y ~1 s) |
+| Timeouts | 2 (a 1.500 y a 3.000 ms; con techo de 25 s la misma clase de caso responde en 935 ms) |
+| Desacuerdos señalados | 2 de 2 evaluadas |
+| Confirmaciones automáticas | 0 |
+
+- **Conclusión honesta:** esto es **observabilidad, no robustez**. El estado sigue
+  cambiando igual; lo que se gana es que el responsable vea que el extractor afirmó más de
+  lo que dijo la contraparte. Con n=2 señales no hay base para afirmar que mejore la
+  fiabilidad, así que `JEV_ENABLED` sigue en `false` por defecto.
+- **Ojo:** con llamadas simuladas JEV no puede dispararse, porque `scheduleSimResult` no
+  rellena `sessionId` y la puerta de evidencia lo exige. Activar `JEV_ENABLED` en una demo
+  con el adaptador `sim` no cambia nada.
+- **Descartado:** bajar los umbrales (0,95/0,95/0,10) o quitar el filtro de privacidad para
+  que confirme más. Sería calibrar contra 36 casos sintéticos para arriesgar una falsa
+  confirmación en directo.

@@ -56,6 +56,8 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     jevEnabled: false,
     jevApplyConfirmations: false,
     jevReviewedTranscriptHashes: [],
+    jevAllowUnreviewedTranscripts: false,
+    jevTimeoutMs: 3_000,
     typesafeApiKey: undefined,
     jevModel: "jev-1.13.0",
     hooks: {},
@@ -90,7 +92,7 @@ export function createApp(
         ? createJevEvaluator({
             apiKey: config.typesafeApiKey,
             model: config.jevModel,
-            timeoutMs: 1_500,
+            timeoutMs: config.jevTimeoutMs,
           })
         : undefined)
     : undefined;
@@ -213,6 +215,7 @@ export function createApp(
       active.state,
       config.jevApplyConfirmations,
       config.jevReviewedTranscriptHashes,
+      { allowUnreviewedTranscripts: config.jevAllowUnreviewedTranscripts, timeoutMs: config.jevTimeoutMs },
     )
       .then((verification) => {
         response.status(200).json(
