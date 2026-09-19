@@ -64,6 +64,9 @@ export function placeIcon(opts: {
 
 export type VehicleIconKind = 'bus' | 'truck' | 'taxi' | 'vip' | 'van'
 
+export const KIND_COLOR: Record<VehicleIconKind, string> = { bus: '#1a1d24', taxi: '#1f9d55', vip: '#7c3aed', truck: '#c47a00', van: '#0f8b8d' }
+export const TRACK_COLOR = '#2563eb'
+
 const SVG: Record<VehicleIconKind, string> = {
   bus: draw(Bus, 12),
   truck: draw(Truck, 12),
@@ -73,7 +76,7 @@ const SVG: Record<VehicleIconKind, string> = {
 }
 
 export function vehicleIcon(kind: VehicleIconKind, delayed = false, label?: string) {
-  const cls = kind === 'truck' || kind === 'van' ? 'truck' : delayed ? 'delayed' : ''
+  const cls = delayed ? 'delayed' : kind === 'truck' ? 'truck' : kind === 'van' ? 'van' : ''
   const chip = label ? `<div class="vehicle-eta ${cls}">${esc(label)}</div>` : ''
   return L.divIcon({ html: `<div class="vehicle-wrap"><div class="vehicle ${cls} kind-${kind}">${SVG[kind]}</div>${chip}</div>`, className: '', iconSize: [22, 22], iconAnchor: [11, 11] })
 }

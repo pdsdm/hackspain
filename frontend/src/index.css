@@ -50,8 +50,8 @@ html, body, #root {
 .legend-swatch.legend-idle { border-left-color: #c9c9c4; border-style: dashed; border-left-style: solid; }
 .legend-barrier { width: 24px; height: 0; flex: none; border-top: 2px dotted #e5484d; }
 
-.route-anim { stroke-dasharray: 2 11; stroke-linecap: round; animation: dash 2.4s linear infinite; }
-@keyframes dash { to { stroke-dashoffset: -26; } }
+.route-flow { animation: dash 1.6s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -16; } }
 .route-casing { pointer-events: none; }
 
 .glass {
@@ -154,6 +154,9 @@ html, body, #root {
 .vehicle.truck { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
 .vehicle.kind-vip { border-color: #7c3aed; color: #7c3aed; box-shadow: 0 0 0 4px #7c3aed22; }
 .vehicle.kind-taxi { border-color: #1f9d55; color: #1f9d55; box-shadow: 0 0 0 4px #1f9d5522; }
+.vehicle.kind-van { border-color: #0f8b8d; color: #0f8b8d; box-shadow: 0 0 0 4px #0f8b8d22; }
+.vehicle-eta.van { border-color: #0f8b8d; color: #0f8b8d; }
+.legend-dots { width: 24px; height: 0; flex: none; border-top: 3px dotted currentColor; }
 .vehicle svg { width: 12px; height: 12px; }
 .vehicle-wrap { position: relative; width: 22px; height: 22px; }
 .vehicle-eta {
