@@ -581,6 +581,386 @@
       "note": "Redistribución pendiente tras cambio de espacio"
     }
   ],
+  "vehicles": [
+    {
+      "id": "VIP-01",
+      "kind": "vip",
+      "name": "VIP-01",
+      "who": "Director de equipo · Alpine",
+      "count": 3,
+      "from": "t4",
+      "origin": "Aeropuerto T4",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.485,
+          -3.615
+        ],
+        [
+          40.4808,
+          -3.6232
+        ],
+        [
+          40.4782,
+          -3.6254
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 43800,
+      "arriveAt": 45480,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-01"
+    },
+    {
+      "id": "VIP-02",
+      "kind": "vip",
+      "name": "VIP-02",
+      "who": "Director de equipo · Aston Martin",
+      "count": 2,
+      "from": "t4",
+      "origin": "Aeropuerto T4",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.485,
+          -3.615
+        ],
+        [
+          40.4808,
+          -3.6232
+        ],
+        [
+          40.4782,
+          -3.6254
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 44400,
+      "arriveAt": 46080,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-02"
+    },
+    {
+      "id": "VIP-03",
+      "kind": "vip",
+      "name": "VIP-03",
+      "who": "Patrocinador principal",
+      "count": 4,
+      "from": "t4",
+      "origin": "Aeropuerto T4",
+      "destinationId": "paddockNorte",
+      "route": [
+        [
+          40.4919,
+          -3.5928
+        ],
+        [
+          40.489,
+          -3.604
+        ],
+        [
+          40.485,
+          -3.615
+        ],
+        [
+          40.4808,
+          -3.6232
+        ],
+        [
+          40.4782,
+          -3.6254
+        ],
+        [
+          40.479,
+          -3.624
+        ]
+      ],
+      "departAt": 45300,
+      "arriveAt": 46980,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Chófer VIP-03"
+    },
+    {
+      "id": "TX-01",
+      "kind": "taxi",
+      "name": "TX-01",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "chamartin",
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.464,
+          -3.623
+        ],
+        [
+          40.4618,
+          -3.6135
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43500,
+      "arriveAt": 46020,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "TX-02",
+      "kind": "taxi",
+      "name": "TX-02",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "castilla",
+      "origin": "Plaza de Castilla",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.465,
+          -3.626
+        ],
+        [
+          40.4618,
+          -3.6135
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 43920,
+      "arriveAt": 46620,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "TX-03",
+      "kind": "taxi",
+      "name": "TX-03",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "chamartin",
+      "origin": "Chamartín",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4728,
+          -3.6826
+        ],
+        [
+          40.4745,
+          -3.67
+        ],
+        [
+          40.476,
+          -3.648
+        ],
+        [
+          40.472,
+          -3.633
+        ],
+        [
+          40.464,
+          -3.623
+        ],
+        [
+          40.4618,
+          -3.6135
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 44280,
+      "arriveAt": 46800,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "TX-04",
+      "kind": "taxi",
+      "name": "TX-04",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "castilla",
+      "origin": "Plaza de Castilla",
+      "destinationId": "accesoSur",
+      "route": [
+        [
+          40.4666,
+          -3.6892
+        ],
+        [
+          40.469,
+          -3.676
+        ],
+        [
+          40.4745,
+          -3.656
+        ],
+        [
+          40.4735,
+          -3.64
+        ],
+        [
+          40.465,
+          -3.626
+        ],
+        [
+          40.4618,
+          -3.6135
+        ],
+        [
+          40.464,
+          -3.6165
+        ]
+      ],
+      "departAt": 45000,
+      "arriveAt": 47700,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Central de taxis"
+    },
+    {
+      "id": "REP-01",
+      "kind": "repartidor",
+      "name": "REP-01",
+      "who": "Hielo y bebida · última hora",
+      "count": 1,
+      "from": "coslada",
+      "origin": "Coslada",
+      "destinationId": "muelleSur",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.461,
+          -3.623
+        ],
+        [
+          40.47,
+          -3.615
+        ]
+      ],
+      "departAt": 44400,
+      "arriveAt": 46500,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-01",
+      "note": "Destino invalidado: Muelle Sur cerrado"
+    },
+    {
+      "id": "REP-02",
+      "kind": "repartidor",
+      "name": "REP-02",
+      "who": "Flores y cartelería · última hora",
+      "count": 1,
+      "from": "coslada",
+      "origin": "Coslada",
+      "destinationId": "muelleEste",
+      "route": [
+        [
+          40.4405,
+          -3.585
+        ],
+        [
+          40.45,
+          -3.6
+        ],
+        [
+          40.458,
+          -3.612
+        ],
+        [
+          40.466,
+          -3.613
+        ],
+        [
+          40.47,
+          -3.615
+        ]
+      ],
+      "departAt": 45600,
+      "arriveAt": 47880,
+      "delayMin": 0,
+      "status": "en_ruta",
+      "counterpart": "Repartidor REP-02"
+    }
+  ],
   "attendanceExpected": 110000,
   "gates": [
     {

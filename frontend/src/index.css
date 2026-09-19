@@ -66,6 +66,8 @@ html, body, #root {
 }
 .vehicle.delayed { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
 .vehicle.truck { border-color: #c47a00; color: #c47a00; box-shadow: 0 0 0 4px #c47a0022; }
+.vehicle.kind-vip { border-color: #7c3aed; color: #7c3aed; box-shadow: 0 0 0 4px #7c3aed22; }
+.vehicle.kind-taxi { border-color: #1f9d55; color: #1f9d55; box-shadow: 0 0 0 4px #1f9d5522; }
 .vehicle svg { width: 12px; height: 12px; }
 .vehicle-wrap { position: relative; width: 22px; height: 22px; }
 .vehicle-eta {

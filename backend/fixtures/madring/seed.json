@@ -7690,6 +7690,107 @@
       "contactRef": "test-catering-manager"
     }
   ],
+  "vehicles": [
+    {
+      "id": "VIP-01",
+      "kind": "vip",
+      "who": "Director de equipo · Alpine",
+      "count": 3,
+      "from": "t4",
+      "destinationId": "paddockNorte",
+      "departAt": 43800,
+      "arriveAt": 45480,
+      "contactRef": "test-vip-transport"
+    },
+    {
+      "id": "VIP-02",
+      "kind": "vip",
+      "who": "Director de equipo · Aston Martin",
+      "count": 2,
+      "from": "t4",
+      "destinationId": "paddockNorte",
+      "departAt": 44400,
+      "arriveAt": 46080,
+      "contactRef": "test-vip-transport"
+    },
+    {
+      "id": "VIP-03",
+      "kind": "vip",
+      "who": "Patrocinador principal",
+      "count": 4,
+      "from": "t4",
+      "destinationId": "paddockNorte",
+      "departAt": 45300,
+      "arriveAt": 46980,
+      "contactRef": "test-vip-transport"
+    },
+    {
+      "id": "TX-01",
+      "kind": "taxi",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "chamartin",
+      "destinationId": "accesoSur",
+      "departAt": 43500,
+      "arriveAt": 46020,
+      "contactRef": "test-taxi-dispatch"
+    },
+    {
+      "id": "TX-02",
+      "kind": "taxi",
+      "who": "Invitados por sus medios",
+      "count": 3,
+      "from": "castilla",
+      "destinationId": "accesoSur",
+      "departAt": 43920,
+      "arriveAt": 46620,
+      "contactRef": "test-taxi-dispatch"
+    },
+    {
+      "id": "TX-03",
+      "kind": "taxi",
+      "who": "Invitados por sus medios",
+      "count": 4,
+      "from": "chamartin",
+      "destinationId": "accesoSur",
+      "departAt": 44280,
+      "arriveAt": 46800,
+      "contactRef": "test-taxi-dispatch"
+    },
+    {
+      "id": "TX-04",
+      "kind": "taxi",
+      "who": "Invitados por sus medios",
+      "count": 2,
+      "from": "castilla",
+      "destinationId": "accesoSur",
+      "departAt": 45000,
+      "arriveAt": 47700,
+      "contactRef": "test-taxi-dispatch"
+    },
+    {
+      "id": "REP-01",
+      "kind": "repartidor",
+      "who": "Hielo y bebida · última hora",
+      "count": 1,
+      "from": "coslada",
+      "destinationId": "muelleSur",
+      "departAt": 44400,
+      "arriveAt": 46500,
+      "contactRef": "test-courier"
+    },
+    {
+      "id": "REP-02",
+      "kind": "repartidor",
+      "who": "Flores y cartelería · última hora",
+      "count": 1,
+      "from": "coslada",
+      "destinationId": "muelleEste",
+      "departAt": 45600,
+      "arriveAt": 47880,
+      "contactRef": "test-courier"
+    }
+  ],
   "receptionStaff": [
     {
       "id": "staff-1",
@@ -7786,6 +7887,24 @@
     {
       "id": "test-organizer",
       "role": "organizer",
+      "phone": null,
+      "email": null
+    },
+    {
+      "id": "test-taxi-dispatch",
+      "role": "taxi-dispatch",
+      "phone": null,
+      "email": null
+    },
+    {
+      "id": "test-vip-transport",
+      "role": "vip-transport",
+      "phone": null,
+      "email": null
+    },
+    {
+      "id": "test-courier",
+      "role": "courier",
       "phone": null,
       "email": null
     }

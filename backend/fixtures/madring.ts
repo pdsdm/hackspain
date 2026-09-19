@@ -258,9 +258,10 @@ export function buildMadringFixtures() {
     })),
     shuttles: base.shuttles.map((s) => ({ id: s.id, capacity: 45, occupiedSeats: s.passengers, guestIds: guests.filter((g) => g.shuttleId === s.id).map((g) => g.id), contactRef: 'test-transport-manager' })),
     deliveries: base.deliveries.map((d) => ({ id: d.id, services: d.services, departAt: d.departAt, arriveAt: d.arriveAt, originalDockId: 'muelleSur', contactRef: 'test-catering-manager' })),
+    vehicles: (base.vehicles ?? []).map((v) => ({ id: v.id, kind: v.kind, who: v.who, count: v.count, from: v.from, destinationId: v.destinationId, departAt: v.departAt, arriveAt: v.arriveAt, contactRef: v.kind === 'taxi' ? 'test-taxi-dispatch' : v.kind === 'vip' ? 'test-vip-transport' : 'test-courier' })),
     receptionStaff: Array.from({ length: 6 }, (_, i) => ({ id: `staff-${i + 1}`, zone: 'sur', assignedTask: null })),
     transfers: [{ id: 'sur-norte-external', from: 'accesoSur', to: 'accesoNorte', via: 'external', route: ROUTE_NORTE_FROM_SUR, driveMinutes: 15, boardingMinutes: 10, alightingMinutes: 5, status: 'unconfirmed', confirmedTrips: [], requiresNorthAccess: true }],
-    contacts: ['venue-manager', 'catering-manager', 'transport-manager', 'reception-manager', 'organizer'].map((role) => ({ id: `test-${role}`, role, phone: null, email: null })),
+    contacts: ['venue-manager', 'catering-manager', 'transport-manager', 'reception-manager', 'organizer', 'taxi-dispatch', 'vip-transport', 'courier'].map((role) => ({ id: `test-${role}`, role, phone: null, email: null })),
   };
   const world = buildWorld(seed);
   const manifest = {
