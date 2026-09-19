@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { ContractError } from "../src/contracts/api.js";
+import { ControlService } from "../src/domain/control-service.js";
 import { PlanService } from "../src/domain/plan-service.js";
 import {
   DomainValidationError,
@@ -102,6 +104,68 @@ test("North allocations require individual access and confirmed external transpo
         error.issues.some((issue) => issue.includes("North access")) &&
         error.issues.some((issue) => issue.includes("transfer capacity")),
     );
+  } finally {
+    database.close();
+  }
+});
+
+test("a replan marks the previous pending decision as obsolete and keeps one pending", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const service = new PlanService(states);
+    service.applyProposal(proposal({ cost: 3200 }));
+    const next = service.applyProposal(proposal({ cost: 4100, title: "Plan Sur ampliado" }));
+
+    const pending = next.decisions.filter((decision) => decision.status === "pendiente");
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]?.cost, 4100);
+    assert.equal(next.waitingForDecision, pending[0]?.id);
+    assert.equal(next.decisions.find((decision) => decision.cost === 3200)?.status, "rechazada");
+    assert(next.events.some((event) => String(event.text).includes("obsoleta")));
+  } finally {
+    database.close();
+  }
+});
+
+test("resolving an obsolete decision is refused and does not move authorized budget", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const service = new PlanService(states);
+    service.applyProposal(proposal({ cost: 3200 }));
+    service.applyProposal(proposal({ cost: 4100 }));
+    const control = new ControlService(states);
+    const stale = states.ensureActiveRun().state.decisions.find((decision) => decision.cost === 3200);
+
+    assert.throws(
+      () => control.applyIntervention({ type: "approve_spend", payload: { decisionId: String(stale?.id) } }),
+      (error: unknown) => error instanceof ContractError && error.status === 409,
+    );
+    assert.equal(states.ensureActiveRun().state.budget.authorized, 1500);
+  } finally {
+    database.close();
+  }
+});
+
+test("reject_spend twist resolves the decision the plan is waiting for", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const service = new PlanService(states);
+    service.applyProposal(proposal({ cost: 3200 }));
+    const live = service.applyProposal(proposal({ cost: 4100 }));
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    const stale = state.decisions.find((decision) => decision.cost === 3200);
+    if (stale) stale.status = "pendiente";
+    states.saveState(run.id, state);
+
+    new ControlService(states).applyTwist("reject_spend");
+
+    const after = states.ensureActiveRun().state;
+    assert.equal(after.decisions.find((decision) => decision.id === live.waitingForDecision)?.status, "rechazada");
+    assert.equal(after.waitingForDecision, null);
   } finally {
     database.close();
   }
