@@ -102,3 +102,48 @@ test("events are processed one after another", async () => {
     database.close();
   }
 });
+
+test("a rejected event does not poison the queue for the next one", async () => {
+  const { database, states, instance } = engine();
+  try {
+    await assert.rejects(
+      instance.handle({ source: "human", kind: "approve_spend", payload: { decisionId: "nope" } }),
+      /Decision not found/,
+    );
+    await instance.handle({ source: "jury", kind: "shuttle_delay", payload: { twist: "shuttle_delay" } });
+    assert.deepEqual(states.ensureActiveRun().state.twistsApplied, ["shuttle_delay"]);
+    await instance.handle({ source: "human", kind: "pause" });
+    assert.equal(states.ensureActiveRun().state.agentsPaused, true);
+  } finally {
+    database.close();
+  }
+});
+
+test("every run starts with a live clock, even from a paused fixture", () => {
+  const { database, states } = engine();
+  try {
+    for (const fixture of ["crisis", "proposal", "lounge_unavailable"] as const) {
+      const run = states.reset(fixture);
+      assert.equal(run.state.clock.paused, false, fixture);
+    }
+  } finally {
+    database.close();
+  }
+});
+
+test("stored events record whether the coordinator ran as llm, rules or none", async () => {
+  const { database, instance } = engine(openDatabase(":memory:"), async () =>
+    JSON.stringify({
+      reading: "ok", planVersion: 1, coordinatorStatus: "replanificando", actions: [], commitments: [],
+      assignments: [], decision: null, unverified: [], operations: [], queries: [], done: true,
+    }),
+  );
+  try {
+    await instance.handle({ id: "evt-llm", source: "chat", kind: "free_text", text: "hola" });
+    await instance.handle({ id: "evt-pause", source: "human", kind: "pause" });
+    const rows = database.connection.prepare("SELECT id, mode FROM events ORDER BY created_at, id").all() as Array<{ id: string; mode: string }>;
+    assert.deepEqual(Object.fromEntries(rows.map((row) => [row.id, row.mode])), { "evt-llm": "llm", "evt-pause": "none" });
+  } finally {
+    database.close();
+  }
+});

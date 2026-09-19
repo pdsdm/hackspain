@@ -41,4 +41,8 @@ export class EventRepository {
       );
     return { ...input, id, payload: input.payload };
   }
+
+  setMode(id: string, mode: CoordinatorRunMode): void {
+    this.database.prepare("UPDATE events SET mode = ? WHERE id = ?").run(mode, id);
+  }
 }
