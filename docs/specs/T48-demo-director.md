@@ -6,13 +6,14 @@ Automatizar reset, checkpoints y cues para que una persona maneje el frontend mi
 
 ## Criterios de aceptación
 
-- [ ] `npm run demo:video -- --inputs=external|api` o comando equivalente documentado.
-- [ ] Resetea a `calm` y espera `/state` estable sin escribir SQLite.
-- [ ] `external` espera los dos eventos reales; `api` usa el mismo contrato y los marca simulados.
-- [ ] Espera predicados de estado/plan/tareas, no solo tiempos fijos.
-- [ ] Imprime cues para seleccionar Principal, Muelle, agentes, compromisos y resultado.
-- [ ] Timeout y fallo indican exactamente qué checkpoint no llegó.
-- [ ] Puede abortarse y repetirse desde cero sin callbacks antiguos aplicados.
+- [x] `npm run demo:video -- --inputs=happyrobot|external|api` está documentado.
+- [x] Resetea a `calm` y espera `/state` estable sin escribir SQLite.
+- [x] `happyrobot` dispara dos runs del workflow; `api` usa el mismo contrato de respaldo.
+- [x] Espera predicados de estado/plan/tareas, no solo tiempos fijos.
+- [x] Imprime cues para seleccionar Principal, Muelle, agentes, compromisos y resultado.
+- [x] Timeout y fallo indican exactamente qué checkpoint no llegó.
+- [x] Usa IDs únicos y puede abortarse y repetirse sin aplicar callbacks anteriores.
+- [ ] Un owner crea y publica `Demo Incident Inputs`; la API key actual no tiene permiso de creación.
 
 ## Fuera de alcance
 
