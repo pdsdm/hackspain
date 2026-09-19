@@ -626,7 +626,7 @@ test("el incidente HappyRobot atraviesa ingesta, coordinador, submit_plan y pers
     HAPPYROBOT_API_KEY: "hr_pipeline",
     HAPPYROBOT_COORDINATOR_WORKFLOW_ID: "wf-pipeline",
     HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
-    HAPPYROBOT_COORDINATOR_APPLY: "true",
+    HAPPYROBOT_COORDINATOR_APPLY: "false",
     HAPPYROBOT_COORDINATOR_TIMEOUT_MS: "3000",
     HAPPYROBOT_WEBHOOK_TOKEN: token,
     PUBLIC_BASE_URL: "https://backend.test",
@@ -668,6 +668,11 @@ test("el incidente HappyRobot atraviesa ingesta, coordinador, submit_plan y pers
 
   try {
     assert.equal(happyrobotSessions.isActive(), false);
+    const reset = await fetch(`${base}/simulation/e2e/reset`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(reset.status, 200);
     const response = await fetch(`${base}/workflow/happyrobot/events`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
