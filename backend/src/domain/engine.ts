@@ -226,15 +226,21 @@ export class Engine {
       return "rules";
     }
     logCoord("llamando al coordinador", event.kind, event.text ?? "");
-    const result = await runCoordinatorLoop(
-      { source: event.source, kind: event.kind, ...(event.text ? { text: event.text } : {}) },
-      {
-        ...this.loopDeps,
-        world: this.options.world,
-        config: this.options.llmConfig,
-        ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
-      },
-    );
+    this.markCoordinatorBusy(event);
+    let result: "ok" | "unavailable";
+    try {
+      result = await runCoordinatorLoop(
+        { source: event.source, kind: event.kind, ...(event.text ? { text: event.text } : {}) },
+        {
+          ...this.loopDeps,
+          world: this.options.world,
+          config: this.options.llmConfig,
+          ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
+        },
+      );
+    } finally {
+      this.clearCoordinatorBusy();
+    }
     logCoord("resultado", result);
     if (result === "unavailable") {
       if (this.applyRulesReplan(event)) return "rules";
@@ -243,6 +249,42 @@ export class Engine {
     }
     this.executor?.pump();
     return this.options.mode;
+  }
+
+  private markCoordinatorBusy(event: IncomingEvent): void {
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.coordinatorBusy = { eventId: event.id, text: event.text ?? `${event.source}:${event.kind}` };
+    if (state.coordinatorStatus === "estable") state.coordinatorStatus = "replanificando";
+    this.states.saveState(run.id, state);
+  }
+
+  private clearCoordinatorBusy(): void {
+    const run = this.states.ensureActiveRun();
+    if (run.state.coordinatorBusy === undefined) return;
+    const state = structuredClone(run.state);
+    delete state.coordinatorBusy;
+    this.states.saveState(run.id, state);
+  }
+
+  recoverInterruptedCoordinator(): boolean {
+    const run = this.states.ensureActiveRun();
+    const busy = run.state.coordinatorBusy;
+    if (!isRecord(busy)) return false;
+    const text = typeof busy.text === "string" ? busy.text : "";
+    logCoordError("interrumpido por reinicio", text);
+    const state = structuredClone(run.state);
+    delete state.coordinatorBusy;
+    const events = records(state, "events");
+    events.push({
+      id: `coord-interrupted-${randomUUID()}`,
+      time: state.clock.simSeconds,
+      kind: "fallo",
+      text: `coordinador interrumpido por reinicio del backend: ${text}. Envía el evento otra vez.`,
+    });
+    state.events = events.slice(-80);
+    this.states.saveState(run.id, state);
+    return true;
   }
 
   private markCoordinatorDown(): void {

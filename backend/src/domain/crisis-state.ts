@@ -75,8 +75,9 @@ export function parseCrisisState(value: unknown): CrisisStateDocument {
 }
 
 export function toPublicState(state: CrisisStateDocument): CrisisStateDocument {
+  const { coordinatorBusy: _busy, ...rest } = structuredClone(state);
   return {
-    ...structuredClone(state),
+    ...rest,
     simulated: false,
     scriptId: "main",
     scriptCursor: 0,

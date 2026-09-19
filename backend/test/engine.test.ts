@@ -197,3 +197,44 @@ test("an accepted call_result does not call the coordinator; a rejected one does
     database.close();
   }
 });
+
+test("the coordinator status shows replanificando while the LLM works and the busy flag stays private", async () => {
+  let statusDuringCall = "";
+  let publicDuringCall: Record<string, unknown> = {};
+  let statesRef: StateRepository | undefined;
+  const { database, states, instance } = engine(openDatabase(":memory:"), async () => {
+    statusDuringCall = String(statesRef?.ensureActiveRun().state.coordinatorStatus);
+    publicDuringCall = statesRef?.getPublicState() ?? {};
+    throw new Error("llm caído");
+  });
+  statesRef = states;
+  try {
+    await instance.handle({ source: "chat", kind: "free_text", text: "Pabellon principal se cierra" });
+    assert.equal(statusDuringCall, "replanificando");
+    assert.equal(publicDuringCall.coordinatorBusy, undefined);
+    assert.equal(states.ensureActiveRun().state.coordinatorBusy, undefined);
+  } finally {
+    database.close();
+  }
+});
+
+test("a coordinator run interrupted by a restart leaves a fallo event on boot", () => {
+  const { database, states, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    states.saveState(run.id, {
+      ...structuredClone(run.state),
+      coordinatorBusy: { eventId: "e1", text: "Pabellon principal se cierra" },
+    });
+    assert.equal(instance.recoverInterruptedCoordinator(), true);
+    const state = states.ensureActiveRun().state;
+    assert.equal(state.coordinatorBusy, undefined);
+    const events = state.events as Array<{ kind: string; text: string }>;
+    const last = events.at(-1);
+    assert.equal(last?.kind, "fallo");
+    assert.match(last?.text ?? "", /interrumpido.*Pabellon principal se cierra/);
+    assert.equal(instance.recoverInterruptedCoordinator(), false);
+  } finally {
+    database.close();
+  }
+});

@@ -116,6 +116,7 @@ export function createApp(
   app.locals.engine = engine;
   app.locals.executor = executor;
   stateRepository.ensureActiveRun();
+  engine.recoverInterruptedCoordinator();
 
   app.use((_request, response, next) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
