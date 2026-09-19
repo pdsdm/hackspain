@@ -23,7 +23,9 @@ El especialista que avisa a los 600 invitados cuando cambia su destino, por segm
 ## Notas
 
 - Referencia de estructura: `backend/src/agents/spaces/` (`prompt.ts`, `extract.ts`, `types.ts`).
-- Endpoints: `POST /workflow/results` (`docs/api-contract.md`). Hoy `workflow-service.ts` solo aplica `data.commitmentId`; hay que añadir `data.guestGroups`. Contrato: añadir el ejemplo en el mismo PR.
-- El coordinador ya crea tareas `area: asistentes, kind: sms` tras un giro (`prompt.ts` línea 17). El adaptador `sim` debe devolver `data.guestGroups` para que el KPI se mueva también sin HappyRobot.
+- Endpoints: `POST /workflow/results` (`docs/api-contract.md`). `workflow-service.ts` ya aplica `data.guestGroups`; el contrato conserva el ejemplo y sus límites.
+- El coordinador crea tareas `area: asistentes, kind: sms` tras un giro y el adaptador `sim` devuelve `data.guestGroups` para mover el KPI sin HappyRobot.
+- El payload saliente incluye `kind` y `channel` (`call` | `sms` | `email`) para que el hook
+  del área no infiera el canal. La prueba real del criterio anterior sigue pendiente.
 - Tipos: `GuestGroup` en `frontend/src/domain/types.ts`. `needs` es texto libre hoy; no cambiar el tipo.
 - Zona: `backend/src/agents/attendees/` es de Pep. `workflow-service.ts` es de Zhi: avisar.

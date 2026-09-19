@@ -221,7 +221,8 @@ export class Engine {
         if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
         if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
-          mode = await this.runCoordinator(event);
+          const materialSummary = typeof event.payload?.materialSummary === "string" ? event.payload.materialSummary : undefined;
+          mode = await this.runCoordinator(materialSummary ? { ...event, text: materialSummary } : event);
         }
       } else {
         mode = await this.runCoordinator(event);
@@ -411,6 +412,7 @@ function callResultMatchesPlan(
 }
 
 function callResultChangesPlan(payload: Record<string, unknown> | undefined): boolean {
+  if (payload?.materialChange === true) return true;
   const status = payload?.status;
   if (status !== "completed") return true;
   const result = payload?.result;

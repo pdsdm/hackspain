@@ -20,11 +20,12 @@ function closedState(): CrisisStateDocument {
     clock: { simSeconds: 44_400 },
     planVersion: 3,
     spaces: [
-      { id: "pabellonB", zone: "sur", capacity: 450, status: "pendiente" },
-      { id: "principal", zone: "sur", capacity: 600, status: "cerrado" },
+      { id: "pabellonB", kind: "pabellon", zone: "sur", capacity: 450, status: "confirmado" },
+      { id: "principal", kind: "pabellon", zone: "sur", capacity: 600, status: "cerrado" },
+      { id: "accesoSur", kind: "acceso", zone: "sur", status: "operativo" },
     ],
     commitments: [
-      { id: "c-pabB", area: "espacios", status: "aceptado_condiciones", planVersion: 3, updatedAt: 44_300, conditions: ["Montaje a las 13:00"] },
+      { id: "c-pabB", area: "espacios", status: "confirmado", planVersion: 3, updatedAt: 44_300, conditions: [] },
       { id: "c-viejo", area: "espacios", status: "invalidado", planVersion: 2, updatedAt: 44_100, conditions: [] },
     ],
     decisions: [],
@@ -32,7 +33,7 @@ function closedState(): CrisisStateDocument {
     scriptId: "main",
     scriptCursor: 0,
     nextScriptAt: null,
-    guestGroups: [{ id: "g-propios", count: 450, assignedSpaceId: "pabellonB" }],
+    guestGroups: [{ id: "g-propios", count: 450, assignedSpaceId: "pabellonB", confirmedCount: 450 }],
     calls: [{ id: "call-1", status: "terminada" }],
     events: [],
     agentsPaused: false,
@@ -41,13 +42,40 @@ function closedState(): CrisisStateDocument {
   } as unknown as CrisisStateDocument;
 }
 
-test("la crisis se da por cerrada cuando cada grupo tiene sede y ningún acuerdo espera respuesta", () => {
+test("la crisis se da por cerrada con plazas confirmadas, condiciones resueltas, aforo y acceso", () => {
   const report = evaluateClosure(closedState(), 0);
   assert.equal(report.closed, true);
   assert.equal(report.seated, 450);
   assert.equal(report.agreed, 1);
-  assert.equal(report.pendingConditions, 1);
-  assert.match(report.summary, /450 de 450 invitados con sede/);
+  assert.equal(report.pendingConditions, 0);
+  assert.match(report.summary, /450 de 450 invitados con plaza confirmada/);
+});
+
+test("una sede propuesta o pendiente y una condición crítica dejan un desenlace condicionado", () => {
+  for (const status of ["propuesto", "pendiente"]) {
+    const state = closedState();
+    state.spaces[0]!.status = status;
+    state.commitments[0]!.status = "aceptado_condiciones";
+    state.commitments[0]!.conditions = ["El recinto todavía no autoriza el uso"];
+    (state.guestGroups as Array<Record<string, unknown>>)[0]!.confirmedCount = 0;
+    const report = evaluateClosure(state, 0);
+    assert.equal(report.closed, false, status);
+    assert.equal(report.stalled, true, status);
+    assert.match(report.gap, /450 invitados sin plaza confirmada/);
+    assert.match(report.gap, /1 condición abierta/);
+  }
+});
+
+test("no cierra con aforo insuficiente o sin acceso operativo a la zona", () => {
+  const capacity = closedState();
+  capacity.spaces[0]!.capacity = 400;
+  assert.equal(evaluateClosure(capacity, 0).closed, false);
+  assert.match(evaluateClosure(capacity, 0).gap, /aforo insuficiente/);
+
+  const access = closedState();
+  access.spaces[2]!.status = "cerrado";
+  assert.equal(evaluateClosure(access, 0).closed, false);
+  assert.match(evaluateClosure(access, 0).gap, /acceso Sur no operativo/);
 });
 
 test("no cierra si queda una llamada en vuelo, una tarea abierta o un acuerdo sin respuesta", () => {
@@ -152,7 +180,10 @@ test("el resultado de una llamada mueve su compromiso aunque el workflow no devu
     const tasks = new TaskRepository(database.connection);
     const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
     const run = states.ensureActiveRun();
-    const planVersion = run.state.planVersion;
+    const initial = structuredClone(run.state);
+    initial.spaces.find((item) => item.id === "pabellonB")!.status = "pendiente";
+    states.saveState(run.id, initial);
+    const planVersion = initial.planVersion;
 
     const queued = workflows.applyCoordinatorProposal({
       eventId: "evt-cierre-1",
@@ -204,15 +235,26 @@ test("el resultado de una llamada mueve su compromiso aunque el workflow no devu
       status: "completed",
       result: {
         outcome: "accepted_with_conditions",
-        summary: "El recinto abre el Pabellón B a las 13:00.",
-        conditions: ["Montaje a las 13:00"],
+        summary: "El recinto limita el Pabellón B a 400 plazas y termina a las 13:15.",
+        conditions: ["Montaje no termina hasta las 13:15"],
         evidence: { callId: `call-${taskId}` },
-        data: {},
+        data: {
+          spaces: [
+            { id: "pabellonB", capacity: 400, readyAt: "13:15" },
+            { id: "loungeSur", capacity: -1, readyAt: "cuando termine" },
+          ],
+        },
       },
     });
 
-    const commitment = states.ensureActiveRun().state.commitments.find((item) => item.id === "c-pabB");
+    const after = states.ensureActiveRun().state;
+    const commitment = after.commitments.find((item) => item.id === "c-pabB");
     assert.equal(commitment?.status, "aceptado_condiciones");
+    assert.deepEqual(commitment?.conditions, ["Confirmar apertura", "Montaje no termina hasta las 13:15"]);
+    assert.equal(after.spaces.find((item) => item.id === "pabellonB")?.capacity, 400);
+    assert.equal(after.spaces.find((item) => item.id === "pabellonB")?.readyAt, 47_700);
+    assert.equal(after.spaces.find((item) => item.id === "pabellonB")?.status, "pendiente");
+    assert.equal(after.spaces.find((item) => item.id === "loungeSur")?.capacity, 150);
   } finally {
     database.close();
   }

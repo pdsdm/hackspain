@@ -178,10 +178,12 @@ test("stored events record whether the coordinator ran as llm, rules or none", a
   }
 });
 
-test("an accepted call_result does not call the coordinator; a rejected one does", async () => {
+test("an accepted call_result only calls the coordinator for a material state change", async () => {
   let calls = 0;
-  const completeFn = async () => {
+  let prompt = "";
+  const completeFn = async (...args: unknown[]) => {
     calls += 1;
+    prompt = String(args[2] ?? "");
     return JSON.stringify({ reading: "x", planVersion: 99, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
   };
   const { database, states, instance } = engine(undefined, completeFn);
@@ -190,15 +192,28 @@ test("an accepted call_result does not call the coordinator; a rejected one does
     const base = { taskId: "t1", runId: run.id, planVersion: run.state.planVersion, result: { summary: "ok", conditions: [], evidence: {}, data: {} } };
     await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "accepted_with_conditions" } } });
     assert.equal(calls, 0);
-    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "rejected" } } });
+    await instance.handle({
+      source: "happyrobot",
+      kind: "call_result",
+      payload: {
+        ...base,
+        status: "completed",
+        materialChange: true,
+        materialSummary: "Pabellón B: capacidad 400; utilizable a las 13:15",
+        result: { ...base.result, outcome: "accepted_with_conditions" },
+      },
+    });
     assert.equal(calls, 1);
+    assert.match(prompt, /capacidad 400; utilizable a las 13:15/);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "completed", result: { ...base.result, outcome: "rejected" } } });
+    assert.equal(calls, 2);
     const next = structuredClone(states.ensureActiveRun().state);
     next.planVersion += 1;
     states.saveState(run.id, next);
     await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
-    assert.equal(calls, 1);
-    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, planVersion: next.planVersion, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
     assert.equal(calls, 2);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, planVersion: next.planVersion, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
+    assert.equal(calls, 3);
   } finally {
     database.close();
   }

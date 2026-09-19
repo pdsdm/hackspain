@@ -198,10 +198,13 @@ export function createApp(
       void engine.handle({
         source: "happyrobot",
         kind: "call_result",
-        payload: envelope as unknown as Record<string, unknown>,
+        payload: {
+          ...(envelope as unknown as Record<string, unknown>),
+          ...(recorded.materialChange ? { materialChange: true, materialSummary: recorded.materialSummary } : {}),
+        },
       });
     }
-    return recorded;
+    return { ok: recorded.ok, applied: recorded.applied, duplicate: recorded.duplicate };
   };
 
   // JEV evalúa la evidencia antes de registrar el resultado (T35). Con JEV apagado

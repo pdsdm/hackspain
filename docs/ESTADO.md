@@ -5,9 +5,9 @@
 
 | | |
 |---|---|
-| **Foto tomada** | 19 de septiembre de 2026, 19:05 CEST |
-| **Commit de `main`** | `36d9af7` (PR #62, T43) |
-| **Trabajo verificado** | T42 en producción; T43 en `main`, `make check` y recorridos locales |
+| **Foto tomada** | 19 de septiembre de 2026, 20:18 CEST |
+| **Base del candidato** | `2196e35` (T44 integrada) |
+| **Trabajo verificado** | H1/H2/H4 sobre `2196e35`; T17/T18 reales siguen abiertas |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin |
 
@@ -15,9 +15,9 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la rama T42 | OK |
-| Tests de backend | 297: **290 pasan, 0 fallan, 7 live omitidos** |
-| Lint y build | Backend y frontend OK |
+| `JEV_LIVE_EVAL=false make check` en `feat/zhi-demo-gaps` | **OK** |
+| Tests de backend | 323: **316 pasan, 0 fallan, 7 live omitidos** |
+| Lint y build | Backend y frontend OK; 2 avisos de baseline en backend |
 | Fixtures | 10 JSON reproducibles OK |
 | Node | 22.23.2 |
 
@@ -42,12 +42,26 @@ El build del frontend conserva el aviso de chunk mayor de 500 kB.
 - Producción validada: `simSeconds=43200` estable durante tres segundos, reloj pausado,
   `planVersion=1`, coordinador estable y cero eventos, llamadas, decisiones o acciones.
 - README documenta frontend Vercel, backend Railway, healthcheck y volumen SQLite.
+- T44: piloto HappyRobot Reasoning Agent disponible en shadow por defecto; el E2E con un run
+  real sigue pendiente y el proveedor por defecto no cambia.
 
-### En `fix/zhi-demo-readiness`, aún sin mergear
+### Correcciones H1/H2/H4
+
+- Un callback aceptado de Espacios fusiona condiciones nuevas y aplica `capacity`/`readyAt`
+  válidos al ID exacto. Solo un cambio material vigente relanza el coordinador una vez.
+- `resolved` exige plazas confirmadas, condiciones resueltas, aforo y acceso. El panel separa
+  sede asignada de plaza confirmada y muestra un plan condicionado sin declararlo cerrado.
+- El payload saliente a HappyRobot incluye `kind` y `channel` para `call`, `sms` y `email`.
+- Duplicados, callbacks obsoletos, rechazos, `no_answer` y datos inválidos conservan las
+  protecciones de run/versión e idempotencia. `make check` pasa con 316/323 pruebas.
+- La semántica conservadora de cierre requiere revisión funcional del equipo. No se ha probado
+  ningún canal real ni el recorrido humano T17/T18.
+
+### Cambios de `fix/zhi-demo-readiness` ya contenidos en `main`
 
 - `clock.seed` usa `SIM_SEED` o una semilla por reset y migra `attendanceSeed` antiguo.
 - `POST /simulation/reset` conserva `CLOCK_SPEED`.
-- El coordinador vuelve a `estable` tras el último resultado aceptado sin pisar otro ciclo.
+- El último resultado aceptado no pisa otro ciclo; el cierre decide después entre `estable` y `atascado`.
 - Un callback adverso con `planVersion` obsoleta se registra, pero no vuelve a lanzar el
   coordinador ni multiplica replans de una versión anterior.
 - El prompt no presenta `verificationTarget` como campo genérico.
@@ -62,6 +76,10 @@ El recorrido automatizado pasa. Helmcode real aplicó la política nueva en una 
 aislada: cero decisiones económicas y despacho inmediato. Esa prueba detectó callbacks
 adversos de una versión antigua que podían relanzar replans; la rama lo corrige y añade una
 regresión. No se repitió el ensayo externo después del fix.
+
+La corrección H1/H2/H4 cubre la propagación de condiciones/hechos, el cierre permisivo y la
+señal de canal. Está verificada sobre `2196e35`; el criterio conservador de cierre mantiene
+pendiente la revisión funcional de Ventura/Pep.
 
 Para cerrar T17 falta repetir el recorrido completo con actor HappyRobot controlado,
 callback y giro. El usuario informó de una primera llamada real previa, pero no se verificó
@@ -101,19 +119,19 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
 | T17 aceptado | actor HappyRobot controlado, callback y giro en el mismo recorrido | Sí |
+| Criterio de cierre H2 | revisión funcional Ventura/Pep antes del ensayo final | No |
 | T18 aceptado | ensayo completo y recuperación con el entorno de demo | Parcial |
 | Prompt/extractor de voz | sincronizar workflow desplegado con T38 | Sí |
 | Simulación LLM estable | decidir si `sim-world` adversarial es ensayo o modo caos | No |
 
 ## Ramas vivas sin mergear
 
-- `backup/pre-demo-cleanup-20260919`: copia exacta de `4e63383` antes de T42.
-- `fix/ventura-cierre-demo`: cierre de crisis y túnel alternativo, tres commits sobre `main`.
-- `feat/ventura-routing-local`: trabajo local de ciclo de recursos sobre una base anterior.
-- `feat/ventura-aprendizaje`: trabajo local T20; incluye memoria `ask_budget`.
-- `feat/astra-happyrobot-coordinator` (T44, `doing`): piloto HappyRobot Reasoning Agent como
-  coordinador. Backend listo con tests unitarios; el E2E con un run real queda pendiente para
-  otro agente. El proveedor por defecto no cambia. Guía en `docs/happyrobot-coordinator.md`.
+- `origin/feat/pep-take-call`: serialización, timeout y toma de llamada; toca executor/engine
+  sobre una base anterior y sigue sin mergear en esta foto.
+- `origin/Prueba-de-plataforma-y-llamada-real`: rama de voz antigua con ocho archivos de diff;
+  no incorporar su frontend o servidor Python sobre `main` a ciegas.
+- `origin/docs/estado-1200`: foto antigua basada en `c371546`; no sustituye este estado.
+- `origin/feat/pep-afluencia`: aparece no mergeada por el grafo, pero su diff contra `main` está vacío.
 
 1. Usar un actor/guion controlado para el ensayo T17 o aceptar `sim-world` adversarial como
    modo caos; el segundo no garantiza convergencia.
@@ -127,8 +145,8 @@ el `sim-world` de T36 y los tests de coste). Se recuperaron sin reescribir histo
   aprobación económica. Las decisiones, si existen, son operativas.
 - Helmcode recibe `reasoning_effort=low` por defecto; la variable de entorno puede
   sobrescribirlo.
-- `accepted` no relanza el coordinador; `rejected` y `no_answer` solo lo relanzan si el
-  resultado todavía pertenece al `runId` y `planVersion` vigentes.
+- Una aceptación solo relanza el coordinador si acaba de aplicar una condición o hecho material;
+  `rejected` y `no_answer` solo lo relanzan si el resultado aún pertenece al run/versión vigentes.
 - El script de demo arranca en `rules + sim`. Para LLM con llamadas simuladas:
   `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=sim ./scripts/demo.sh up-local`.
 - Un deployment nuevo en Railway crea un run `calm` pausado; reiniciar el mismo deployment

@@ -23,11 +23,12 @@ function Cell({ label, value, total, note, tone }: { label: string; value: numbe
 
 export function KpiOverlay({ s }: { s: CrisisState }) {
   const k = kpis(s)
-  const pendingSeats = k.total - k.confirmed
+  const pendingSeats = k.total - k.assigned
+  const pendingConfirmed = k.total - k.confirmed
   const critical = k.critical.length + k.pendingDecisions
   return (
     <Glass label="Indicadores" className="flex-row">
-      <Cell label="Sede asignada" value={k.confirmed} total={k.total} note={pendingSeats ? `${pendingSeats} sin plaza` : s.resolved ? 'plan cerrado' : `${k.critical.length} condiciones abiertas`} tone={pendingSeats ? (k.confirmed ? 'amber' : 'red') : s.resolved ? 'green' : 'amber'} />
+      <Cell label="Sede asignada" value={k.assigned} total={k.total} note={pendingSeats ? `${pendingSeats} sin sede` : pendingConfirmed ? `${k.confirmed} con plaza confirmada` : s.resolved ? 'plan cerrado' : `${k.critical.length} condiciones abiertas`} tone={pendingSeats ? (k.assigned ? 'amber' : 'red') : s.resolved ? 'green' : 'amber'} />
       <Cell label="Informados" value={k.informed} total={k.total} note={`${k.accepted} aceptan`} tone={k.informed >= k.total ? 'green' : 'ink'} />
       <Cell label="Catering confirmado" value={k.cateringConfirmed} total={k.cateringTotal} note={k.cateringConfirmed >= k.cateringTotal ? 'completo' : `${k.cateringTotal - k.cateringConfirmed} sin confirmar`} tone={k.cateringConfirmed >= k.cateringTotal ? 'green' : k.cateringConfirmed ? 'amber' : 'red'} />
       <Cell label="Shuttles coordinados" value={k.shuttlesOk} total={k.shuttlesTotal} note={critical ? `${critical} ${critical > 1 ? 'condiciones críticas' : 'condición crítica'}` : 'sin condiciones críticas'} tone={k.shuttlesOk >= k.shuttlesTotal ? 'green' : 'amber'} />

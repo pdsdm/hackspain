@@ -1,16 +1,25 @@
 import type { CrisisState, Space } from './types'
 
-/** Un espacio donde de verdad se puede meter gente; mismo criterio que el cierre del backend. */
-const USABLE_SPACE = ['operativo', 'propuesto', 'pendiente', 'confirmado']
+/** Un espacio asignable; la confirmación se cuenta aparte. */
+const ASSIGNABLE_SPACE = ['operativo', 'propuesto', 'pendiente', 'confirmado']
+const CONFIRMED_SPACE = ['operativo', 'confirmado']
+const HOSPITALITY_KIND = ['pabellon', 'lounge', 'espera']
 
 export function kpis(s: CrisisState) {
   const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
-  // Sede asignada, no confirmada: un espacio solo pasa a "confirmado" cuando una llamada
-  // verificada lo cierra, y contar solo eso dejaba el indicador en 0 toda la crisis.
-  const confirmed = s.guestGroups.reduce((a, g) => {
-    const space = s.spaces.find((x) => x.id === g.assignedSpaceId)
-    return a + (space && USABLE_SPACE.includes(space.status) ? g.count : 0)
-  }, 0)
+  const coverage = s.guestGroups.map((g) => {
+    const count = Math.max(0, g.count)
+    const confirmedCount = Math.min(count, Math.max(0, g.confirmedCount))
+    const hasAssignedSpace = typeof g.assignedSpaceId === 'string'
+    const space = hasAssignedSpace ? s.spaces.find((x) => x.id === g.assignedSpaceId) : undefined
+    const hospitality = space && HOSPITALITY_KIND.includes(space.kind)
+    return {
+      assigned: hospitality && ASSIGNABLE_SPACE.includes(space.status) ? count : !hasAssignedSpace ? confirmedCount : 0,
+      confirmed: hospitality && CONFIRMED_SPACE.includes(space.status) ? confirmedCount : !hasAssignedSpace ? confirmedCount : 0,
+    }
+  })
+  const assigned = coverage.reduce((a, item) => a + item.assigned, 0)
+  const confirmed = coverage.reduce((a, item) => a + item.confirmed, 0)
   const informed = s.guestGroups.reduce((a, g) => a + g.informedCount, 0)
   const accepted = s.guestGroups.reduce((a, g) => a + g.acceptedCount, 0)
   const cateringTotal = s.deliveries.reduce((a, d) => a + d.services, 0)
@@ -20,7 +29,7 @@ export function kpis(s: CrisisState) {
     .filter((c) => c.status === 'aceptado_condiciones' || c.status === 'en_consulta' || c.status === 'propuesto')
     .flatMap((c) => c.conditions.map((cond) => ({ commitment: c.title, cond })))
   const pendingDecisions = s.decisions.filter((d) => d.status === 'pendiente').length
-  return { total, confirmed, informed, accepted, cateringTotal, cateringConfirmed, shuttlesOk, shuttlesTotal: s.shuttles.length, critical, pendingDecisions }
+  return { total, assigned, confirmed, informed, accepted, cateringTotal, cateringConfirmed, shuttlesOk, shuttlesTotal: s.shuttles.length, critical, pendingDecisions }
 }
 
 export function areaSummary(s: CrisisState) {
