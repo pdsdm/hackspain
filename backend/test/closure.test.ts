@@ -218,6 +218,87 @@ test("el resultado de una llamada mueve su compromiso aunque el workflow no devu
   }
 });
 
+test("una tarea abierta del plan anterior se arrastra al plan nuevo y no queda zombi", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+    const run = states.ensureActiveRun();
+
+    const zombie = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "asistentes",
+      kind: "sms",
+      payload: { objective: "Avisar a los tres grupos", counterpart: "Invitados" },
+      idempotencyKey: "plan-viejo:sms-asistentes",
+    });
+
+    workflows.applyCoordinatorProposal({
+      eventId: "evt-arrastre-1",
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      reading: "Plan nuevo tras el giro.",
+      proposal: {
+        title: "Plan Sur", summary: "Reubicar", rationale: "Misma zona", cost: null,
+        conditions: [], allocations: [], confirmedNorthGuestIds: [], confirmedExternalTransferSeats: 0,
+      },
+      commitments: [],
+      actions: [],
+      unverified: [],
+    });
+
+    const after = states.ensureActiveRun();
+    assert.equal(tasks.get(zombie.id)?.planVersion, after.state.planVersion);
+    assert.equal(tasks.get(zombie.id)?.status, "pending");
+  } finally {
+    database.close();
+  }
+});
+
+test("una tarea pendiente del plan anterior se cancela si el plan nuevo la reemplaza", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const states = new StateRepository(database.connection);
+    const tasks = new TaskRepository(database.connection);
+    const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+    const run = states.ensureActiveRun();
+    const old = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "asistentes",
+      kind: "sms",
+      payload: { objective: "Aviso antiguo", counterpart: "Invitados" },
+      idempotencyKey: "plan-viejo:sms-asistentes",
+    });
+
+    workflows.applyCoordinatorProposal({
+      eventId: "evt-reemplazo-1",
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      reading: "Plan nuevo con otro aviso.",
+      proposal: {
+        title: "Plan Sur", summary: "Reubicar", rationale: "Misma zona", cost: null,
+        conditions: [], allocations: [], confirmedNorthGuestIds: [], confirmedExternalTransferSeats: 0,
+      },
+      commitments: [],
+      actions: [{
+        actionId: "sms-nuevo", area: "asistentes", kind: "sms", objective: "Aviso vigente",
+        counterpart: "Invitados", dueAt: 44_400, reason: "Comunicar el plan actual", dependsOn: [], payload: {},
+      }],
+      unverified: [],
+    });
+
+    assert.equal(tasks.get(old.id)?.status, "cancelled");
+    const open = tasks.listOpen(run.id);
+    assert.equal(open.length, 1);
+    assert.equal((open[0]?.payload as { objective?: string }).objective, "Aviso vigente");
+  } finally {
+    database.close();
+  }
+});
+
 test("una intervención del responsable se aplica sin esperar a que el coordinador termine", async () => {
   const database = openDatabase(":memory:");
   try {

@@ -15,7 +15,7 @@
 | Comprobación | Resultado |
 |---|---|
 | `make check` en la rama de rescate | OK |
-| Tests de backend | 271: **264 pasan, 0 fallan, 7 live omitidos** |
+| Tests de backend | 306: **299 pasan, 0 fallan, 7 live omitidos** |
 | Lint y build | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node | 23.10.0 |
@@ -60,6 +60,12 @@ DEMO_CALL_MODE=sim` con Helmcode, tres recorridos completos.
 - **Los compromisos avanzan a `aceptado_condiciones`.** Se quedaban en `en_consulta` para
   siempre: promocionarlos exige `result.data.commitmentId` y el adaptador `sim` no lo
   devuelve. El despacho anota qué compromiso responde cada acción y el resultado lo usa.
+- **No quedan tareas zombi tras replanificar.** Una tarea `pending` del plan viejo no se
+  despachaba porque `claimNext` exige la versión vigente, pero seguía bloqueando el cierre.
+  Las válidas se arrastran; las supersedidas o con dependencias fallidas se cancelan.
+- **Un callback simulado obsoleto ya no tumba el backend.** Antes un resultado fuera de
+  contexto lanzaba `ContractError` desde el tick del reloj y terminaba el proceso. Ahora se
+  descarta y se registra el aviso.
 - **Las intervenciones humanas se aplican al instante**; solo la replanificación se encola.
 - **El KPI de invitados cuenta sede asignada**, no `confirmado`: con JEV apagado ningún
   espacio llega a `confirmado` y el indicador marcaba 0/600 toda la demo.

@@ -249,6 +249,17 @@ export class WorkflowService {
       const state = applyCoordinatorState(planned, envelope);
       this.states.saveState(envelope.runId, state);
 
+      // Tareas del plan anterior que nunca salieron. claimNext solo despacha la versión
+      // vigente, así que sin arrastrarlas se quedan «pending» para siempre: ni se ejecutan
+      // ni se cancelan, y el plan no puede cerrarse nunca.
+      // Solo las que no se han despachado: una llamada en vuelo tiene su resultado atado a
+      // la versión con la que salió, y moverla lo convierte en un resultado fuera de
+      // contexto.
+      const oldPending = this.tasks
+        .listOpen(envelope.runId)
+        .filter((task) => task.status === "pending" && task.planVersion < state.planVersion);
+      const replacements = new Set(envelope.actions.map((action) => `${action.area}:${action.kind}`));
+
       const queued = envelope.actions.map((action) => {
         const verificationTarget = verificationTargetFor(action, state);
         const commitmentId = commitmentIdForAction(state, action);
@@ -272,6 +283,14 @@ export class WorkflowService {
         });
         return { actionId: action.actionId, taskId: task.id };
       });
+      for (const task of oldPending) {
+        const superseded = replacements.has(`${task.area}:${task.kind}`);
+        if (superseded || !this.tasks.dependenciesSatisfied(task.id)) {
+          this.tasks.cancel(task.id, superseded ? "superseded by current plan" : "dependency did not complete");
+        } else {
+          this.tasks.carryToPlan(task.id, state.planVersion);
+        }
+      }
 
       const response: CoordinatorResponse = {
         ok: true,
