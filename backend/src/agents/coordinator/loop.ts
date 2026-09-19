@@ -100,17 +100,18 @@ async function runJsonLoop(
 
     const output: CoordinatorOutput = parsed.output;
     const queries = output.queries ?? [];
-    queryAnswers = queries.map((query) =>
-      answerQuery(query, deps.states.ensureActiveRun().state, deps.world),
-    );
+    queryAnswers = [];
+    for (const query of queries) {
+      queryAnswers.push(await answerQuery(query, deps.states.ensureActiveRun().state, deps.world));
+    }
     const run = deps.states.ensureActiveRun();
     const openTaskIds = new Set(deps.tasks.listOpen(run.id).map((task) => task.id));
-    const dryErrors = applyOperations(
+    const dryErrors = (await applyOperations(
       structuredClone(run.state),
       deps.world,
       output.operations ?? [],
       openTaskIds,
-    ).errors;
+    )).errors;
     if (dryErrors.length > 0) {
       previousErrors = dryErrors;
       logCoordError(`ronda ${round + 1} operaciones`, dryErrors.join("; "));
@@ -125,7 +126,7 @@ async function runJsonLoop(
       logCoord("aviso", `ronda ${round + 1}: done true con ${queries.length} queries; persisto el plan`);
     }
     try {
-      const persistErrors = persistCoordinatorOutput({
+      const persistErrors = await persistCoordinatorOutput({
         runId: run.id,
         planVersion: run.state.planVersion,
         output,
