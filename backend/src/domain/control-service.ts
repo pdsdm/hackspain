@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { ContractError, type Intervention, type TwistId } from "../contracts/api.js";
+import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
 import type { StateRepository } from "../state/state-repository.js";
 
@@ -200,8 +201,8 @@ export class ControlService {
     this.states.saveState(run.id, state);
   }
 
-  reset(): { runId: string; planVersion: number } {
-    const run = this.states.reset();
+  reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
+    const run = this.states.reset(fixture);
     return { runId: run.id, planVersion: run.state.planVersion };
   }
 }

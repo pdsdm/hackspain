@@ -23,6 +23,7 @@ export interface CrisisController {
   togglePause: () => void
   select: (id: string | null) => void
   reset: () => void
+  sendEvent: (text: string) => Promise<boolean>
   loadFixture: (name: FixtureName) => void
 }
 
@@ -108,13 +109,51 @@ export function useCrisisState(): CrisisController {
     state: { ...state, selectedId }, source: SOURCE, ready, error, stale, ageSeconds, pending, feedback, reference,
     setReference: () => setReference(structuredClone(state)),
     intervene,
-    twist: (twist) => { if (SOURCE === 'sim') dispatch({ type: 'TWIST', twist }) },
+    twist: (twist) => {
+      if (SOURCE === 'sim') {
+        dispatch({ type: 'TWIST', twist })
+        return
+      }
+      if (requestInFlight.current || stale) return
+      requestInFlight.current = true
+      setPending(true)
+      void api.twist(twist)
+        .then(() => setFeedback('Giro enviado al backend.'))
+        .catch((e) => setFeedback('No se pudo enviar el giro: ' + (e instanceof Error ? e.message : 'error')))
+        .finally(() => { requestInFlight.current = false; setPending(false) })
+    },
     setSpeed: (speed) => { if (SOURCE === 'sim') dispatch({ type: 'SET_SPEED', speed }) },
     togglePause: () => { if (SOURCE === 'sim') dispatch({ type: 'TOGGLE_PAUSE' }) },
     select,
     reset: () => {
-      if (SOURCE !== 'sim') return
-      dispatch({ type: 'RESET' }); setReference(createFixtureState('normal')); select('principal'); setFeedback(null)
+      if (SOURCE === 'sim') {
+        dispatch({ type: 'RESET' }); setReference(createFixtureState('normal')); select('principal'); setFeedback(null)
+        return
+      }
+      if (requestInFlight.current) return
+      requestInFlight.current = true
+      setPending(true)
+      void api.reset()
+        .then(() => setFeedback('Ejecución reiniciada.'))
+        .catch((e) => setFeedback('No se pudo reiniciar: ' + (e instanceof Error ? e.message : 'error')))
+        .finally(() => { requestInFlight.current = false; setPending(false) })
+    },
+    sendEvent: async (text) => {
+      if (SOURCE !== 'api' || requestInFlight.current || stale) return false
+      requestInFlight.current = true
+      setPending(true)
+      setFeedback(null)
+      try {
+        await api.sendEvent(text)
+        setFeedback('Evento enviado. El coordinador está trabajando.')
+        return true
+      } catch (e) {
+        setFeedback('No se pudo enviar: ' + (e instanceof Error ? e.message : 'error de conexión'))
+        return false
+      } finally {
+        requestInFlight.current = false
+        setPending(false)
+      }
     },
     loadFixture: (name) => {
       if (SOURCE !== 'sim') return

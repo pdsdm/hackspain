@@ -7,6 +7,7 @@ import type { CrisisStateDocument } from "./crisis-state.js";
 import type { GuestAllocation } from "./plan-rules.js";
 import type { WorkflowService } from "./workflow-service.js";
 import type { StateRepository } from "../state/state-repository.js";
+import type { TaskRepository } from "../state/task-repository.js";
 import {
   etaFor,
   placeById,
@@ -57,13 +58,12 @@ export function applyOperation(
       if (operation.status === "confirmado") {
         return { ok: false, error: `set_place ${operation.id}: confirmado solo lo aplica un resultado de llamada` };
       }
-      const space = findById(records(draft, "spaces"), operation.id);
+      const space = draft.spaces.find((item) => item.id === operation.id);
       if (!space) return { ok: false, error: `set_place: lugar desconocido ${operation.id}` };
       space.status = operation.status;
       if (operation.note !== undefined) space.note = operation.note;
       if (operation.capacity !== undefined) space.capacity = operation.capacity;
       if (operation.readyAt !== undefined) space.readyAt = operation.readyAt;
-      draft.spaces = records(draft, "spaces");
       return { ok: true };
     }
     case "set_gate": {
@@ -201,17 +201,18 @@ function allocationsFrom(output: CoordinatorOutput): GuestAllocation[] {
 
 const CHANNEL_KIND = { llamada: "call", sms: "sms", email: "email" } as const;
 
-export async function persistCoordinatorOutput(input: {
+export function persistCoordinatorOutput(input: {
   runId: string;
   planVersion: number;
   output: CoordinatorOutput;
   world: WorldModel;
   workflows: WorkflowService;
   tasks: TaskRepository;
-  draft: CrisisStateDocument;
-}): Promise<string[]> {
+  states: StateRepository;
+}): string[] {
   const openTaskIds = new Set(input.tasks.listOpen(input.runId).map((task) => task.id));
-  const dry = structuredClone(input.draft);
+  const current = input.states.ensureActiveRun();
+  const dry = structuredClone(current.state);
   const { errors, cancelled } = applyOperations(dry, input.world, input.output.operations ?? [], openTaskIds);
   if (errors.length > 0) return errors;
 
@@ -266,9 +267,11 @@ export async function persistCoordinatorOutput(input: {
     input.workflows.applyCoordinatorProposal(envelope);
   }
 
-  const runState = structuredClone(input.draft);
-  // Reload after proposal may have saved a newer state via WorkflowService.
-  applyOperations(runState, input.world, input.output.operations ?? [], openTaskIds);
+  const run = input.states.ensureActiveRun();
+  const next = structuredClone(run.state);
+  applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
+  if (!next.waitingForDecision) next.coordinatorStatus = input.output.coordinatorStatus;
+  input.states.saveState(run.id, next);
   return [];
 }

@@ -23,18 +23,18 @@ Las partes T10 (asignaciones, compromisos, acciones, decisión) se aplican reuti
 
 ## Criterios de aceptación
 
-- [ ] Con `INITIAL_FIXTURE=calm`, `GET /state` arranca a las 12:00, `coordinatorStatus: "estable"`, 600 plazas en Principal, shuttles y entregas en ruta. El reloj avanza.
-- [ ] `POST /events` con texto libre produce, en menos de 60 s, cambios de mapa y cola visibles (`GET /actions`).
-- [ ] "Se ha llenado el parking Sur" altera una puerta y desvía un shuttle o encola transporte.
-- [ ] Un giro posterior incrementa `planVersion`, cancela tareas inválidas y no despacha planes viejos (T7).
-- [ ] Shuttle o invitados a Norte sin acceso confirmado: la operación se rechaza y el modelo corrige en la ronda siguiente.
-- [ ] Gasto por encima de 1.500 € crea `decision` pendiente (T7).
-- [ ] `POST /workflow/results` aplicado dispara un evento `call_result` y cierra `calls[]`.
-- [ ] `POST /interventions` y `POST /simulation/twists` cumplen el contrato y se registran como eventos. El giro aplica el efecto T3 al instante; el replan es del coordinador. Con `COORDINATOR_MODE=rules` solo el efecto determinista.
-- [ ] Si el LLM falla o supera 60 s, los giros conocidos quedan con el efecto determinista y un evento `fallo` "coordinador no disponible".
-- [ ] Sin `HAPPYROBOT_API_KEY` ni hooks, el adaptador `sim` cierra las llamadas en 20–40 s de reloj.
-- [ ] El frontend en `api` muestra chat, giros y reset contra el backend.
-- [ ] Tests sin red: mundo, operaciones, bucle inyectado, motor, ejecutor, API. `make check` pasa.
+- [x] Con `INITIAL_FIXTURE=calm`, `GET /state` arranca a las 12:00, `coordinatorStatus: "estable"`, 600 plazas en Principal, shuttles y entregas en ruta. El reloj avanza.
+- [x] `POST /events` con texto libre produce, en menos de 60 s, cambios de mapa y cola visibles (`GET /actions`).
+- [x] "Se ha llenado el parking Sur" altera una puerta y desvía un shuttle o encola transporte.
+- [x] Un giro posterior incrementa `planVersion`, cancela tareas inválidas y no despacha planes viejos (T7).
+- [x] Shuttle o invitados a Norte sin acceso confirmado: la operación se rechaza y el modelo corrige en la ronda siguiente.
+- [x] Gasto por encima de 1.500 € crea `decision` pendiente (T7).
+- [x] `POST /workflow/results` aplicado dispara un evento `call_result` y cierra `calls[]`.
+- [x] `POST /interventions` y `POST /simulation/twists` cumplen el contrato y se registran como eventos. El giro aplica el efecto T3 al instante; el replan es del coordinador. Con `COORDINATOR_MODE=rules` solo el efecto determinista.
+- [x] Si el LLM falla o supera 60 s, los giros conocidos quedan con el efecto determinista y un evento `fallo` "coordinador no disponible".
+- [x] Sin `HAPPYROBOT_API_KEY` ni hooks, el adaptador `sim` cierra las llamadas en 20–40 s de reloj.
+- [x] El frontend en `api` muestra chat, giros y reset contra el backend.
+- [x] Tests sin red: mundo, operaciones, bucle inyectado, motor, ejecutor, API. `make check` pasa.
 
 ## Fuera de alcance
 

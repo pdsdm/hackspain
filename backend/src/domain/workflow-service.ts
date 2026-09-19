@@ -99,6 +99,19 @@ function applySpecialistState(
     }
     next.calls = calls;
   }
+
+  const commitmentId = envelope.result.data.commitmentId;
+  if (typeof commitmentId === "string") {
+    const commitment = next.commitments.find((item) => item.id === commitmentId);
+    if (commitment) {
+      if (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions") {
+        commitment.status = "aceptado_condiciones";
+      } else if (envelope.result.outcome === "rejected") {
+        commitment.status = "invalidado";
+      }
+      commitment.updatedAt = next.clock.simSeconds;
+    }
+  }
   return next;
 }
 

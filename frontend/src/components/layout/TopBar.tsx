@@ -33,10 +33,12 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
         <span className="text-[12px] text-muted">→ {fmtClock(s.clock.openingAt)}</span>
       </div>
 
-      {s.simulated && (
+      {(s.simulated || ctl.source === 'api') && (
         <>
           <span className="w-px h-6 bg-line-2" />
           <div className="flex items-center gap-1">
+            {s.simulated && (
+              <>
             <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
               {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
             </button>
@@ -48,6 +50,8 @@ export function TopBar({ ctl, onIntervenir }: { ctl: CrisisController; onInterve
                 </button>
               )
             })}
+              </>
+            )}
             <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">
               <RotateCcw size={14} />
             </button>

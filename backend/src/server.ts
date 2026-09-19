@@ -1,17 +1,22 @@
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { SimulationClock } from "./domain/clock.js";
 import { openDatabase } from "./state/database.js";
 
 const config = loadConfig();
 const database = openDatabase(config.databasePath);
-const app = createApp(database, { workflowToken: config.workflowToken });
+const app = createApp(database, { workflowToken: config.workflowToken, config });
+const executor = app.locals.executor;
+const clock = new SimulationClock(app.locals.stateRepository, executor, config.clockSpeed);
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`Backend listening on http://${config.host}:${config.port}`);
+  clock.start();
 });
 
 function shutdown(signal: string) {
   console.log(`${signal} received, shutting down`);
+  clock.stop();
   server.close(() => {
     database.close();
     process.exit(0);

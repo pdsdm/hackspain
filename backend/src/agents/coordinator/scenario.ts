@@ -85,9 +85,33 @@ export function liveCoordinatorInput(
   extras: Partial<CoordinatorInput> = {},
 ): CoordinatorInput {
   const clock = state.clock as CoordinatorInput["clock"];
-  const spaces = asRecords(state.spaces) as CoordinatorInput["spaces"];
-  const guestGroups = asRecords(state.guestGroups) as CoordinatorInput["guestGroups"];
-  const commitments = asRecords(state.commitments) as CoordinatorInput["commitments"];
+  const spaces = asRecords(state.spaces).map((space) => ({
+    id: String(space.id),
+    name: String(space.name ?? space.id),
+    zone: space.zone === "norte" ? "norte" as const : "sur" as const,
+    status: String(space.status ?? ""),
+    ...(typeof space.capacity === "number" ? { capacity: space.capacity } : {}),
+    ...(typeof space.readyAt === "number" ? { readyAt: space.readyAt } : {}),
+    ...(typeof space.note === "string" ? { note: space.note } : {}),
+  }));
+  const guestGroups = asRecords(state.guestGroups).map((group) => ({
+    id: String(group.id),
+    name: String(group.name ?? group.id),
+    count: Number(group.count ?? 0),
+    where: String(group.where ?? ""),
+    ...(typeof group.assignedSpaceId === "string" ? { assignedSpaceId: group.assignedSpaceId } : {}),
+    ...(typeof group.needs === "string" ? { needs: group.needs } : {}),
+  }));
+  const commitments = asRecords(state.commitments).map((commitment) => ({
+    id: String(commitment.id),
+    title: String(commitment.title ?? ""),
+    area: commitment.area as CoordinatorInput["commitments"][number]["area"],
+    status: commitment.status as CoordinatorInput["commitments"][number]["status"],
+    counterpart: String(commitment.counterpart ?? ""),
+    conditions: Array.isArray(commitment.conditions)
+      ? commitment.conditions.filter((item): item is string => typeof item === "string")
+      : [],
+  }));
   const budget = state.budget as CoordinatorInput["budget"];
   const constraints = Array.isArray(state.constraints)
     ? state.constraints.filter((item): item is string => typeof item === "string")
