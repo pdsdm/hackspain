@@ -6,6 +6,7 @@ export interface HappyRobotCoordinatorConfig {
   apiKey: string;
   apiBase: string;
   workflowId: string;
+  hookUrl?: string;
   environment: string;
   model: string;
   apply: boolean;
@@ -33,6 +34,7 @@ export function loadHappyRobotCoordinatorConfig(
     apiKey,
     apiBase: (env.HAPPYROBOT_COORDINATOR_API_BASE?.trim() || DEFAULT_API_BASE).replace(/\/+$/, ""),
     workflowId,
+    ...(env.HAPPYROBOT_COORDINATOR_HOOK_URL?.trim() ? { hookUrl: env.HAPPYROBOT_COORDINATOR_HOOK_URL.trim() } : {}),
     environment: env.HAPPYROBOT_COORDINATOR_ENVIRONMENT?.trim() || "development",
     model: HAPPYROBOT_COORDINATOR_MODEL,
     apply: readApplyFlag(env.HAPPYROBOT_COORDINATOR_APPLY),

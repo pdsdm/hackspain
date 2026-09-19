@@ -276,21 +276,30 @@ async function triggerRun(
   payload: Record<string, unknown>,
   fetchFn: FetchFn,
   signal: AbortSignal,
-): Promise<string> {
-  const response = await fetchFn(`${config.apiBase}/workflows/${encodeURIComponent(config.workflowId)}/runs`, {
+): Promise<string | null> {
+  const viaHook = Boolean(config.hookUrl);
+  const url = config.hookUrl ?? `${config.apiBase}/workflows/${encodeURIComponent(config.workflowId)}/runs`;
+  const response = await fetchFn(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ payload, environment: config.environment }),
+    body: JSON.stringify(viaHook ? payload : { payload, environment: config.environment }),
     signal,
   });
   if (!response.ok) {
     throw new Error(`trigger HappyRobot ${response.status}: ${(await response.text()).slice(0, 300)}`);
   }
-  const data = (await response.json()) as { run_id?: unknown; queued_run_ids?: unknown };
+  const text = await response.text();
+  let data: { run_id?: unknown; queued_run_ids?: unknown; id?: unknown } = {};
+  try {
+    data = JSON.parse(text) as typeof data;
+  } catch {
+    data = {};
+  }
   const fromQueue = Array.isArray(data.queued_run_ids) ? data.queued_run_ids[0] : undefined;
-  const runId = typeof data.run_id === "string" && data.run_id ? data.run_id : fromQueue;
-  if (typeof runId !== "string" || !runId) throw new Error("trigger HappyRobot sin run_id");
-  return runId;
+  const runId = typeof data.run_id === "string" && data.run_id ? data.run_id : fromQueue ?? data.id;
+  if (typeof runId === "string" && runId) return runId;
+  if (viaHook) return null;
+  throw new Error("trigger HappyRobot sin run_id");
 }
 
 async function readRunStatus(
@@ -395,7 +404,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
       input,
       publicBaseUrl: config.publicBaseUrl,
     });
-    let happyrobotRunId: string;
+    let happyrobotRunId: string | null;
     try {
       happyrobotRunId = await triggerRun(config, payload, fetchFn, signal);
     } catch (error) {
@@ -404,7 +413,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
       return finish(session, signal.aborted ? "timeout" : "unavailable", { error: message });
     }
     base.happyrobotRunId = happyrobotRunId;
-    logCoord("happyrobot run", happyrobotRunId, config.model, options.apply ? "apply" : "shadow");
+    logCoord("happyrobot run", happyrobotRunId ?? "(hook sin run_id)", config.model, options.apply ? "apply" : "shadow");
 
     let settled: CoordinatorOutput | undefined;
     const settledPromise = done.then((output) => {
@@ -422,6 +431,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
         return finish(session, "accepted", { output: settled, applied: options.apply });
       }
       if (signal.aborted) break;
+      if (happyrobotRunId === null) continue;
       try {
         lastStatus = await readRunStatus(config, happyrobotRunId, fetchFn, signal);
         pollFailures = 0;

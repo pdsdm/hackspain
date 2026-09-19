@@ -26,6 +26,7 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `COORDINATOR_MODE` | `llm` (se infiere si `COORDINATOR_HARNESS=happyrobot` y hay workflow). |
 | `HAPPYROBOT_API_KEY` | La misma clave de las llamadas. |
 | `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | UUID o slug del workflow Orquestador. |
+| `HAPPYROBOT_COORDINATOR_HOOK_URL` | Opcional. Hook directo, p. ej. `https://workflows.platform.eu.happyrobot.ai/hooks/development/<slug>`. Si está, el trigger va ahí en vez de `/workflows/{id}/runs`; el hook no devuelve `run_id`, así que no se sondea el estado del run. En EU el endpoint del API devolvía `Workflow not found`. |
 | `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development`. |
 | `HAPPYROBOT_COORDINATOR_APPLY` | Vacío o `false`. `true` solo cuando se decida aplicar planes. |
 | `HAPPYROBOT_COORDINATOR_TIMEOUT_MS` | Opcional. Por defecto 180000. |
