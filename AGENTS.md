@@ -29,14 +29,16 @@ Prioridad: que funcione > que se entienda en la demo > que el código sea elegan
 
 - `backend/`: API, agentes de IA, integración con la API del sponsor
 - `frontend/`: UI de la demo
+- `docs/ESTADO.md`: **empieza por aquí.** Estado real del proyecto, qué falta y qué bloquea
 - `docs/specs/`: una spec corta por feature (define qué significa "hecho")
 - `docs/decisions.md`: decisiones tomadas y su porqué
 - `docs/api-contract.md`: contrato backend ↔ frontend (fuente de verdad)
 - `TASKS.md`: quién hace qué, en qué rama y en qué estado
-- `.agents/skills/`: procedimientos repetibles (p. ej. `cerrar-tarea`)
+- `.agents/skills/`: procedimientos repetibles (`cerrar-tarea`, `actualizar-estado`)
 
 ## Antes de empezar una tarea
 
+0. Lee `docs/ESTADO.md`. Es la memoria del proyecto entre sesiones: el contexto de una conversación se pierde, eso no. Si está desactualizado (mira la fecha y el commit de su cabecera), regenéralo con la skill `actualizar-estado` antes de seguir. Trabaja siempre desde `origin/main` recién traído, no desde una rama local vieja.
 1. Busca la tarea en `TASKS.md`. Si no está, pide al humano que la añada antes de programar.
 2. Si la tarea tiene spec en `docs/specs/`, léela: sus criterios de aceptación son la definición de "hecho".
 3. Si tocas la comunicación entre backend y frontend, lee `docs/api-contract.md`.
@@ -54,6 +56,7 @@ Prioridad: que funcione > que se entienda en la demo > que el código sea elegan
 
 ## Definición de hecho
 
+- `docs/ESTADO.md` refleja lo que acabas de cambiar, si afecta a qué falta o qué bloquea.
 - `make check` pasa.
 - Los criterios de aceptación de la spec (si existe) se cumplen.
 - La fila de la tarea en `TASKS.md` está actualizada.
