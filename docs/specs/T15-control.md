@@ -9,13 +9,13 @@ puede intervenir?» de la rúbrica.
 
 ## Criterios de aceptación
 
-- [ ] `approve_spend` y `reject_spend` resuelven la decisión y el efecto se ve en el panel.
-- [ ] `pause` detiene el despacho de nuevas acciones; el reloj sigue corriendo.
-- [ ] `resume` vuelve a despachar sin duplicar lo que ya estaba en cola.
-- [ ] `set_constraint` cambia lo que el coordinador propone en el siguiente ciclo (no solo
+- [x] `approve_spend` y `reject_spend` resuelven la decisión y el efecto se ve en el panel.
+- [x] `pause` detiene el despacho de nuevas acciones; el reloj sigue corriendo.
+- [x] `resume` vuelve a despachar sin duplicar lo que ya estaba en cola.
+- [x] `set_constraint` cambia lo que el coordinador propone en el siguiente ciclo (no solo
       se registra en la cronología).
-- [ ] `take_call` marca la llamada como atendida por un humano y lo refleja el panel.
-- [ ] **Bug de decisiones huérfanas resuelto** (ver abajo), con un test que lo cubra.
+- [x] `take_call` marca la llamada como atendida por un humano y lo refleja el panel.
+- [x] **Bug de decisiones huérfanas resuelto** (ver abajo), con un test que lo cubra.
 
 ---
 

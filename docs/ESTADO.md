@@ -105,7 +105,11 @@ y **duplica la decisión pendiente** (3 × 4.200 € en la misma ejecución) y a
 ### 🟡 4. Resto
 
 - Agentes de Catering, Transporte y Asistentes (T12, T13, T14): sin guion ni extractor.
-- Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
+- Control humano verificado (T15): **hecho en `feat/pep-control` (sin mergear, sábado
+  12:30)**: los 5 controles probados en modo `rules`, y al replanificar la decisión pendiente
+  anterior pasa a `rechazada` («obsoleta» en cronología), así que solo hay una pendiente.
+  Un gasto ya autorizado no vuelve a pedir aprobación. 3 tests nuevos (105 en total).
+  Texto anterior: `/interventions` existe y registra, pero nadie ha
   comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
   coordinador después.
 - Integración (T17): logs y runbook ya están en `main`; sigue sin llamada real. Entorno,
