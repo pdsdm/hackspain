@@ -48,6 +48,52 @@ test("sim adapter opens a call and applies a canned result", async () => {
   }
 });
 
+test("an isolated E2E run forces sim even when real hooks are configured", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { transporte: "https://hook.test/transporte" },
+    happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  let externalCalls = 0;
+  globalThis.fetch = async () => {
+    externalCalls += 1;
+    throw new Error("external dispatch must stay disabled");
+  };
+  try {
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.forceSimActions = true;
+    states.saveState(run.id, state);
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
+      idempotencyKey: "e2e-sim-call",
+    });
+    useAcceptingSeed(states, task);
+    executor.pump();
+    await new Promise((resolve) => setImmediate(resolve));
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(calls[0]?.simulated, true);
+    assert.equal(externalCalls, 0);
+    executor.fireDue(Number(run.state.clock.simSeconds) + 60);
+    assert.equal(tasks.get(task.id)?.status, "completed");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
 test("un resultado fuera de contexto se descarta y no tumba el proceso", async () => {
   const { database, states, tasks, executor } = harness();
   try {

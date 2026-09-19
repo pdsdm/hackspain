@@ -52,15 +52,16 @@
 | T41 | Piloto JEV → playbook acotado, corpus sintético y comparación con coordinador | Ventura + Devin | `feat/ventura-jev-routing-pilot` (PR #57) | [T41](docs/specs/T41-jev-routing-pilot.md) | review |
 | T42 | Arranque limpio y pausado en cada despliegue | Zhi + Devin | `fix/zhi-clean-deploy-state` (PR #64, mergeada) | [T42](docs/specs/T42-arranque-limpio.md) | done |
 | T43 | Cierre de la crisis: acuerdos avanzan, plan termina, intervención inmediata y túnel para la red del hackathon | Ventura + Devin | `fix/ventura-cierre-demo` (PR #62, mergeada) | [Contrato](docs/api-contract.md#cierre-de-la-crisis-resolved-closuresummary-coordinatorstatus-atascado) | done |
-| T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` | [T44](docs/specs/T44-happyrobot-coordinator.md) | doing |
+| T44 | Piloto HappyRobot Reasoning Agent como coordinador | Astra | `feat/astra-happyrobot-coordinator` (PR #81, mergeada) | [T44](docs/specs/T44-happyrobot-coordinator.md) | review |
 | T45 | Congelar escenario y storyboard técnico de la demo | Ventura (revisión: Carlos) | `docs/ventura-video-scenario` | [T45](docs/specs/T45-video-scenario.md) | review |
 | T46 | Entrada autenticada de incidentes desde HappyRobot | Zhi | `feat/zhi-happyrobot-event-ingress` | [T46](docs/specs/T46-happyrobot-event-ingress.md) | done |
 | T47 | Workflow HappyRobot determinista para inputs simulados de llamada y SMS | Ventura | `feat/ventura-happyrobot-incident-inputs` | [T47](docs/specs/T47-happyrobot-incident-inputs.md) | bloqueada |
 | T48 | Director reproducible del recorrido de vídeo | Ventura (revisión: Zhi + Carlos) | `feat/ventura-demo-director` | [T48](docs/specs/T48-demo-director.md) | doing |
-| T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` | [T49](docs/specs/T49-demo-incidents-ui.md) | doing |
+| T49 | Incidencias activas y procedencia de inputs en el frontend | Ventura (revisión: Carlos) | `feat/ventura-demo-incidents-ui` (PR #75) | [T49](docs/specs/T49-demo-incidents-ui.md) | done |
 | T50 | Coordinación de staff mediante el agente de Asistentes | Ventura | `feat/ventura-demo-staff-coordination` | [T50](docs/specs/T50-staff-coordination.md) | review |
 | T51 | Outputs de Espacios, Catering, Transporte y Asistentes listos para vídeo | Ventura (Catering + Asistentes) + Álvaro (Transporte) | `feat/ventura-demo-specialists`, `feat/alvaro-demo-transport` | [T51](docs/specs/T51-demo-specialists.md) | doing |
 | T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | doing |
+| T53 | Pulido UI: mapa a pantalla completa, vidrio más opaco, pines sin recorte y cronología en raíl | Pep | `feat/pep-ui-polish` | - | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

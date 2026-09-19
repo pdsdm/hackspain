@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
@@ -186,6 +185,25 @@ export function createApp(
     next();
   };
 
+  const authorizeHappyRobotIncident = (request: Request, response: Response, next: NextFunction) => {
+    const authorization = request.get("authorization");
+    const prefix = "Bearer ";
+    const received = authorization?.startsWith(prefix) ? authorization.slice(prefix.length) : "";
+    const token = options.workflowToken ?? config.workflowToken;
+    if (received && token && sameToken(received, token)) {
+      next();
+      return;
+    }
+    const state = stateRepository.ensureActiveRun().state;
+    const e2eHash = typeof state.e2eInputTokenHash === "string" ? state.e2eInputTokenHash : "";
+    const receivedHash = received ? createHash("sha256").update(received).digest("hex") : "";
+    if (state.forceSimActions === true && e2eHash && receivedHash && sameToken(receivedHash, e2eHash)) {
+      next();
+      return;
+    }
+    response.status(token ? 401 : 503).json({ error: token ? "Invalid workflow token" : "Workflow integration is not configured" });
+  };
+
   const recordWorkflowResult = (
     envelope: SpecialistResultEnvelope,
     verification?: CallAcceptanceVerification,
@@ -303,6 +321,32 @@ export function createApp(
     }
   });
 
+  app.post("/simulation/e2e/reset", authorizeWorkflow, (request, response, next) => {
+    const body = request.body && typeof request.body === "object" ? request.body as Record<string, unknown> : {};
+    const inputTokenHash = body.inputTokenHash;
+    if (inputTokenHash !== undefined && (typeof inputTokenHash !== "string" || !/^[a-f0-9]{64}$/.test(inputTokenHash))) {
+      response.status(400).json({ error: "inputTokenHash must be a SHA-256 hex digest" });
+      return;
+    }
+    void engine
+      .reset("calm")
+      .then((result) => {
+        const run = stateRepository.ensureActiveRun();
+        const state = structuredClone(run.state);
+        state.forceSimActions = true;
+        state.e2eCoordinatorApply = true;
+        state.e2eMode = "production-isolated";
+        if (typeof inputTokenHash === "string") state.e2eInputTokenHash = inputTokenHash;
+        state.agentsPaused = false;
+        state.clock.paused = false;
+        state.clock.live = false;
+        state.clock.speed = 120;
+        stateRepository.saveState(run.id, state);
+        response.status(200).json({ ok: true, ...result, externalActions: "sim" });
+      })
+      .catch(next);
+  });
+
   app.post("/events", (request, response, next) => {
     try {
       const event = parseEvent(request.body);
@@ -315,7 +359,7 @@ export function createApp(
     }
   });
 
-  app.post("/workflow/happyrobot/events", authorizeWorkflow, (request, response, next) => {
+  app.post("/workflow/happyrobot/events", authorizeHappyRobotIncident, (request, response, next) => {
     try {
       const envelope = parseHappyRobotIncident(request.body);
       const reservation = happyrobotEventRepository.reserve(envelope);
@@ -392,6 +436,15 @@ export function createApp(
     } catch (error) {
       next(error);
     }
+  });
+
+  app.get("/coordinator/happyrobot/report", authorizeWorkflow, (_request, response) => {
+    const report = happyrobotRegistry.getLastReport();
+    if (!report) {
+      response.status(404).json({ error: "No hay informe HappyRobot" });
+      return;
+    }
+    response.status(200).json(report);
   });
 
   app.post("/coordinator/happyrobot/shadow", authorizeWorkflow, (request, response, next) => {

@@ -10,6 +10,10 @@ function calm() {
   return parseCrisisState(JSON.parse(readFileSync(new URL("../fixtures/madring/states/calm.json", import.meta.url), "utf8")));
 }
 
+function normal() {
+  return parseCrisisState(JSON.parse(readFileSync(new URL("../fixtures/madring/states/normal.json", import.meta.url), "utf8")));
+}
+
 function gates(state: ReturnType<typeof calm>): Array<Record<string, unknown>> {
   return state.gates as Array<Record<string, unknown>>;
 }
@@ -41,7 +45,7 @@ test("burstAt es determinista por minuto", () => {
 });
 
 test("un acceso ya saturado al arrancar no avisa hasta pasar el enfriamiento, y luego una vez", () => {
-  const state = calm();
+  const state = normal();
   const gate = gates(state).find((item) => item.id === "gate-sur")!;
   assert.equal(gate.status, "saturado");
   const first = advanceAttendance(state, 43200, 43260, 1);

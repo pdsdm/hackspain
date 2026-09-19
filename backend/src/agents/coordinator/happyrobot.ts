@@ -11,52 +11,18 @@ import type { StateRepository } from "../../state/state-repository.js";
 import type { TaskRepository } from "../../state/task-repository.js";
 import { worldSummary, type WorldModel } from "../../world/world.js";
 import { logCoord, logCoordError } from "../../log.js";
+import type { HappyRobotCoordinatorConfig } from "./happyrobot-config.js";
 
-export const HAPPYROBOT_COORDINATOR_MODEL = "gpt-5.6-luna-low";
-const DEFAULT_API_BASE = "https://platform.eu.happyrobot.ai/api/v2";
-const DEFAULT_TIMEOUT_MS = 180_000;
+export {
+  HAPPYROBOT_COORDINATOR_MODEL,
+  loadHappyRobotCoordinatorConfig,
+  readApplyFlag,
+  type HappyRobotCoordinatorConfig,
+} from "./happyrobot-config.js";
+
 const POLL_MS = 5_000;
 const TERMINAL_FAILURE = new Set(["failed", "canceled", "skipped"]);
 const TERMINAL_SUCCESS = new Set(["succeeded", "completed"]);
-
-export interface HappyRobotCoordinatorConfig {
-  apiKey: string;
-  apiBase: string;
-  workflowId: string;
-  environment: string;
-  model: string;
-  apply: boolean;
-  timeoutMs: number;
-  publicBaseUrl: string;
-}
-
-export function readApplyFlag(value: string | undefined): boolean {
-  return ["1", "true"].includes(value?.trim().toLowerCase() ?? "");
-}
-
-export function loadHappyRobotCoordinatorConfig(
-  env: NodeJS.ProcessEnv = process.env,
-): HappyRobotCoordinatorConfig {
-  const apiKey = env.HAPPYROBOT_API_KEY?.trim();
-  const workflowId = env.HAPPYROBOT_COORDINATOR_WORKFLOW_ID?.trim();
-  if (!apiKey) throw new Error("COORDINATOR_HARNESS=happyrobot requiere HAPPYROBOT_API_KEY");
-  if (!workflowId) throw new Error("COORDINATOR_HARNESS=happyrobot requiere HAPPYROBOT_COORDINATOR_WORKFLOW_ID");
-  const timeoutRaw = env.HAPPYROBOT_COORDINATOR_TIMEOUT_MS?.trim();
-  const timeoutMs = timeoutRaw ? Number(timeoutRaw) : DEFAULT_TIMEOUT_MS;
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 600_000) {
-    throw new Error("HAPPYROBOT_COORDINATOR_TIMEOUT_MS must be an integer between 1000 and 600000");
-  }
-  return {
-    apiKey,
-    apiBase: (env.HAPPYROBOT_COORDINATOR_API_BASE?.trim() || DEFAULT_API_BASE).replace(/\/+$/, ""),
-    workflowId,
-    environment: env.HAPPYROBOT_COORDINATOR_ENVIRONMENT?.trim() || "development",
-    model: env.COORDINATOR_MODEL?.trim() || HAPPYROBOT_COORDINATOR_MODEL,
-    apply: readApplyFlag(env.HAPPYROBOT_COORDINATOR_APPLY),
-    timeoutMs,
-    publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
-  };
-}
 
 export interface HappyRobotCoordinatorReport {
   provider: "happyrobot";
@@ -310,21 +276,30 @@ async function triggerRun(
   payload: Record<string, unknown>,
   fetchFn: FetchFn,
   signal: AbortSignal,
-): Promise<string> {
-  const response = await fetchFn(`${config.apiBase}/workflows/${encodeURIComponent(config.workflowId)}/runs`, {
+): Promise<string | null> {
+  const viaHook = Boolean(config.hookUrl);
+  const url = config.hookUrl ?? `${config.apiBase}/workflows/${encodeURIComponent(config.workflowId)}/runs`;
+  const response = await fetchFn(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ payload, environment: config.environment }),
+    body: JSON.stringify(viaHook ? payload : { payload, environment: config.environment }),
     signal,
   });
   if (!response.ok) {
     throw new Error(`trigger HappyRobot ${response.status}: ${(await response.text()).slice(0, 300)}`);
   }
-  const data = (await response.json()) as { run_id?: unknown; queued_run_ids?: unknown };
+  const text = await response.text();
+  let data: { run_id?: unknown; queued_run_ids?: unknown; id?: unknown } = {};
+  try {
+    data = JSON.parse(text) as typeof data;
+  } catch {
+    data = {};
+  }
   const fromQueue = Array.isArray(data.queued_run_ids) ? data.queued_run_ids[0] : undefined;
-  const runId = typeof data.run_id === "string" && data.run_id ? data.run_id : fromQueue;
-  if (typeof runId !== "string" || !runId) throw new Error("trigger HappyRobot sin run_id");
-  return runId;
+  const runId = typeof data.run_id === "string" && data.run_id ? data.run_id : fromQueue ?? data.id;
+  if (typeof runId === "string" && runId) return runId;
+  if (viaHook) return null;
+  throw new Error("trigger HappyRobot sin run_id");
 }
 
 async function readRunStatus(
@@ -429,7 +404,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
       input,
       publicBaseUrl: config.publicBaseUrl,
     });
-    let happyrobotRunId: string;
+    let happyrobotRunId: string | null;
     try {
       happyrobotRunId = await triggerRun(config, payload, fetchFn, signal);
     } catch (error) {
@@ -438,7 +413,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
       return finish(session, signal.aborted ? "timeout" : "unavailable", { error: message });
     }
     base.happyrobotRunId = happyrobotRunId;
-    logCoord("happyrobot run", happyrobotRunId, config.model, options.apply ? "apply" : "shadow");
+    logCoord("happyrobot run", happyrobotRunId ?? "(hook sin run_id)", config.model, options.apply ? "apply" : "shadow");
 
     let settled: CoordinatorOutput | undefined;
     const settledPromise = done.then((output) => {
@@ -456,6 +431,7 @@ export async function runHappyRobotCoordinator(options: RunHappyRobotOptions): P
         return finish(session, "accepted", { output: settled, applied: options.apply });
       }
       if (signal.aborted) break;
+      if (happyrobotRunId === null) continue;
       try {
         lastStatus = await readRunStatus(config, happyrobotRunId, fetchFn, signal);
         pollFailures = 0;

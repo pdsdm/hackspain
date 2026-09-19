@@ -176,7 +176,20 @@ El estado persiste en `backend/data/demo.db`. Los logs y PID quedan en `.demo/`,
 
 `HAPPYROBOT_API_KEY`, `HAPPYROBOT_TEST_PHONE`, `HAPPYROBOT_WEBHOOK_TOKEN` y `HAPPYROBOT_HOOK_*` solo se rellenan en el `.env` raíz. No se copian a argumentos ni logs.
 
-## 7. Estado y limitaciones conocidas
+## 7. E2E real de la toma grabada
+
+Configura en `.env` o `.env.e2e` `HAPPYROBOT_API_KEY` y `HAPPYROBOT_WEBHOOK_TOKEN`. `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` es opcional: si falta, el runner descubre `Demo Incident Inputs` por nombre. Los archivos están ignorados por Git.
+
+Contra producción, después de desplegar esta versión:
+
+```bash
+cd backend
+E2E_TARGET_URL=https://hackspain-production.up.railway.app npm run demo:e2e-real -- --confirm-real-happyrobot
+```
+
+En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend. En ambos modos, el reset E2E autenticado crea una ejecución `calm` aislada, fuerza los cuatro especialistas al adaptador `sim`, ejecuta los dos inputs mediante runs reales de HappyRobot y valida los checkpoints M0–M4. Nunca usa los hooks de llamadas, SMS o email reales. La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
+
+## 8. Estado y limitaciones conocidas
 
 - Verificado localmente: Vite en modo `api` llega a `/health`, `/state`, `/events` y `/simulation/*`; el backend registra el evento.
 - Probado por tests: despacho al hook, timeout sin callback, autenticación e idempotencia de `/workflow/results`.

@@ -132,6 +132,18 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
 ```
 
+### `POST /simulation/e2e/reset`
+
+Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, acelera el reloj y activa el coordinador HappyRobot en apply solo para ese run; aunque Railway esté en shadow o tenga hooks de especialistas, el plan se aplica y llamadas, SMS y email usan el adaptador `sim`. Un reset normal elimina la marca. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
+
+```json
+{ "inputTokenHash": "<sha256-hex>" }
+```
+
+```json
+{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim" }
+```
+
 ### `POST /simulation/live` (T32)
 
 Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semilla, sin pulsar los botones. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
@@ -152,7 +164,7 @@ Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semil
 
 ### Afluencia en los accesos (`gates[]`)
 
-El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.seed`, fijada por `SIM_SEED` o generada en cada reset) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado`, se anota `incidencia` y, como máximo cada 900 s simulados por acceso (`lastSaturationAt`), entra al coordinador un evento `source: clock`, `kind: gate_saturated`, `payload: { gateId, waiting }`; en `rules` se abre otro acceso cerrado de la misma zona si lo hay. Misma semilla, misma serie.
+El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.seed`, fijada por `SIM_SEED` o generada en cada reset) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado` y se anota `incidencia`. Solo con `clock.live: true` (Modo vivo), y como máximo cada 900 s simulados por acceso (`lastSaturationAt`), entra al coordinador un evento `source: clock`, `kind: gate_saturated`, `payload: { gateId, waiting }`; en `rules` se abre otro acceso cerrado de la misma zona si lo hay. Sin Modo vivo, la saturación solo se ve en el mapa y en la cronología, y el coordinador no actúa hasta que el humano envía algo. Misma semilla, misma serie.
 
 ### Actores móviles (`vehicles[]`, opcional)
 
@@ -294,7 +306,7 @@ Reglas:
 
 ### Piloto HappyRobot como coordinador (T44)
 
-Tres endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los tres exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
+Cuatro endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los cuatro exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
 
 #### `POST /workflow/coordinator/happyrobot/consult`
 
@@ -316,7 +328,11 @@ Tres endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los tres exigen el m
 { "accepted": false, "retry": true, "errors": ["json_invalido: la respuesta no es JSON"], "plan_version": 1 }
 ```
 
-`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan solo si `HAPPYROBOT_COORDINATOR_APPLY=true`; en shadow lo registra y no muta `CrisisState`.
+`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan HappyRobot solo si `HAPPYROBOT_COORDINATOR_APPLY=true`; en shadow registra ese plan sin aplicarlo. Si `COORDINATOR_HARNESS=happyrobot` opera el motor en shadow, el proveedor textual configurado continúa el ciclo y aplica el plan principal.
+
+#### `GET /coordinator/happyrobot/report`
+
+Devuelve el último informe del coordinador HappyRobot para auditar el E2E: `provider`, `model`, `correlationId`, `happyrobotRunId`, `runId`, `planVersion`, `status`, `applied`, `latencyMs`, `consults`, `submissions`, `validationErrors[]`, `output` y `error?`. Devuelve `404` si aún no hay informe.
 
 #### `POST /coordinator/happyrobot/shadow`
 
@@ -464,4 +480,4 @@ El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin ho
 
 Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
 
-`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). El formato se valida al arrancar: un número mal formado, o su ausencia habiendo hooks configurados, impide el arranque en vez de fallar en mitad de la demo.
+`contact.phone` y `phone_number` salen del entorno, no del fixture (que es sintético y público): `HAPPYROBOT_TEST_PHONE`, en E.164 (`+34600000000`, sin espacios ni guiones). Un número mal formado impide el arranque. Falta el teléfono no bloquea el arranque (webhooks del coordinador y simulación); las llamadas reales irían sin destino E.164.

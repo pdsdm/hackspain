@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+
 const PREDEFINED_REQUEST_EVENT_ID = "b329e750-2e0e-4618-ba65-e04bb6a93c5f";
 const WEBHOOK_POST_EVENT_ID = "01926f2b-2973-7ebf-ada1-e984251e27ec";
 const WORKFLOW_NAME = "Demo Incident Inputs";
@@ -144,7 +146,10 @@ export async function setupHappyRobotDemoInputs(fetchFn: FetchFn = fetch): Promi
   console.log(`HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID=${created.id}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// En Windows argv[1] llega con barras invertidas y `file://${argv[1]}` nunca casa con
+// import.meta.url: el instalador terminaba en silencio con código 0, aparentando éxito.
+const invokedPath = process.argv[1];
+if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
   setupHappyRobotDemoInputs().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

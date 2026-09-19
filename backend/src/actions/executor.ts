@@ -104,7 +104,7 @@ export class ActionExecutor {
     const state = structuredClone(run.state);
     const calls = records(state, "calls");
     const hook = this.config.hooks[task.area as AreaHook];
-    const real = Boolean(hook && this.config.happyrobotApiKey);
+    const real = state.forceSimActions !== true && Boolean(hook && this.config.happyrobotApiKey);
     calls.push({
       id: callId,
       agent: task.area,
@@ -122,7 +122,7 @@ export class ActionExecutor {
     state.agents = records(state, "agents");
     this.states.saveState(run.id, state);
 
-    const adapter = hook && this.config.happyrobotApiKey ? "happyrobot" : "sim";
+    const adapter = real ? "happyrobot" : "sim";
     logAction("dispatch", {
       taskId: task.id,
       runId: run.id,
@@ -131,7 +131,7 @@ export class ActionExecutor {
       kind: task.kind,
       adapter,
     });
-    if (hook && this.config.happyrobotApiKey) {
+    if (real && hook && this.config.happyrobotApiKey) {
       const outcome = await dispatchHappyRobot({
         hookUrl: hook,
         apiKey: this.config.happyrobotApiKey,
