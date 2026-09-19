@@ -73,3 +73,9 @@
 - **Qué:** con `COGNITION_API_KEY` o `DEVIN_API_KEY` el coordinador usa SWE (`swe-1.7`) por `/v1/chat/completions` (compatible con OpenAI, sin SDK). El harness por defecto (`COORDINATOR_HARNESS=tools`) es function calling local: `consult_world` y `submit_plan`, validadas igual que D11. `COORDINATOR_HARNESS=json` conserva el bucle D11. `COORDINATOR_HARNESS=devin` crea una sesión en `api.devin.ai` (`DEVIN_ORG_ID`, `devin_mode=fast`) y lee structured output. HappyRobot sigue siendo solo voz/SMS/email.
 - **Por qué:** SWE está entrenado en el harness de Devin; las sesiones cloud tardan de más para un replan de <60 s. El tool loop local da el mismo estilo de agente a tiempo de demo.
 - **Descartado:** LiteLLM u otro proxy, y usar Devin cloud como camino por defecto.
+
+### D13: los giros rompen el mundo; los planes de contingencia son del recinto, no del agente
+
+- **Qué:** el efecto determinista de un giro se limita al daño y a sus consecuencias mecánicas. Dos de los nueve (`lounge_unavailable`, `reject_split`) activan además el plan de contingencia del recinto (Norte C `propuesto`), que el coordinador puede adoptar o descartar. Todo estado que active una contingencia lleva nota de origen para que se distinga de una propuesta del coordinador. Detalle en [`giros-y-contingencias.md`](giros-y-contingencias.md).
+- **Por qué:** un recinto de GP tiene contingencias escritas; modelarlo así es más realista y prueba mejor el criterio del agente, que es elegir o rechazar la alternativa obvia con un motivo. Además abre la cadena `lounge_unavailable` → `provider_silent`, donde la propia contingencia se queda sin transporte.
+- **Descartado:** quitar la contingencia y que el agente invente Norte C desde cero (menos realista y no prueba criterio); y dejarla sin nota de origen, que impide distinguir la contingencia de una decisión del coordinador y disimula una caída del LLM.
