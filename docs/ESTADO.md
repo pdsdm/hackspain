@@ -10,167 +10,116 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:50 |
-| **Commit de `main`** | `c371546` (PR #26) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 13:32 CEST |
+| **Commit de `main`** | `027ea69` (PR #32) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, cierre de recuperación T6/T9 |
+| **Generado por** | Devin, cierre del tramo técnico T17/T18 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` | ✅ OK |
-| Tests de backend | ✅ **102 de 102** |
+| `make check` | OK |
+| Tests de backend | **110 de 110** |
+| Lint y build | Backend y frontend OK |
+| Fixtures | 10 JSON reproducibles OK |
 
-Ambos verificados sobre `c371546` con Node 22.23.2.
+Verificado sobre `027ea69` con Node 22.23.2. El frontend mantiene el aviso conocido de
+chunk mayor de 500 kB; no falla el build.
 
 ## Qué funciona
 
-Todo lo de aquí está mergeado en `main`.
+Todo lo de esta sección está mergeado en `main`.
 
-- **Contrato cerrado** (T3): `/state`, `/interventions`, `/events`, `/actions`,
-  `/simulation/twists`, `/simulation/reset`, `/workflow/coordinator/proposals`,
-  `/workflow/results`. `CrisisState` es el contrato público (D10).
-- **Datos** (T5): seed MADRING, `world.json` y 10 fixtures de estado reproducibles
-  (`calm`, `normal`, `crisis`, `proposal`, `recovered`, `lounge_unavailable`,
-  `pabellon_b_400`…).
-- **Backend** (T2, T7, T25): Express + SQLite, estado persistente por ejecución, reglas
-  deterministas (aforo, Norte exige traslado, gasto > 1.500 € abre decisión), cola
-  idempotente por `planVersion`.
-- **Coordinador real** (T10, T24, T26): bucle en proceso `evento → LLM → operaciones +
-  consultas → validación → persistir`, sin SDK. Proveedores: Cognition (por defecto),
-  Helmcode/Deepseek, OpenAI, Anthropic.
-- **Motor de eventos** (T24): `POST /events` con texto libre; reloj simulado que avanza.
-- **Trazabilidad de integración** (T17): logs de acciones/callbacks, prueba del payload HappyRobot y guía de pruebas mergeados en PR #24.
-- **Camino único de llamada** (T9, T28): «Avisar» crea `call_request`, el backend valida y despacha, el destino E.164 se inyecta desde entorno y el callback actualiza `/state` (PR #26).
-- **Replanificación tras giro** (T16, en `review`): invalidación determinista de acuerdos.
-- **Agente de Espacios** (T11): guion de conversación y extractor de resultados.
-- **Frontend** (T4, T8, T23): panel de 3 columnas, plano Norte/Sur, mapa Leaflet, KPIs con
-  delta, coordinador y agentes, llamada, decisión, cronología, chat de eventos libres,
-  panel de los 9 giros, modal de intervención.
+- **Panel real** (T27): frontend en modo `api`, eventos, intervenciones, giros y polling de
+  `/state` contra el backend.
+- **Motor y estado** (T2, T7, T24, T25): Express + SQLite, ejecuciones persistentes,
+  reloj, reglas deterministas y cola por `planVersion`.
+- **Coordinador** (T10, T26): bucle JSON/tools/Devin en proceso y proveedor Helmcode
+  configurado por D15, con `rules` como respaldo.
+- **Control y giro** (T15, T16): aprobación, decisiones obsoletas, invalidación de
+  compromisos, incremento de `planVersion`, cancelación/traslado de tareas y reavisos.
+- **Camino de llamada** (T9, T28): el backend despacha a HappyRobot y recibe resultados
+  autenticados en `/workflow/results`; el panel no maneja credenciales.
+- **Recorrido técnico T17** (PR #32): test integrado `evento → propuesta → aprobación →
+  llamada sim → callback HTTP → lounge_unavailable → replan`. Termina sin decisiones
+  duplicadas ni llamadas `en_curso`.
+- **Protecciones T17** (PR #32): no salen acciones nuevas antes de aprobar gasto y un
+  callback duplicado no vuelve a ejecutar el coordinador.
+- **Entorno T18 local** (PR #32): `scripts/demo.sh` arranca backend con SQLite persistente
+  y frontend API; permite `status`, `reset`, `restart-backend` y `down`. El arranque local,
+  el proxy de Vite y la persistencia tras reinicio se comprobaron manualmente.
+- **Especialistas**: Espacios (T11) y Asistentes/SMS segmentado (T14) tienen guion,
+  extractor y tests.
 
 ## Qué falta, por riesgo para la demo
 
-### 🔴 1. La llamada real sale, pero el resultado no vuelve · T6 (`doing`), T9 (`review`)
+### 1. Llamada HappyRobot real — T6 (`doing`), T9 (`review`)
 
-Es el **requisito obligatorio del enunciado** ("interacción de verdad").
+No se ha verificado una llamada saliente real que termine con el callback y un compromiso
+visible en `/state`. Faltan, como mínimo, trigger, API key, teléfono E.164 y token de
+callback válidos en el `.env` del portátil de demo.
 
-**La ida ya funciona.** El sábado 19 a las 13:10, desde la rama `feat/alvaro-integracion`,
-el backend hizo el `POST` al workflow `my5asz8ibzd3` y HappyRobot respondió `200`: tarea
-`dispatched` y llamada `en_curso` con `simulated: false`.
+El equipo informó de un Quick Tunnel anterior, pero no se verificó en esta sesión. En este
+entorno `cloudflared` no está en `PATH` y no hay proceso activo. El modo `up` falla de forma
+explícita antes de arrancar nada si falta el binario.
 
-**Lo que falta es la vuelta, y es del lado de HappyRobot:** el nodo tiene que mandar el
-`HAPPYROBOT_WEBHOOK_TOKEN` real al `callbackUrl` que recibe. Con el token de relleno la
-respuesta es `401` y la tarea muere en `no_answer` a los 180 s de reloj.
+### 2. Recorrido T17 con servicios reales
 
-Tres cosas que costaron encontrarse y ya están en
-[`T9-integracion.md`](specs/T9-integracion.md) y en `.env.example`:
+El test usa una salida estructurada inyectada equivalente a la esperada de Helmcode y un
+callback simulado. Falta repetir el mismo recorrido con Helmcode `deepseek-v4-flash` y
+HappyRobot reales. T17 permanece `doing` hasta esa validación.
 
-1. El host del hook es `workflows.platform.eu.happyrobot.ai`, no `platform.happyrobot.ai`
-   (este último da `307` a `/auth/login` y Node falla con `fetch failed`).
-2. `PUBLIC_BASE_URL` tiene que ser un túnel vivo; los de `trycloudflare` caducan.
-3. El `callbackUrl` es `/workflow/happyrobot/results`, no `/workflow/results`.
+### 3. T18 público y ensayo
 
-`main` ya valida `call_request`, encola una llamada sin LLM, inyecta el destino E.164
-desde entorno y muestra «Avisar a…» sin secretos en el frontend. El recorrido Vite →
-backend → tarea → llamada simulada → callback está verificado.
+La automatización del Quick Tunnel está mergeada, pero no se ejecutó contra una URL
+pública en esta sesión. Falta comprobar `/health` público, token del callback, recuperación
+tras reinicio y un ensayo completo. T18 permanece `doing`.
 
-**T9 no bloquea, pero sigue sin mergear** (rama `feat/alvaro-integracion`). La PR #26 se
-mergeó desde esa rama pero llevaba otra cosa: `main` **no tiene** el traductor de entrada
-(`happyrobot-inbound.ts`), ni la ruta `POST /workflow/happyrobot/results`, ni la spec del
-agente de voz. El tablero dice «mergeada» y el código dice que no. Mergear esa rama es lo
-que hace falta para que la vuelta funcione fuera del portátil de Álvaro.
+### 4. Resto
 
-**Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
-llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →
-`sim` etiquetado como simulado en pantalla. Nunca presentar una grabación como llamada en
-vivo.
-
-### 🟡 2. Proveedor LLM sin prueba de demo
-
-Hay `HELMCODE_API_KEY` en el `.env` local; Cognition y Devin siguen sin clave. El camino
-Helmcode no se ha probado en esta sesión con un evento real. `rules` mantiene el respaldo
-determinista para los giros.
-
-**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`):** Pep tiene un `.env` local
-con clave de Cognition. Verificado que `api.cognition.ai` **no resuelve en DNS**, así que el
-harness `tools` (el rápido, por defecto) devuelve `unavailable` siempre. Solo funciona
-`COORDINATOR_HARNESS=devin`: una sesión Devin por evento, **60-70 s** hasta el primer plan.
-Para la demo hace falta una clave OpenAI-compatible real (Helmcode, OpenAI o Anthropic) o
-asumir esa latencia.
-
-### 🟠 3. El panel enseña la simulación, no el backend · T27 (`todo`)
-
-El frontend arranca con `VITE_DATA_SOURCE=sim` y ejecuta `frontend/src/domain/script.ts`,
-un guion de 323 líneas con los diálogos escritos a mano. **Lo que se ve hoy en pantalla no
-es el sistema.**
-
-Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
-enchufe y arreglar lo que se rompa.
-
-**Actualización (sábado 11:50, Pep, rama `feat/pep-panel-api`, sin mergear):** el panel en
-modo `api` ya corre el cierre del Principal por `POST /events` con datos del backend:
-agentes, llamadas, cronología, KPIs, decisión y aprobación. Arreglado en la rama:
-`POST /interventions` y `/simulation/twists` esperaban a toda la cola del coordinador (más de
-2 min con `devin`) y el panel las daba por fallidas a los 4 s; ahora responden al encolar.
-Cada `call` lleva `simulated` para no etiquetar como «vía HappyRobot» una llamada del
-adaptador `sim`. Pendiente del coordinador (Ventura/Zhi): tras cada `call_result` replanifica
-y **duplica la decisión pendiente** (3 × 4.200 € en la misma ejecución) y acumula llamadas
-`en_curso` (20 llamadas, 12 vivas a los 2 min).
-
-### 🟡 4. Resto
-
-- Agentes de Catering, Transporte y Asistentes (T12, T13, T14): sin guion ni extractor.
-- Control humano verificado (T15): **hecho en `feat/pep-control` (sin mergear, sábado
-  12:30)**: los 5 controles probados en modo `rules`, y al replanificar la decisión pendiente
-  anterior pasa a `rechazada` («obsoleta» en cronología), así que solo hay una pendiente.
-  Un gasto ya autorizado no vuelve a pedir aprobación. 3 tests nuevos (105 en total).
-  Texto anterior: `/interventions` existe y registra, pero nadie ha
-  comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
-  coordinador después.
-- Integración (T17): logs y runbook ya están en `main`; sigue sin llamada real. Entorno,
-  pitch y vídeo (T18, T19, T21): nada.
-- Aprendizaje entre ejecuciones (T20, bonus): nada.
+- Catering y Transporte (T12, T13): `todo`.
+- Pitch, ensayo y vídeo (T19): `todo`.
+- T30–T32: `todo`; no abrirlos antes de completar y ensayar el recorrido principal.
+- Aprendizaje entre ejecuciones (T20): bonus, `todo`.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Llamada real | hook, token de callback y backend público | **Sí — equipo de HappyRobot + despliegue** |
-| Coordinador Helmcode | prueba real con la clave local | No |
-| Panel real | T27, y de que el backend aguante | No |
-| Guion del pitch | decidir giro principal y desenlace | No |
+| Llamada real | trigger, credenciales, número de prueba y callback público | Sí — HappyRobot y portátil de demo |
+| T17 aceptado | llamada real T6 y prueba Helmcode | Parcial |
+| T18 aceptado | Quick Tunnel operativo, callback real y ensayo | Parcial |
+| Pitch final | decidir actor telefónico y desenlace | No |
 
 ## Ramas vivas sin mergear
 
 | Rama | Qué tiene |
 |---|---|
-| `Prueba-de-plataforma-y-llamada-real` | Web call y sala Twilio de respaldo; no portar a `main` mientras HappyRobot siga disponible. |
+| `Prueba-de-plataforma-y-llamada-real` | 6 commits; Web call y sala de voz de respaldo, además de cambios frontend que no deben sustituir D14. |
+| `docs/estado-1200` | Un commit de `ESTADO.md` basado en `c371546`; está obsoleto y no tiene PR abierto. |
+
+No hay PRs abiertos en GitHub al tomar esta foto.
 
 ## Decisiones pendientes que bloquean a otros
 
-1. **Cuántas interacciones reales** en la demo. Propuesta: una llamada + un SMS; el resto
-   `sim` etiquetado.
-2. **Giro principal.** Candidata fuerte: la cadena `lounge_unavailable` →
-   `provider_silent`, donde el plan de contingencia del recinto (Norte C) se queda sin
-   transporte. Ver [`giros-y-contingencias.md`](giros-y-contingencias.md).
-3. **Cómo termina la demo**: plan cerrado o limitación abierta y honesta.
-4. **Quién hace de responsable de recinto** al teléfono y con qué respuestas.
-5. **Qué proveedor LLM** y quién tiene la clave.
+1. Quién hace de responsable de recinto al teléfono y qué respuestas dará.
+2. Cuántas interacciones reales entran en la demo; propuesta vigente: una llamada y un SMS.
+3. Cómo termina el relato: plan cerrado o limitación abierta y honesta.
+4. Dónde está el binario `cloudflared` del portátil y quién aporta las credenciales T6.
 
 ## Avisos para el siguiente agente
 
-- **Usa Node 22** (`nvm use 22`). Con Node 20, `make check` falla con dos errores que
-  parecen del repo y no lo son: el glob de `node --test` y `node:sqlite`.
-- **`main` se mueve muy rápido.** Haz `git fetch` antes de cualquier análisis; una foto de
-  hace una hora ya no vale.
-- **`TASKS.md` no lo cuenta todo.** Lista las ramas remotas: hay trabajo real en ramas que
-  no figuran en el tablero o figuran con otro nombre.
-- **Antes de dar por perdido el trabajo de alguien**, mira si su rama ya se mergeó por PR.
-  Una rama borrada del remoto casi siempre significa "PR mergeada".
-- **Los 9 giros son una lista cerrada** en `backend/src/contracts/api.ts`. Uno inventado
-  devuelve HTTP 400. El texto libre va por `POST /events` y necesita LLM.
-- **Reparto de zonas para no pisarse**: backend base → Zhi · HappyRobot → Álvaro ·
-  coordinador y Espacios → Ventura · `frontend/` entero y agentes de Catering/Asistentes →
-  Pep · `docs/`, `TASKS.md` y pitch → Carlos. Detalle en
-  [`plan-sabado.md`](plan-sabado.md).
+- Usa Node 22. En esta máquina Node 22.23.2 viene de `pi-node`; no existe
+  `~/.nvm/nvm.sh`.
+- `scripts/demo.sh` arranca por defecto en `rules` + `sim`. Para servicios reales usa
+  `DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=real`; el preflight comprueba que las
+  variables necesarias existen sin mostrar sus valores.
+- Reiniciar conserva SQLite, pero pierde callbacks `sim` programados solo en memoria. Si
+  se reinicia durante una llamada simulada, ejecuta `reset calm` antes del ensayo.
+- Un Quick Tunnel cambia de URL al arrancar. HappyRobot debe usar el `callbackUrl` del
+  payload, no una URL copiada a mano.
+- T17 y T18 no están cerradas: su tramo técnico está en `main`, pero falta la validación
+  real descrita en sus specs.
+- Haz `git fetch` antes de analizar: `main` se mueve rápido y las ramas remotas antiguas
+  pueden estar ya mergeadas.

@@ -77,7 +77,7 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 - `set_constraint`: requiere `payload.text`.
 - `take_call`: requiere `payload.callId` de una llamada `en_curso`.
 
-Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
+Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Mientras haya una decisión pendiente no se despachan acciones nuevas; las ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
 
 **Respuesta 200**: `{ "ok": true }`.
 
@@ -248,7 +248,9 @@ Campos de `result.data` que el backend aplica al estado:
 
 - `commitmentId`: el compromiso pasa a `aceptado_condiciones` (outcome `accepted*`) o `invalidado` (`rejected`).
 - `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
-- El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot.
+- `deliveries[]` (área `catering`, T12): `{ "id": "CAT-02", "status": "confirmada", "dockId": "muelleEste", "arriveAt": 47700, "services": 240, "note": "pendiente: recepción abre el muelle" }`. Solo con `status: "completed"`. `status` admite `confirmada`, `programada` o `bloqueada`; nunca `entregada` ni `invalidada`. `dockId` solo se aplica si el muelle existe y no está `cerrado`/`descartado`; una `confirmada` sobre un muelle cerrado queda en `programada`. Una entrega ya `entregada` no cambia.
+- Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` **no** relanza al coordinador: aplica su efecto y el plan sigue. `rejected`, `no_answer` y `failed` sí lo relanzan. Sin esta regla cada plan generaba 4-7 replanificaciones en cascada y la cola bloqueaba giros e intervenciones.
+- El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot, y `deliveries[]` para las tareas `catering` (`confirmada` si el muelle está abierto, `bloqueada` si está cerrado; la entrega nombrada en el objetivo, o todas las no entregadas).
 
 ### `POST /workflow/happyrobot/results`
 

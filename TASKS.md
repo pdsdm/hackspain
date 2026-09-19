@@ -21,13 +21,13 @@
 | T9 | Adaptador HappyRobot y callbacks | Álvaro | `feat/alvaro-integracion` (PR #26, mergeada) | [T9](docs/specs/T9-integracion.md) | review |
 | T10 | Workflow coordinador | Ventura | `feat/ventura-coordinador` (PR #14, mergeada) | [T10](docs/specs/T10-coordinador.md) | done |
 | T11 | Agente de Espacios | Ventura | `feat/ventura-espacios` (PR #10, mergeada) | [T11](docs/specs/T11-espacios.md) | done |
-| T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | todo |
+| T12 | Agente de Catering | Pep | `feat/pep-catering` | [T12](docs/specs/T12-catering.md) | review |
 | T13 | Agente de Transporte | Álvaro | `feat/alvaro-transporte` | [T13](docs/specs/T13-transporte.md) | todo |
 | T14 | Agente de Asistentes y avisos segmentados | Pep | `feat/pep-asistentes` | [T14](docs/specs/T14-asistentes.md) | review |
 | T15 | Aprobaciones, pausa y control de incidentes | Pep | `feat/pep-control` | [T15](docs/specs/T15-control.md) | review |
 | T16 | Replanificación e invalidación de acuerdos | Ventura | `feat/ventura-adaptacion` | [T16](docs/specs/T16-adaptacion.md) | review |
 | T17 | Integración y pruebas críticas | Zhi | `feat/zhi-integracion-final` | [T17](docs/specs/T17-integracion-final.md) | doing |
-| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-entorno-demo` | [T18](docs/specs/T18-entorno-demo.md) | todo |
+| T18 | Entorno de demo y recuperación | Zhi | `feat/zhi-integracion-final` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
 | T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |
@@ -42,6 +42,7 @@
 | T30 | Afluencia con picos y saturación de accesos en el backend | Zhi (tick) + Ventura (regla) | `feat/zhi-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | todo |
 | T31 | Actores móviles: taxis, VIP y repartidores de última hora | Zhi + Pep + Ventura | `feat/zhi-actores` | [T31](docs/specs/T31-actores-moviles.md) | todo |
 | T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | todo |
+| T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
 
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
 **Plan del mundo dinámico (T29–T32, aditivo, se recorta antes que nada de lo anterior): [`docs/plan-mundo-dinamico.md`](docs/plan-mundo-dinamico.md).**
