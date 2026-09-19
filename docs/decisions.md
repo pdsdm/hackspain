@@ -111,6 +111,12 @@ Con Helmcode, `COORDINATOR_REASONING_EFFORT` vacío ya significa `low`: lo pone 
 aparecieron dos respuestas de ~100 s y ~120 s: el bucle corta a 120 s y ese evento se queda
 sin plan, con el respaldo determinista solo para giros.
 
+### D18: piloto JEV para routing a playbooks (T40, resultado 19/09/2026)
+
+- **Qué:** JEV clasifica texto hacia un playbook cerrado solo en modo aislado. El playbook no se activa en la demo: primero debe pasar un gate conservador y una segunda validación determinista del estado. Fallback al coordinador ante ambigüedad, timeout, error, estado cambiado o incidencia compuesta.
+- **Resultado:** 60 consultas sintéticas, 0 falsos positivos y 0 verdaderos positivos con el gate inicial; mediana 313/292 ms (desarrollo/holdout). El coordinador fue válido en 6/6 y tuvo mediana 28,3 s. La idea reduce latencia potencial, pero no está lista para activar por cobertura cero.
+- **Descartado por ahora:** bajar umbrales usando el mismo holdout, conectar JEV al motor y dejar que JEV cree operaciones o mutaciones. Se mantiene el holdout congelado.
+
 ### D17: costes informativos durante la crisis (T38, aprobada por Ventura)
 
 - **Qué:** recuperar el servicio tiene prioridad. Se registran costes previstos y comprometidos, sin topes de contingencia, límites autónomos ni aprobaciones económicas. Sustituye la parte presupuestaria de D10 y de las specs anteriores.

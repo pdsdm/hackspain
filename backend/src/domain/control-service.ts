@@ -39,7 +39,7 @@ function twists(state: CrisisStateDocument): string[] {
     : [];
 }
 
-function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
+export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
   const spaces = records(state, "spaces");
   const shuttles = records(state, "shuttles");
   const deliveries = records(state, "deliveries");
