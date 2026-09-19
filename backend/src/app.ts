@@ -237,14 +237,26 @@ export function createApp(
   app.post("/interventions", (request, response, next) => {
     try {
       const intervention = parseIntervention(request.body);
-      void engine
-        .handle({
-          source: "human",
-          kind: intervention.type,
-          payload: intervention.payload ?? {},
-        })
-        .catch((error) => console.error("[interventions] handle", error));
-      response.status(200).json({ ok: true });
+      const handled = engine.handle({
+        source: "human",
+        kind: intervention.type,
+        payload: intervention.payload ?? {},
+      });
+      // Aprobar/replanificar puede tardar el LLM; el panel aborta a los 4 s.
+      // pause / resume / take_call son síncronos: hay que esperar para devolver 409
+      // si la llamada ya no está en curso (si no, el panel cree que tomó la línea).
+      const wait =
+        intervention.type === "pause" ||
+        intervention.type === "resume" ||
+        intervention.type === "take_call";
+      if (!wait) {
+        void handled.catch((error) => console.error("[interventions] handle", error));
+        response.status(200).json({ ok: true });
+        return;
+      }
+      void handled
+        .then(() => response.status(200).json({ ok: true }))
+        .catch(next);
     } catch (error) {
       next(error);
     }

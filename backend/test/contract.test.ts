@@ -137,6 +137,13 @@ test("panel mutations validate, persist and reset the active run", async () => {
     assert.equal(response.status, 200);
     assert.equal(states.getPublicState().agentsPaused, true);
 
+    response = await post(base, "/interventions", { type: "take_call", payload: { callId: "nope" } });
+    assert.equal(response.status, 404);
+    assert.equal(
+      ((await response.json()) as { error?: string }).error?.includes("Call not found"),
+      true,
+    );
+
     response = await post(base, "/interventions", { type: "set_constraint", payload: {} });
     assert.equal(response.status, 400);
 

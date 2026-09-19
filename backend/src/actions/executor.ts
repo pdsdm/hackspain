@@ -55,6 +55,7 @@ export class ActionExecutor {
 
   private due: DueSim[] = [];
   private engine: Engine | undefined;
+  private ringingRealCall = false;
 
   constructor(
     private readonly states: StateRepository,
@@ -69,6 +70,15 @@ export class ActionExecutor {
 
   clear(): void {
     this.due = [];
+    this.ringingRealCall = false;
+  }
+
+  holdDispatchTimeout(callId: string): void {
+    this.due = this.due.filter((item) => item.envelope.result.evidence.callId !== callId);
+  }
+
+  clearRinging(): void {
+    this.ringingRealCall = false;
   }
 
   fireDue(now: number): void {
@@ -81,12 +91,20 @@ export class ActionExecutor {
   }
 
   pump(): void {
-    const run = this.states.ensureActiveRun();
-    if (run.state.agentsPaused || run.state.waitingForDecision) return;
+    const snapshot = this.states.ensureActiveRun();
+    if (snapshot.state.agentsPaused || snapshot.state.waitingForDecision) return;
     for (let index = 0; index < 3; index += 1) {
+      const run = this.states.ensureActiveRun();
+      if (run.state.agentsPaused || run.state.waitingForDecision) return;
       const task = this.tasks.claimNext();
       if (!task) return;
+      if (this.shouldDeferRealCall(run.state, task)) {
+        this.tasks.releaseClaim(task.id);
+        return;
+      }
+      if (task.kind === "call" && this.usesHappyRobot(task)) this.ringingRealCall = true;
       this.dispatch(task).catch((error) => {
+        this.ringingRealCall = false;
         logActionError("dispatch failed", {
           taskId: task.id,
           error: error instanceof Error ? error.message : String(error),
@@ -94,6 +112,19 @@ export class ActionExecutor {
         this.tasks.markDispatchOutcome(task.id, "unknown");
       });
     }
+  }
+
+  private usesHappyRobot(task: DispatchTask): boolean {
+    return Boolean(this.config.hooks[task.area as AreaHook] && this.config.happyrobotApiKey);
+  }
+
+  private realCallInFlight(state: CrisisStateDocument): boolean {
+    return records(state, "calls").some((call) => call.status === "en_curso" && call.simulated === false);
+  }
+
+  private shouldDeferRealCall(state: CrisisStateDocument, task: DispatchTask): boolean {
+    if (task.kind !== "call" || !this.usesHappyRobot(task)) return false;
+    return this.ringingRealCall || this.realCallInFlight(state);
   }
 
   private async dispatch(task: DispatchTask): Promise<void> {
@@ -144,9 +175,13 @@ export class ActionExecutor {
       });
       this.tasks.markDispatchOutcome(task.id, outcome);
       logAction("dispatch outcome", { taskId: task.id, adapter, outcome });
+      if (outcome !== "dispatched") this.ringingRealCall = false;
       if (outcome === "dispatched") {
+        // El timeout es de pared (~180 s), no de reloj de simulación: a ×20
+        // 180 s de escenario son 9 s reales y HappyRobot aún está marcando.
+        const speed = Math.max(1, Number(state.clock.speed ?? 1));
         this.due.push({
-          at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
+          at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS * speed,
           envelope: noAnswerEnvelope({ task, runId: run.id, callId }),
           onlyIfDispatched: true,
         });
@@ -171,6 +206,7 @@ export class ActionExecutor {
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {
+    this.ringingRealCall = false;
     const recorded = this.workflows.recordSpecialistResult(envelope);
     logAction("result", {
       taskId: envelope.taskId,

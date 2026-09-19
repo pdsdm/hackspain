@@ -205,3 +205,123 @@ test("a native HappyRobot callback closes the open call with its transcript", as
     database.close();
   }
 });
+
+test("HappyRobot no_answer timeout follows wall time when the clock is sped up", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { transporte: "http://hook.test/transporte" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const sped = structuredClone(run.state);
+    sped.clock.speed = 20;
+    states.saveState(run.id, sped);
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "x", counterpart: "y" },
+      idempotencyKey: "fast-clock",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const now = Number(sped.clock.simSeconds);
+    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS * 20 + 1);
+    assert.equal(tasks.get(task.id)?.status, "failed");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("a second HappyRobot call stays queued while another is ringing", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { espacios: "http://hook.test/espacios", catering: "http://hook.test/catering" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "a", counterpart: "A" },
+      idempotencyKey: "hr-1",
+    });
+    const second = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "catering",
+      kind: "call",
+      payload: { objective: "b", counterpart: "B" },
+      idempotencyKey: "hr-2",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(calls.filter((call) => call.status === "en_curso").length, 1);
+    assert.equal(tasks.get(second.id)?.status, "pending");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
+test("taking a call cancels the HappyRobot no_answer timeout", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { transporte: "http://hook.test/transporte" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "x", counterpart: "y" },
+      idempotencyKey: "hold-timeout",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    executor.holdDispatchTimeout(`call-${task.id}`);
+    const now = Number(run.state.clock.simSeconds);
+    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+    assert.equal((states.ensureActiveRun().state.calls as Array<Record<string, unknown>>)[0]?.status, "en_curso");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});

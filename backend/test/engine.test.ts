@@ -178,6 +178,61 @@ test("stored events record whether the coordinator ran as llm, rules or none", a
   }
 });
 
+test("intake without a public text does not write source:kind into the timeline", async () => {
+  const { database, states, instance } = engine();
+  try {
+    const before = (states.ensureActiveRun().state.events as unknown[]).length;
+    await instance.handle({
+      source: "happyrobot",
+      kind: "call_result",
+      payload: {
+        status: "completed",
+        result: { outcome: "accepted", summary: "ok", conditions: [], evidence: {}, data: {} },
+      },
+    });
+    const afterResult = states.ensureActiveRun().state.events as Array<{ text: string }>;
+    assert.equal(afterResult.length, before);
+    assert.equal(afterResult.some((event) => event.text.includes("happyrobot:")), false);
+
+    await assert.rejects(
+      instance.handle({ source: "human", kind: "take_call", payload: { callId: "missing" } }),
+      /Call not found/,
+    );
+    const afterTake = states.ensureActiveRun().state.events as Array<{ text: string }>;
+    assert.equal(afterTake.some((event) => event.text.includes("human:take_call")), false);
+  } finally {
+    database.close();
+  }
+});
+
+test("take_call on an open call writes an intervention, not the raw event kind", async () => {
+  const { database, states, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.calls = [
+      {
+        id: "call-open",
+        agent: "espacios",
+        counterpart: "Recinto",
+        channel: "llamada",
+        startedAt: state.clock.simSeconds,
+        endsAfter: 90,
+        status: "en_curso",
+        simulated: false,
+        transcript: [],
+      },
+    ];
+    states.saveState(run.id, state);
+    await instance.handle({ source: "human", kind: "take_call", payload: { callId: "call-open" } });
+    const events = states.ensureActiveRun().state.events as Array<{ kind: string; text: string }>;
+    assert.equal(events.some((event) => event.text.includes("human:take_call")), false);
+    assert.ok(events.some((event) => event.kind === "intervencion" && event.text.includes("Recinto")));
+  } finally {
+    database.close();
+  }
+});
+
 test("an accepted call_result does not call the coordinator; a rejected one does", async () => {
   let calls = 0;
   const completeFn = async () => {
