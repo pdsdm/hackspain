@@ -159,17 +159,7 @@ function checkShape(value: unknown): ValidationIssue[] {
       if (typeof raw.dueAt !== "number") add(`actions[${index}].dueAt no es un número`);
       if (!isStringArray(raw.dependsOn)) add(`actions[${index}].dependsOn no es una lista`);
       if (typeof raw.reason !== "string") add(`actions[${index}].reason no es un texto`);
-      if (raw.verificationTarget !== undefined) {
-        const target = raw.verificationTarget;
-        if (
-          !isRecord(target) ||
-          typeof target.commitmentId !== "string" ||
-          target.resourceType !== "space" ||
-          typeof target.resourceId !== "string"
-        ) {
-          add(`actions[${index}].verificationTarget inválido`);
-        }
-      }
+      // Un verificationTarget mal formado se descarta en validateOutput, no invalida el plan.
     }
   }
 
@@ -301,22 +291,6 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
         add("dependencia_inexistente", `acción ${action.id} depende de ${dependency}`);
       }
     }
-    if (action.verificationTarget) {
-      const target = action.verificationTarget;
-      const commitment = output.commitments.find((item) => item.id === target.commitmentId);
-      const resource = input.spaces.find((item) => item.id === target.resourceId);
-      if (action.area !== "espacios" || action.channel !== "llamada") {
-        add("target_no_confirmable", `acción ${action.id} no es una llamada de espacios`);
-      }
-      if (commitment?.area !== "espacios") {
-        add("target_compromiso_inexistente", target.commitmentId);
-      }
-      if (!resource) add("target_espacio_inexistente", target.resourceId);
-      if (target.resourceId !== "pabellonB" || target.commitmentId !== "c-pabB" || resource?.zone !== "sur" ||
-        commitment?.title !== "Reserva de Pabellón B · 450 plazas") {
-        add("target_fuera_demo", "Solo c-pabB: Reserva de Pabellón B · 450 plazas (Sur)");
-      }
-    }
   }
 
   for (const commitment of output.commitments) {
@@ -386,6 +360,31 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
   return issues;
 }
 
+// El target de verificación es un extra opcional de la demo (T35): si el modelo lo pone
+// donde no toca, se retira la marca y el plan sigue siendo válido. Nunca tumba un replan.
+function dropUnconfirmableTargets(output: CoordinatorOutput, input: CoordinatorInput): void {
+  for (const action of output.actions) {
+    const target: unknown = action.verificationTarget;
+    if (target === undefined) continue;
+    if (!isRecord(target)) {
+      delete action.verificationTarget;
+      continue;
+    }
+    const commitment = output.commitments.find((item) => item.id === target.commitmentId);
+    const resource = input.spaces.find((item) => item.id === target.resourceId);
+    const confirmable =
+      action.area === "espacios" &&
+      action.channel === "llamada" &&
+      target.commitmentId === "c-pabB" &&
+      target.resourceType === "space" &&
+      target.resourceId === "pabellonB" &&
+      commitment?.area === "espacios" &&
+      commitment.title === "Reserva de Pabellón B · 450 plazas" &&
+      resource?.zone === "sur";
+    if (!confirmable) delete action.verificationTarget;
+  }
+}
+
 export function validateOutput(
   value: unknown,
   input: CoordinatorInput,
@@ -399,6 +398,7 @@ export function validateOutput(
   output.operations = Array.isArray(output.operations) ? output.operations : [];
   output.queries = Array.isArray(output.queries) ? output.queries : [];
   output.done = output.done !== false;
+  dropUnconfirmableTargets(output, input);
   const issues = checkInvariants(output, input);
   return { output: issues.length === 0 ? output : null, issues };
 }

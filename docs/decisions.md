@@ -96,6 +96,19 @@
 - **Qué:** mientras se valida Cognition, el backend usa Helmcode con `deepseek-v4-flash` y harness JSON. Es independiente del modelo de voz, que se elige dentro de HappyRobot.
 - **Por qué:** prioriza latencia de replanificación y mantiene `rules` como respaldo. Descartado: confundir `COORDINATOR_MODEL` con el LLM de la llamada en tiempo real.
 
+**Medición del 19/09/2026, `npm run coordinator -- --runs=4 --fixture=crisis`, cuatro ejecuciones por variante:**
+
+| `COORDINATOR_REASONING_EFFORT` | Latencias | Válidas | Invitados asignados |
+|---|---|---|---|
+| `low` (recomendado) | 12,4 / 18,4 / 19,9 / 22,1 s | 4/4 | 600 en las cuatro |
+| vacío (por defecto) | 18,2 / 20,2 / 27,9 / 31,5 s | 4/4 | 600 en las cuatro |
+| `none` (sin thinking) | 6,1 / 7,4 / 7,7 / 8,5 s | 4/4 | **90 / 90 / 450 / 0** |
+
+**No pongas `none`.** Va tres veces más rápido, pero los planes dejan a la mayoría de los
+600 invitados sin asignar, que es justo el criterio de la demo. En otras 15 llamadas
+aparecieron dos respuestas de ~100 s y ~120 s: el bucle corta a 120 s y ese evento se queda
+sin plan, con el respaldo determinista solo para giros.
+
 ### Propuesta T35: JEV verifica evidencia; el backend conserva los efectos
 
 - **Qué:** HTTP sin SDK en el handler de resultados, máximo 1.500 ms y fallback; solo reserva `c-pabB` / Pabellón B Sur. Evaluación sin efectos por defecto; activación separada tras validar español.
