@@ -186,7 +186,8 @@ test("a disabled verifier leaves no JEV event or confirmation", async () => {
 
 for (const [name, evaluate, reason] of [
   ["unavailable", async () => { throw new Error("private provider error must not be displayed"); }, "verificacion no disponible"],
-  ["insufficient", async () => ({ ...SCORES, hasUnresolvedConditions: 0.9 }), "evidencia insuficiente"],
+  // Con probabilidades, la cronología explica el desacuerdo en vez de un «evidencia insuficiente» mudo.
+  ["insufficient", async () => ({ ...SCORES, hasUnresolvedConditions: 0.9 }), "la contraparte deja condiciones abiertas"],
 ] as const) {
   test(`callback returns 200 and explains ${name} verification`, async () => {
     const h = await setup({ evaluate });
@@ -198,6 +199,57 @@ for (const [name, evaluate, reason] of [
     } finally { await h.close(); }
   });
 }
+
+test("un desacuerdo con el extractor sale como incidencia en la cronología", async () => {
+  const h = await setup({
+    env: { JEV_APPLY_CONFIRMATIONS: "" },
+    evaluate: async () => ({ ...SCORES, acceptsTargetExplicitly: 0.4 }),
+  });
+  try {
+    await h.post();
+    const events = h.states.getPublicState().events as Array<{ kind: string; text: string }>;
+    const flagged = events.findLast((event) => event.text.startsWith("JEV"))!;
+    assert.equal(flagged.kind, "incidencia");
+    assert(flagged.text.includes("no lo sostiene"));
+    assert(flagged.text.includes("no hay una aceptación firme del interlocutor"));
+    // Señala, no decide: el compromiso sigue donde estaba.
+    assert.equal(commitment(h).status, "aceptado_condiciones");
+  } finally { await h.close(); }
+});
+
+test("sin desacuerdo no se ensucia la cronología con una incidencia", async () => {
+  const h = await setup({ env: { JEV_APPLY_CONFIRMATIONS: "" } });
+  try {
+    await h.post();
+    const events = h.states.getPublicState().events as Array<{ kind: string; text: string }>;
+    const flagged = events.findLast((event) => event.text.startsWith("JEV"))!;
+    assert.notEqual(flagged.kind, "incidencia");
+    assert(flagged.text.includes("solo evaluacion"));
+  } finally { await h.close(); }
+});
+
+test("las transcripciones sin revisar solo se mandan con la activación explícita", async () => {
+  const natural = [
+    { who: "agente" as const, text: "¿Me confirma la reserva tal y como la hemos hablado?", at: 3 },
+    { who: "humano" as const, text: "Confirmado, lo dejo cerrado con la gerencia del recinto.", at: 11 },
+  ];
+  const bloqueado = await setup({ env: { JEV_APPLY_CONFIRMATIONS: "" } });
+  try {
+    bloqueado.envelope.result.evidence.transcript = natural;
+    await bloqueado.post();
+    assert.equal(bloqueado.evaluations(), 0);
+    assert(verificationEvent(bloqueado).includes("privacidad revision necesaria"));
+  } finally { await bloqueado.close(); }
+
+  const permitido = await setup({
+    env: { JEV_APPLY_CONFIRMATIONS: "", JEV_ALLOW_UNREVIEWED_TRANSCRIPTS: "true" },
+  });
+  try {
+    permitido.envelope.result.evidence.transcript = natural;
+    await permitido.post();
+    assert.equal(permitido.evaluations(), 1);
+  } finally { await permitido.close(); }
+});
 
 test("concurrent duplicate callbacks apply and notify only once", async () => {
   const h = await setup();

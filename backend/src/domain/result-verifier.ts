@@ -4,7 +4,7 @@ import type { JevEvaluateFn } from "../agents/jev.js";
 import type { SpecialistResultEnvelope, TranscriptLine } from "../contracts/api.js";
 import type { DispatchTask } from "../state/task-repository.js";
 import {
-  confirmationBlocker, decideAcceptance, readVerificationTarget, verificationSnapshot,
+  acceptanceGap, confirmationBlocker, decideAcceptance, readVerificationTarget, verificationSnapshot,
   type AcceptanceDecision, type AcceptanceScores, type VerificationTarget,
 } from "./acceptance-policy.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
@@ -15,6 +15,14 @@ export interface CallAcceptanceVerification {
   target?: VerificationTarget;
   scores?: AcceptanceScores;
   snapshot?: string;
+  /** Desacuerdo entre lo que afirma el extractor y lo que sostiene la transcripción. */
+  gap?: string;
+}
+
+export interface VerificationOptions {
+  /** Manda a JEV transcripciones no revisadas. Solo para datos sintéticos. */
+  allowUnreviewedTranscripts?: boolean;
+  timeoutMs?: number;
 }
 
 const DEMO_WORDS = new Set(`a al ahora antes apertura aprueba aprobado autorización autoriza autorizado
@@ -53,6 +61,7 @@ export async function verifyCallAcceptance(
   state: CrisisStateDocument,
   applyConfirmations = false,
   reviewedTranscriptHashes: readonly string[] = [],
+  options: VerificationOptions = {},
 ): Promise<CallAcceptanceVerification> {
   const target = readVerificationTarget(task.payload);
   const keep = (reason: string): CallAcceptanceVerification => ({ decision: "keep_conditional", reason, ...(target ? { target } : {}) });
@@ -68,7 +77,9 @@ export async function verifyCallAcceptance(
     transcript.some((line, index) => line.at < 0 || line.at > 3600 || line.at < (transcript[index - 1]?.at ?? 0))) {
     return keep("evidencia_insuficiente");
   }
-  if (!isTranscriptAllowed(transcript, reviewedTranscriptHashes)) return keep("privacidad_revision_necesaria");
+  if (!options.allowUnreviewedTranscripts && !isTranscriptAllowed(transcript, reviewedTranscriptHashes)) {
+    return keep("privacidad_revision_necesaria");
+  }
   const space = state.spaces.find((item) => item.id === target.resourceId)!;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -80,13 +91,15 @@ export async function verifyCallAcceptance(
         terms: { spaceName: "Pabellón B", capacity: 450, readyAt: typeof space.readyAt === "number" ? space.readyAt : null, planCost: typeof state.budget.forecast === "number" ? state.budget.forecast : null },
         transcript: transcript.map(({ who, text, at }) => ({ who, text, at })),
       }),
-      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), 1_500); }),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), options.timeoutMs ?? 1_500); }),
     ]);
     const decision = decideAcceptance(scores);
+    const gap = acceptanceGap(scores);
     return {
       decision: applyConfirmations ? decision : "keep_conditional",
       reason: decision === "confirm_target" ? (applyConfirmations ? "evidencia_suficiente" : "solo_evaluacion") : "evidencia_insuficiente",
       target, scores,
+      ...(gap ? { gap } : {}),
       snapshot: verificationSnapshot(state),
     };
   } catch {
