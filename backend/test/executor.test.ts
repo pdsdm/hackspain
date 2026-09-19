@@ -213,6 +213,7 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(payload["situation.simSeconds"], run.state.clock.simSeconds);
     // El workflow contesta por la puerta traducida (T9), no por la estricta del contrato.
     assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
+    assert.equal(payload.transcriptCallbackUrl, "http://localhost:8000/workflow/happyrobot/transcript");
     const now = Number(run.state.clock.simSeconds);
     executor.fireDue(now + 60);
     assert.equal(tasks.get(task.id)?.status, "dispatched");

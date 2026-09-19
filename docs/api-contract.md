@@ -67,7 +67,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 
 `spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
 
-En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`.
+En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`. En llamadas reales, `calls[].transcript` crece con los callbacks parciales de T22 mientras el estado siga `en_curso`; sus líneas están ordenadas por `at`, no se duplican al reenviar un snapshot y permanecen en `/state` después de pasar a `terminada` y después de reiniciar el backend.
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
 
@@ -422,9 +422,33 @@ Campos de `result.data` que el backend aplica al estado:
 - Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` solo relanza al coordinador si aplicó una condición nueva o cambió materialmente un hecho seguro de `spaces[]`; una aceptación sin novedad no lo relanza. `rejected`, `no_answer` y `failed` sí lo relanzan si todavía pertenecen al run y versión vigentes. Duplicados, resultados obsoletos y datos inválidos no generan otra reconsideración.
 - El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot, y `deliveries[]` para las tareas `catering` (`confirmada` si el muelle está abierto, `bloqueada` si está cerrado; la entrega nombrada en el objetivo, o todas las no entregadas).
 
+### `POST /workflow/happyrobot/transcript` (T22)
+
+Callback parcial autenticado para una llamada real todavía activa. Usa el mismo bearer que el resto de endpoints de workflow. El cuerpo identifica la tarea mediante `taskId`/`task_id` o `callId`/`call_id = call-<taskId>`; el backend recupera la ejecución de la tarea y no confía en un `runId` interno enviado por HappyRobot.
+
+```json
+{
+  "call_id": "call-7a31…",
+  "session_id": "id-real-de-happyrobot",
+  "happyrobot_run_id": "run-real-opcional",
+  "transcript": [
+    { "id": "msg-1", "role": "assistant", "content": "¿Tienen libre el Lounge?", "at": 2 },
+    { "id": "msg-2", "role": "user", "content": "Sí, desde las 13:15.", "at": 6 }
+  ]
+}
+```
+
+El workflow manda un snapshot **acumulativo desde el inicio de la llamada** después de cada intervención, o cada pocos segundos. `transcript` acepta los formatos de T9 (`role`/`speaker`/`who`, `content`/`text`/`message`); `at` son segundos desde el inicio. `session_id` y `happyrobot_run_id` son correlación opcional, nunca secretos ni IDs inventados. El backend ordena, fusiona y persiste en SQLite; repetir el mismo snapshot no añade líneas.
+
+```json
+{ "ok": true, "duplicate": false, "added": 2, "total": 2 }
+```
+
+El webhook `HAPPYROBOT_HOOK_*` actual no documenta `run_id` ni `session_id` en su respuesta. Aunque la Public API garantiza `run_id` al usar `POST /workflows/:id/runs`, esa no es la ruta de disparo vigente. Por ello T22 requiere configurar en el workflow desplegado una herramienta o webhook durante el nodo de voz que use `transcriptCallbackUrl`. Si el nodo solo entrega sesión y transcript al finalizar, no hay transcript en vivo: habría que habilitar emisión parcial o migrar el disparo a `triggerRun` y consumir `/runs/:id/sessions` más `/sessions/:id/stream`. El callback final de abajo sigue siendo obligatorio.
+
 ### `POST /workflow/happyrobot/results`
 
-Misma autorización, misma respuesta y mismos efectos que `/workflow/results`, pero acepta el cuerpo nativo del workflow. Es la URL que el backend manda en `callbackUrl`, y el adaptador de T9 (`backend/src/actions/adapters/happyrobot-inbound.ts`) lo traduce al sobre de arriba antes de aplicarlo.
+Misma autorización, misma respuesta y mismos efectos que `/workflow/results`, pero acepta el cuerpo nativo del workflow. Es la URL que el backend manda en `callbackUrl`, y el adaptador de T9 (`backend/src/actions/adapters/happyrobot-inbound.ts`) lo traduce al sobre de arriba antes de aplicarlo. El transcript final se fusiona con las líneas parciales ya persistidas: no borra intervenciones ni repite líneas idénticas.
 
 ```json
 {
@@ -470,13 +494,14 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
   "situation": { "simSeconds": 43200, "planVersion": 2, "coordinatorStatus": "replanificando" },
   "contact.phone": "+34600000000",
   "situation.simSeconds": 43200,
-  "callbackUrl": "https://demo.example/workflow/happyrobot/results"
+  "callbackUrl": "https://demo.example/workflow/happyrobot/results",
+  "transcriptCallbackUrl": "https://demo.example/workflow/happyrobot/transcript"
 }
 ```
 
 `kind` y `channel` llevan la misma señal explícita (`call` | `sms` | `email`) para que un hook por área elija el canal de la tarea sin inferirlo del área. Esto no acredita por sí solo que el proveedor haya enviado, entregado o recibido un mensaje.
 
-El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
+El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Durante una llamada de voz configurada para T22, también publica snapshots acumulativos en `transcriptCallbackUrl`; ambos usan `HAPPYROBOT_WEBHOOK_TOKEN`. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback final en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.
 
 Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { WifiOff } from 'lucide-react'
 import { useCrisisState } from './data/useCrisisState'
-import { activeCall, pendingDecision } from './domain/selectors'
+import { displayCall, pendingDecision } from './domain/selectors'
 import type { FixtureName } from './domain/fixtures'
 import { TopBar } from './components/layout/TopBar'
 import { NavTabs } from './components/layout/NavTabs'
@@ -31,7 +31,7 @@ export default function App() {
   const [modal, setModal] = useState<'intervenir' | 'decisiones' | null>(null)
   const [drawer, setDrawer] = useState(false)
   const decision = pendingDecision(s)
-  const call = activeCall(s)
+  const call = displayCall(s)
   const disabled = ctl.pending || ctl.stale
 
   if (!ctl.ready) return <main className="connection-screen">

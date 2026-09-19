@@ -12,6 +12,7 @@ import { commitmentIdForAction, commitmentIdFromTaskPayload } from "./commitment
 import { parseClock } from "../agents/spaces/extract.js";
 import type { CallAcceptanceVerification } from "./result-verifier.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
+import { mergeTranscriptLines } from "./transcript.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import type { WorkflowEventRepository } from "../state/workflow-event-repository.js";
@@ -174,7 +175,10 @@ function applySpecialistState(
     if (call) {
       call.status = envelope.status === "no_answer" ? "sin_respuesta" : "terminada";
       if (envelope.result.evidence.transcript) {
-        call.transcript = envelope.result.evidence.transcript;
+        const current = Array.isArray(call.transcript)
+          ? call.transcript as NonNullable<SpecialistResultEnvelope["result"]["evidence"]["transcript"]>
+          : [];
+        call.transcript = mergeTranscriptLines(current, envelope.result.evidence.transcript).transcript;
       }
     }
     next.calls = calls;
