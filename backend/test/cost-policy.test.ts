@@ -163,4 +163,3 @@ for (const variant of ["accepted", "conditional", "rejected", "missing_evidence"
     } finally { database.close(); }
   });
 }
-
