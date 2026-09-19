@@ -77,7 +77,7 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 - `approve_spend`, `reject_spend`, `reject_split`: requieren `payload.decisionId`.
 - `pause`, `resume`: sin payload.
 - `set_constraint`: requiere `payload.text`.
-- `take_call`: requiere `payload.callId` de una llamada `en_curso`.
+- `take_call`: requiere `payload.callId` de una llamada `en_curso`. Si la llamada ya cerró (buzón, ocupado, timeout) responde **409** y no escribe un evento `human:take_call` en la cronología.
 
 Aprobar aumenta `budget.authorized`, pero no confirma recursos ni incrementa `budget.committed`. Mientras haya una decisión pendiente no se despachan acciones nuevas; las ya iniciadas continúan. Pausar evita nuevos despachos sin cancelar acciones iniciadas.
 
