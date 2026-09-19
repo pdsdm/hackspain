@@ -56,6 +56,8 @@ export class StateRepository {
   createRun(state: CrisisStateDocument, scenarioId = "madring-hospitality"): DemoRun {
     const id = randomUUID();
     const parsed = parseCrisisState(state);
+    // Los fixtures son instantáneas pausadas; una ejecución siempre arranca con el reloj vivo.
+    parsed.clock.paused = false;
 
     this.database.exec("BEGIN IMMEDIATE");
     try {

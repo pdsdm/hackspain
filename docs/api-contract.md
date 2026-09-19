@@ -101,7 +101,7 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 { "fixture": "calm" }
 ```
 
-`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`.
+`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`. La ejecución arranca siempre con `clock.paused: false`, aunque el fixture sea una instantánea pausada.
 
 ```json
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
@@ -244,4 +244,4 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
 }
 ```
 
-El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después.
+El workflow responde por el callback T3 (`POST /workflow/results`), no por el cuerpo de este POST. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y el coordinador vuelve a correr.

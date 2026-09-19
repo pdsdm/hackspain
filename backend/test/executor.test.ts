@@ -84,3 +84,45 @@ test("cancelled tasks are never dispatched", () => {
     database.close();
   }
 });
+
+test("a dispatched task without callback times out as no_answer", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { transporte: "http://hook.test/transporte" },
+    happyrobotApiKey: "key",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
+      idempotencyKey: "hook-call",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+    const now = Number(run.state.clock.simSeconds);
+    executor.fireDue(now + 60);
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    assert.equal(tasks.get(task.id)?.status, "failed");
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(calls[0]?.status, "sin_respuesta");
+    const agent = (states.ensureActiveRun().state.agents as Array<Record<string, unknown>>).find((a) => a.id === "transporte");
+    assert.equal(agent?.status, "incidencia");
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});

@@ -22,9 +22,36 @@ function records(state: CrisisStateDocument, field: string): Array<Record<string
 interface DueSim {
   at: number;
   envelope: SpecialistResultEnvelope;
+  // Un timeout solo se entrega si la tarea sigue esperando el callback real.
+  onlyIfDispatched?: boolean;
+}
+
+function noAnswerEnvelope(input: {
+  task: DispatchTask;
+  runId: string;
+  callId: string;
+}): SpecialistResultEnvelope {
+  const payload = isRecord(input.task.payload) ? input.task.payload : {};
+  return {
+    eventId: `timeout-${input.task.id}`,
+    taskId: input.task.id,
+    runId: input.runId,
+    planVersion: input.task.planVersion,
+    status: "no_answer",
+    result: {
+      outcome: "no_answer",
+      summary: `${String(payload.counterpart ?? "La contraparte")} no responde; sin resultado de la llamada.`,
+      conditions: [],
+      evidence: { callId: input.callId },
+      data: {},
+    },
+  };
 }
 
 export class ActionExecutor {
+  // Segundos de reloj que esperamos el callback de HappyRobot antes de dar la tarea por no contestada.
+  static readonly DISPATCH_TIMEOUT_SECONDS = 180;
+
   private due: DueSim[] = [];
   private engine: Engine | undefined;
 
@@ -46,7 +73,10 @@ export class ActionExecutor {
   fireDue(now: number): void {
     const ready = this.due.filter((item) => item.at <= now);
     this.due = this.due.filter((item) => item.at > now);
-    for (const item of ready) this.deliver(item.envelope);
+    for (const item of ready) {
+      if (item.onlyIfDispatched && this.tasks.get(item.envelope.taskId)?.status !== "dispatched") continue;
+      this.deliver(item.envelope);
+    }
   }
 
   pump(): void {
@@ -96,6 +126,13 @@ export class ActionExecutor {
         state,
       });
       this.tasks.markDispatchOutcome(task.id, outcome);
+      if (outcome === "dispatched") {
+        this.due.push({
+          at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
+          envelope: noAnswerEnvelope({ task, runId: run.id, callId }),
+          onlyIfDispatched: true,
+        });
+      }
       return;
     }
 
