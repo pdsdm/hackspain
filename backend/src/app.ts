@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
+import { translateHappyRobotResult } from "./actions/adapters/happyrobot-inbound.js";
 import { ActionExecutor } from "./actions/executor.js";
 import { llmVerbose, loadLlmConfig } from "./agents/coordinator/llm.js";
 import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
@@ -16,6 +17,7 @@ import {
   parseReset,
   parseSpecialistResult,
   parseTwist,
+  type SpecialistResultEnvelope,
 } from "./contracts/api.js";
 import { ControlService } from "./domain/control-service.js";
 import { Engine } from "./domain/engine.js";
@@ -249,36 +251,54 @@ export function createApp(
     }
   });
 
+  // Las dos puertas de resultado comparten verificación, registro y disparo del motor:
+  // `/workflow/results` recibe el sobre del contrato y la de HappyRobot su cuerpo nativo.
+  const applySpecialistResult = (
+    envelope: SpecialistResultEnvelope,
+    response: Response,
+    next: NextFunction,
+  ) => {
+    const task = taskRepository.get(envelope.taskId);
+    if (!task) throw new ContractError(`Task not found: ${envelope.taskId}`, 404);
+    const active = stateRepository.ensureActiveRun();
+    const evaluator =
+      task.runId === active.id && task.planVersion === active.state.planVersion
+        ? jevEvaluateFn
+        : undefined;
+    void verifyCallAcceptance(task, envelope, evaluator, active.state, config.jevApplyConfirmations, config.jevReviewedTranscriptHashes)
+      .then((verification) => {
+        const recorded = workflowService.recordSpecialistResult(envelope, config.jevEnabled ? verification : undefined);
+        logWorkflow("result", {
+          taskId: envelope.taskId,
+          eventId: envelope.eventId,
+          status: envelope.status,
+          applied: recorded.applied,
+          duplicate: recorded.duplicate,
+        });
+        if (recorded.applied && !recorded.duplicate) {
+          void engine.handle({
+            source: "happyrobot",
+            kind: "call_result",
+            payload: envelope as unknown as Record<string, unknown>,
+          });
+        }
+        response.status(200).json(recorded);
+      })
+      .catch(next);
+  };
+
   app.post("/workflow/results", authorizeWorkflow, (request, response, next) => {
     try {
-      const envelope = parseSpecialistResult(request.body);
-      const task = taskRepository.get(envelope.taskId);
-      if (!task) throw new ContractError(`Task not found: ${envelope.taskId}`, 404);
-      const active = stateRepository.ensureActiveRun();
-      const evaluator =
-        task.runId === active.id && task.planVersion === active.state.planVersion
-          ? jevEvaluateFn
-          : undefined;
-      void verifyCallAcceptance(task, envelope, evaluator, active.state, config.jevApplyConfirmations, config.jevReviewedTranscriptHashes)
-        .then((verification) => {
-          const recorded = workflowService.recordSpecialistResult(envelope, config.jevEnabled ? verification : undefined);
-          logWorkflow("result", {
-            taskId: envelope.taskId,
-            eventId: envelope.eventId,
-            status: envelope.status,
-            applied: recorded.applied,
-            duplicate: recorded.duplicate,
-          });
-          if (recorded.applied && !recorded.duplicate) {
-            void engine.handle({
-              source: "happyrobot",
-              kind: "call_result",
-              payload: envelope as unknown as Record<string, unknown>,
-            });
-          }
-          response.status(200).json(recorded);
-        })
-        .catch(next);
+      applySpecialistResult(parseSpecialistResult(request.body), response, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Puerta nativa de HappyRobot: es la URL que viaja en `callbackUrl` (D14).
+  app.post("/workflow/happyrobot/results", authorizeWorkflow, (request, response, next) => {
+    try {
+      applySpecialistResult(translateHappyRobotResult(request.body, taskRepository), response, next);
     } catch (error) {
       next(error);
     }
