@@ -10,19 +10,19 @@
 
 | | |
 |---|---|
-| **Foto tomada** | sábado 19 de septiembre de 2026, 11:18 |
-| **Commit de `main`** | `2c95d63` (PR #23) |
+| **Foto tomada** | sábado 19 de septiembre de 2026, 11:45 |
+| **Commit de `main`** | `deafd54` (PR #24) |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, prueba de integración T17 |
+| **Generado por** | Devin, recuperación T6/T9 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
 | `make check` | ✅ OK |
-| Tests de backend | ✅ **99 de 99** |
+| Tests de backend | ✅ **102 de 102** |
 
-Ambos verificados en `feat/zhi-integracion-final`, basada en `2c95d63`, con Node 22.23.2.
+Ambos verificados en `feat/alvaro-integracion`, basada en `deafd54`, con Node 22.23.2.
 
 ## Qué funciona
 
@@ -41,6 +41,7 @@ Todo lo de aquí está mergeado en `main`.
   consultas → validación → persistir`, sin SDK. Proveedores: Cognition (por defecto),
   Helmcode/Deepseek, OpenAI, Anthropic.
 - **Motor de eventos** (T24): `POST /events` con texto libre; reloj simulado que avanza.
+- **Trazabilidad de integración** (T17): logs de acciones/callbacks, prueba del payload HappyRobot y guía de pruebas mergeados en PR #24.
 - **Replanificación tras giro** (T16, en `review`): invalidación determinista de acuerdos.
 - **Agente de Espacios** (T11): guion de conversación y extractor de resultados.
 - **Frontend** (T4, T8, T23): panel de 3 columnas, plano Norte/Sur, mapa Leaflet, KPIs con
@@ -49,34 +50,30 @@ Todo lo de aquí está mergeado en `main`.
 
 ## Qué falta, por riesgo para la demo
 
-### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`todo`)
+### 🔴 1. Ninguna llamada real · T6 (`doing`), T9 (`doing`)
 
 Es el **requisito obligatorio del enunciado** ("interacción de verdad") y lo único que no
 se resuelve con horas de código, porque depende del equipo de HappyRobot, que está en el
 evento.
 
-Hay más avance del que dice el tablero. La rama **`Prueba-de-plataforma-y-llamada-real`**
-(sin mergear) tiene un workflow desplegado que funciona como **Web call** (micro del
-navegador), un panel «Avisar a…» y el envío del botón a `POST /events`; el frontend ya no
-maneja secretos de HappyRobot.
+La rama `feat/alvaro-integracion` ya valida `call_request`, encola una llamada sin LLM,
+inyecta el destino E.164 desde entorno y porta «Avisar a…» sin secretos en el frontend.
+El recorrido Vite → backend → tarea → llamada simulada → callback está verificado.
 
-**Lo que falta exactamente:** la URL de un trigger **Webhook**, un número de prueba que
-llegue al adaptador y la prueba contra una llamada saliente real. POSTear al deployment
-del Web call devuelve HTML.
+**Lo que falta exactamente:** `HAPPYROBOT_HOOK_ESPACIOS`, `HAPPYROBOT_WEBHOOK_TOKEN`,
+`PUBLIC_BASE_URL` y la prueba contra una llamada saliente real. El Web call de la rama
+antigua sigue disponible como respaldo.
 
 **Escalera de respaldo** (bajar un escalón solo cuando el anterior esté descartado):
 llamada saliente por API → **web call por navegador (ya funciona)** → SMS o email real →
 `sim` etiquetado como simulado en pantalla. Nunca presentar una grabación como llamada en
 vivo.
 
-### 🔴 2. No hay ninguna clave de LLM · sin tarea asignada
+### 🟡 2. Proveedor LLM sin prueba de demo
 
-**No existe fichero `.env` en el repo, solo `.env.example`.** Y sin clave, el coordinador
-no decide nada: verificado que `POST /events` con texto libre solo escribe en la cronología
-y el mundo no cambia.
-
-Esto está al mismo nivel de bloqueo que la llamada, y es mucho más fácil de resolver: hay
-créditos de Cognition y de Helmcode sin usar.
+Hay `HELMCODE_API_KEY` en el `.env` local; Cognition y Devin siguen sin clave. El camino
+Helmcode no se ha probado en esta sesión con un evento real. `rules` mantiene el respaldo
+determinista para los giros.
 
 ### 🟠 3. El panel enseña la simulación, no el backend · T27 (`todo`)
 
@@ -87,11 +84,11 @@ es el sistema.**
 Los tres endpoints que necesita ya existen. El trabajo no es construir, es cambiar el
 enchufe y arreglar lo que se rompa.
 
-### 🟠 4. Camino de llamada aún sin mergear · T28 (`todo`)
+### 🟠 4. Camino de llamada pendiente de merge · T28 (`todo`)
 
-La última rama de voz ya manda el botón «Avisar» a `POST /events` y deja HappyRobot en el
-backend. T17 registra la decisión y añade logs, pero ambos cambios siguen fuera de `main`.
-Falta mergear una sola implementación y probarla con el trigger real.
+`feat/alvaro-integracion` deja un único camino: «Avisar» → `POST /events` → backend →
+HappyRobot → callback. No contiene la sala Twilio. Falta mergear el PR y probar el trigger
+real.
 
 ### 🟡 5. Resto
 
@@ -99,16 +96,16 @@ Falta mergear una sola implementación y probarla con el trigger real.
 - Control humano verificado (T15): `/interventions` existe y registra, pero nadie ha
   comprobado que `pause`, `set_constraint` y `take_call` cambien lo que hace el
   coordinador después.
-- Integración (T17): la rama prueba Vite → backend → giro → acciones → callback y añade
-  logs/runbook; sigue sin llamada real. Entorno, pitch y vídeo (T18, T19, T21): nada.
+- Integración (T17): logs y runbook ya están en `main`; sigue sin llamada real. Entorno,
+  pitch y vídeo (T18, T19, T21): nada.
 - Aprendizaje entre ejecuciones (T20, bonus): nada.
 
 ## Bloqueos y de quién dependen
 
 | Qué | Depende de | ¿Externo? |
 |---|---|---|
-| Llamada real | trigger Webhook del workflow | **Sí — equipo de HappyRobot** |
-| Coordinador decidiendo | una clave de LLM en `.env` | No |
+| Llamada real | hook, token de callback y backend público | **Sí — equipo de HappyRobot + despliegue** |
+| Coordinador Helmcode | prueba real con la clave local | No |
 | Panel real | T27, y de que el backend aguante | No |
 | Guion del pitch | decidir giro principal y desenlace | No |
 
@@ -116,9 +113,8 @@ Falta mergear una sola implementación y probarla con el trigger real.
 
 | Rama | Qué tiene |
 |---|---|
-| `Prueba-de-plataforma-y-llamada-real` | T6/T28: Web call, sala de voz y panel «Avisar a…» que ya envía `POST /events`; sin mergear ni llamada saliente verificada. |
-| `feat/alvaro-integracion` | Apunta a `863ecf3`; no contiene cambios propios y está por detrás de `main`. |
-| `feat/zhi-integracion-final` | T17: logs, prueba del payload HappyRobot y guía sobre `2c95d63`; pendiente de merge. |
+| `feat/alvaro-integracion` | T6/T9/T28: `call_request` determinista, destino por entorno y panel «Avisar a…»; dos commits locales pendientes de push/PR. |
+| `Prueba-de-plataforma-y-llamada-real` | Web call y sala Twilio de respaldo; no portar a `main` mientras HappyRobot siga disponible. |
 
 ## Decisiones pendientes que bloquean a otros
 

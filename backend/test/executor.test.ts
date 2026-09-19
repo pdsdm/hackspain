@@ -95,6 +95,7 @@ test("a dispatched task without callback times out as no_answer", async () => {
     coordinatorMode: "rules" as const,
     hooks: { transporte: "http://hook.test/transporte" },
     happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
   const originalFetch = globalThis.fetch;
@@ -123,6 +124,9 @@ test("a dispatched task without callback times out as no_answer", async () => {
     assert.equal(payload.taskId, task.id);
     assert.equal(payload.runId, run.id);
     assert.equal(payload.planVersion, run.state.planVersion);
+    assert.equal(payload.phone_number, "+34600000000");
+    assert.equal((payload.contact as Record<string, unknown>).phone, "+34600000000");
+    assert.deepEqual(payload.data, {});
     assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/results");
     const now = Number(run.state.clock.simSeconds);
     executor.fireDue(now + 60);
