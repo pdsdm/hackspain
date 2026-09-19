@@ -66,6 +66,13 @@ export class Engine {
     return Boolean(this.options.llmConfig || this.options.completeFn);
   }
 
+  llmDeps(): { config?: LlmConfig; completeFn?: CompleteFn } {
+    return {
+      ...(this.options.llmConfig ? { config: this.options.llmConfig } : {}),
+      ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
+    };
+  }
+
   private applyGenerated(incident: GeneratedIncident): void {
     const run = this.states.ensureActiveRun();
     const draft = structuredClone(run.state);

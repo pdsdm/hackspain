@@ -10,6 +10,7 @@ import type { StateRepository } from "../state/state-repository.js";
 import type { TaskRepository } from "../state/task-repository.js";
 import {
   etaFor,
+  originStopId,
   placeById,
   routeTo,
   type WorldModel,
@@ -150,6 +151,47 @@ export function applyOperation(
       vehicle.status = operation.status ?? "desviado";
       if (operation.note !== undefined) vehicle.note = operation.note;
       draft.vehicles = records(draft, "vehicles");
+      return { ok: true };
+    }
+    case "spawn_vehicle": {
+      const fromId = originStopId(operation.from, operation.from);
+      const origin = placeById(world, fromId);
+      if (!origin) return { ok: false, error: `spawn_vehicle: origen desconocido ${operation.from}` };
+      const destination = findById(records(draft, "spaces"), operation.destinationId);
+      if (!destination) return { ok: false, error: `spawn_vehicle: destino desconocido ${operation.destinationId}` };
+      if (destination.status === "cerrado" || destination.status === "descartado") {
+        return { ok: false, error: `spawn_vehicle: destino ${operation.destinationId} ${String(destination.status)}` };
+      }
+      const vehicles = records(draft, "vehicles");
+      const id = operation.id?.trim() || `DHL-${randomUUID().slice(0, 8)}`;
+      if (vehicles.some((item) => item.id === id)) {
+        return { ok: false, error: `spawn_vehicle: ya existe ${id}; usa redirect_vehicle` };
+      }
+      const kind = operation.kind ?? "repartidor";
+      if (!["taxi", "vip", "repartidor"].includes(kind)) {
+        return { ok: false, error: `spawn_vehicle: kind desconocido ${kind}` };
+      }
+      const estimate = routeTo(world, fromId, operation.destinationId);
+      const delayMin = operation.delayMin ?? 0;
+      const departAt = now;
+      vehicles.push({
+        id,
+        kind,
+        name: id,
+        who: operation.who,
+        count: operation.count ?? 1,
+        from: fromId,
+        origin: origin.name,
+        destinationId: operation.destinationId,
+        route: estimate.route,
+        departAt,
+        arriveAt: departAt + estimate.minutes * 60 + delayMin * 60,
+        delayMin,
+        status: "en_ruta",
+        counterpart: operation.counterpart ?? "DHL Express",
+        ...(operation.note ? { note: operation.note } : {}),
+      });
+      draft.vehicles = vehicles;
       return { ok: true };
     }
     case "set_group": {
