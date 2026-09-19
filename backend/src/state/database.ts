@@ -45,7 +45,7 @@ const SCHEMA = `
     payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
     idempotency_key TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending'
-      CHECK (status IN ('pending', 'dispatching', 'dispatched', 'unknown', 'completed', 'failed')),
+      CHECK (status IN ('pending', 'dispatching', 'dispatched', 'unknown', 'completed', 'failed', 'cancelled')),
     attempts INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
