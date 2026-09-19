@@ -77,6 +77,10 @@ function normalizeOperation(raw: unknown): unknown {
     const dockId = pickString(raw.dockId, raw.dock, raw.muelleId, raw.muelle, raw.destinationDock);
     if (dockId !== undefined) next.dockId = dockId;
   }
+  if (raw.op === "redirect_vehicle") {
+    const destinationId = pickString(raw.destinationId, raw.toId, raw.destination, raw.placeId);
+    if (destinationId !== undefined) next.destinationId = destinationId;
+  }
   return next;
 }
 
@@ -85,6 +89,7 @@ function operationReady(raw: unknown): boolean {
   if (raw.op === "set_place") return typeof raw.id === "string" && typeof raw.status === "string";
   if (raw.op === "reroute_shuttle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
   if (raw.op === "redirect_delivery") return typeof raw.id === "string" && typeof raw.dockId === "string";
+  if (raw.op === "redirect_vehicle") return typeof raw.id === "string" && typeof raw.destinationId === "string";
   if (raw.op === "cancel_action") return typeof raw.taskId === "string" && typeof raw.reason === "string";
   if (raw.op === "set_group") return typeof raw.id === "string";
   if (raw.op === "set_gate") return typeof raw.id === "string";
@@ -204,6 +209,7 @@ function checkShape(value: unknown): ValidationIssue[] {
           "set_gate",
           "reroute_shuttle",
           "redirect_delivery",
+          "redirect_vehicle",
           "set_group",
           "cancel_action",
           "set_agent",
@@ -217,6 +223,9 @@ function checkShape(value: unknown): ValidationIssue[] {
         }
         if (raw.op === "redirect_delivery" && (typeof raw.id !== "string" || typeof raw.dockId !== "string")) {
           add(`operations[${index}] redirect_delivery incompleto`);
+        }
+        if (raw.op === "redirect_vehicle" && (typeof raw.id !== "string" || typeof raw.destinationId !== "string")) {
+          add(`operations[${index}] redirect_vehicle incompleto`);
         }
         if (raw.op === "cancel_action" && (typeof raw.taskId !== "string" || typeof raw.reason !== "string")) {
           add(`operations[${index}] cancel_action incompleto`);

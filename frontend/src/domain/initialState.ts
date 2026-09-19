@@ -62,6 +62,11 @@ export const ROUTE_CASTILLA: LatLng[] = [POS.castilla, [40.4690, -3.6760], [40.4
 export const ROUTE_T4: LatLng[] = [POS.t4, [40.4890, -3.6040], [40.4840, -3.6020], [40.4760, -3.6050], [40.4690, -3.6080], POS.accesoSur]
 export const ROUTE_COSLADA: LatLng[] = [POS.coslada, [40.4500, -3.6000], [40.4580, -3.6120], [40.4610, -3.6230], POS.muelleSur]
 
+export const ROUTE_T4_PADDOCK: LatLng[] = [POS.t4, [40.4890, -3.6040], [40.4850, -3.6150], POS.parkingNorte, POS.accesoPaddock, POS.paddockNorte]
+export const ROUTE_CHAMARTIN_PARKING: LatLng[] = [POS.chamartin, [40.4745, -3.6700], [40.4760, -3.6480], [40.4720, -3.6330], [40.4640, -3.6230], POS.parkingSur, POS.accesoSur]
+export const ROUTE_CASTILLA_PARKING: LatLng[] = [POS.castilla, [40.4690, -3.6760], [40.4745, -3.6560], [40.4735, -3.6400], [40.4650, -3.6260], POS.parkingSur, POS.accesoSur]
+export const ROUTE_COSLADA_ESTE: LatLng[] = [POS.coslada, [40.4500, -3.6000], [40.4580, -3.6120], [40.4660, -3.6130], POS.muelleEste]
+
 export const ROUTE_NORTE_FROM_SUR: LatLng[] = [POS.accesoSur, [40.4640, -3.6120], [40.4700, -3.6100], [40.4790, -3.6120], POS.accesoNorte]
 
 export function createInitialState(): CrisisState {
@@ -109,6 +114,17 @@ export function createInitialState(): CrisisState {
     deliveries: [
       { id: 'CAT-01', name: 'CAT-01 · 360 servicios', services: 360, dockId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 5), arriveAt: hm(12, 40), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
       { id: 'CAT-02', name: 'CAT-02 · 240 servicios', services: 240, dockId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 30), arriveAt: hm(13, 5), status: 'programada', note: 'Destino invalidado: Muelle Sur cerrado' },
+    ],
+    vehicles: [
+      { id: 'VIP-01', kind: 'vip', name: 'VIP-01', who: 'Director de equipo · Alpine', count: 3, from: 't4', origin: 'Aeropuerto T4', destinationId: 'paddockNorte', route: ROUTE_T4_PADDOCK, departAt: hm(12, 10), arriveAt: hm(12, 38), delayMin: 0, status: 'en_ruta', counterpart: 'Chófer VIP-01' },
+      { id: 'VIP-02', kind: 'vip', name: 'VIP-02', who: 'Director de equipo · Aston Martin', count: 2, from: 't4', origin: 'Aeropuerto T4', destinationId: 'paddockNorte', route: ROUTE_T4_PADDOCK, departAt: hm(12, 20), arriveAt: hm(12, 48), delayMin: 0, status: 'en_ruta', counterpart: 'Chófer VIP-02' },
+      { id: 'VIP-03', kind: 'vip', name: 'VIP-03', who: 'Patrocinador principal', count: 4, from: 't4', origin: 'Aeropuerto T4', destinationId: 'paddockNorte', route: ROUTE_T4_PADDOCK, departAt: hm(12, 35), arriveAt: hm(13, 3), delayMin: 0, status: 'en_ruta', counterpart: 'Chófer VIP-03' },
+      { id: 'TX-01', kind: 'taxi', name: 'TX-01', who: 'Invitados por sus medios', count: 4, from: 'chamartin', origin: 'Chamartín', destinationId: 'accesoSur', route: ROUTE_CHAMARTIN_PARKING, departAt: hm(12, 5), arriveAt: hm(12, 47), delayMin: 0, status: 'en_ruta', counterpart: 'Central de taxis' },
+      { id: 'TX-02', kind: 'taxi', name: 'TX-02', who: 'Invitados por sus medios', count: 3, from: 'castilla', origin: 'Plaza de Castilla', destinationId: 'accesoSur', route: ROUTE_CASTILLA_PARKING, departAt: hm(12, 12), arriveAt: hm(12, 57), delayMin: 0, status: 'en_ruta', counterpart: 'Central de taxis' },
+      { id: 'TX-03', kind: 'taxi', name: 'TX-03', who: 'Invitados por sus medios', count: 4, from: 'chamartin', origin: 'Chamartín', destinationId: 'accesoSur', route: ROUTE_CHAMARTIN_PARKING, departAt: hm(12, 18), arriveAt: hm(13, 0), delayMin: 0, status: 'en_ruta', counterpart: 'Central de taxis' },
+      { id: 'TX-04', kind: 'taxi', name: 'TX-04', who: 'Invitados por sus medios', count: 2, from: 'castilla', origin: 'Plaza de Castilla', destinationId: 'accesoSur', route: ROUTE_CASTILLA_PARKING, departAt: hm(12, 30), arriveAt: hm(13, 15), delayMin: 0, status: 'en_ruta', counterpart: 'Central de taxis' },
+      { id: 'REP-01', kind: 'repartidor', name: 'REP-01', who: 'Hielo y bebida · última hora', count: 1, from: 'coslada', origin: 'Coslada', destinationId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 20), arriveAt: hm(12, 55), delayMin: 0, status: 'en_ruta', counterpart: 'Repartidor REP-01', note: 'Destino invalidado: Muelle Sur cerrado' },
+      { id: 'REP-02', kind: 'repartidor', name: 'REP-02', who: 'Flores y cartelería · última hora', count: 1, from: 'coslada', origin: 'Coslada', destinationId: 'muelleEste', route: ROUTE_COSLADA_ESTE, departAt: hm(12, 40), arriveAt: hm(13, 18), delayMin: 0, status: 'en_ruta', counterpart: 'Repartidor REP-02' },
     ],
     attendanceExpected: 110000,
     gates: [

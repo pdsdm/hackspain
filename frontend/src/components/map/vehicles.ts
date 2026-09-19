@@ -1,10 +1,11 @@
-import type { CrisisState, Delivery, LatLng, Shuttle } from '../../domain/types'
+import type { CrisisState, Delivery, LatLng, Shuttle, Vehicle } from '../../domain/types'
+import type { VehicleIconKind } from './icons'
 import { fmtClock } from '../../domain/time'
 import { progress } from './geo'
 
 export interface VehicleView {
   id: string
-  kind: 'bus' | 'truck'
+  kind: VehicleIconKind
   name: string
   load: string
   destId: string
@@ -53,9 +54,21 @@ function deliveryView(s: CrisisState, d: Delivery, now: number): VehicleView {
   }
 }
 
+function otherView(s: CrisisState, v: Vehicle, now: number): VehicleView {
+  const kind: VehicleIconKind = v.kind === 'taxi' ? 'taxi' : v.kind === 'vip' ? 'vip' : 'van'
+  const label: Record<Vehicle['status'], string> = { en_ruta: 'En ruta', retenido: 'Retenido', desviado: 'Desviado · nueva ruta', llegado: 'Llegado' }
+  const tone = v.status === 'llegado' ? 'green' : v.status === 'retenido' ? 'red' : v.status === 'desviado' ? 'amber' : 'ink'
+  const load = v.kind === 'repartidor' ? v.who : `${v.count} · ${v.who}`
+  return {
+    id: v.id, kind, name: v.name, load, destId: v.destinationId, destName: spaceName(s, v.destinationId),
+    eta: v.arriveAt, etaLabel: fmtClock(v.arriveAt), pct: v.status === 'retenido' ? Math.round(progress(v.departAt, v.arriveAt, now) * 100) : Math.round(progress(v.departAt, v.arriveAt, now) * 100),
+    status: v.note ? `${label[v.status]} · ${v.note}` : label[v.status], tone, delayed: v.status === 'retenido', done: v.status === 'llegado', waypoints: viaPoints(s, v.route), fallback: v.route?.length ? v.route : [[40.4732, -3.6195], [40.4732, -3.6195]],
+  }
+}
+
 export function vehicleViews(s: CrisisState): VehicleView[] {
   const now = s.clock.simSeconds
-  return [...s.shuttles.map((sh) => shuttleView(s, sh, now)), ...s.deliveries.map((d) => deliveryView(s, d, now))]
+  return [...s.shuttles.map((sh) => shuttleView(s, sh, now)), ...s.deliveries.map((d) => deliveryView(s, d, now)), ...(s.vehicles ?? []).map((v) => otherView(s, v, now))]
 }
 
 export function vehicleRowsHtml(list: VehicleView[]) {

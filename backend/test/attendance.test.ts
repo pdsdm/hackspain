@@ -63,3 +63,38 @@ test("un acceso cerrado no se mueve", () => {
   assert.equal(gate.waiting, before.waiting);
   assert.equal(gate.status, "cerrado");
 });
+
+test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehículo retenido", async () => {
+  const { SimulationClock } = await import("../src/domain/clock.js");
+  const { ActionExecutor } = await import("../src/actions/executor.js");
+  const { loadConfig } = await import("../src/config.js");
+  const { WorkflowService } = await import("../src/domain/workflow-service.js");
+  const { openDatabase } = await import("../src/state/database.js");
+  const { StateRepository } = await import("../src/state/state-repository.js");
+  const { TaskRepository } = await import("../src/state/task-repository.js");
+  const { WorkflowEventRepository } = await import("../src/state/workflow-event-repository.js");
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
+  const clock = new SimulationClock(states, new ActionExecutor(states, tasks, workflows, config), 60, 1);
+  try {
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.clock.speed = 3600;
+    const vehicles = state.vehicles as Array<Record<string, unknown>>;
+    vehicles.find((item) => item.id === "TX-02")!.status = "retenido";
+    states.saveState(run.id, state);
+    clock.tick();
+    const after = states.ensureActiveRun().state.vehicles as Array<Record<string, unknown>>;
+    assert.equal(after.find((item) => item.id === "VIP-01")!.status, "llegado");
+    assert.equal(after.find((item) => item.id === "TX-01")!.status, "llegado");
+    assert.equal(after.find((item) => item.id === "TX-02")!.status, "retenido");
+    const events = states.ensureActiveRun().state.events as Array<{ text: string }>;
+    assert.ok(events.some((event) => event.text.startsWith("VIP-01") && event.text.includes("Paddock")));
+  } finally {
+    clock.stop();
+    database.close();
+  }
+});

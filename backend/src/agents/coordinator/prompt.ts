@@ -93,11 +93,11 @@ REGLAS DEL FORMATO
 
 MAPA Y OPERACIONES
 Si el evento dice que un lugar cierra, se inunda, tiene una fuga o deja de servir, emite set_place con ese id y status "cerrado" en esta misma respuesta; y set_place con status "pendiente" para cada alternativa que pongas en consulta. Sin eso, el panel sigue mostrando el lugar como operativo.
-Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada.
+Cerrar un lugar no mueve a nadie. Si un acceso, muelle o pabellón deja de servir, debes reroute_shuttle, redirect_delivery, redirect_vehicle (taxis, VIP, repartidores: { "op": "redirect_vehicle", "id", "destinationId", "note" }) o set_group para cada afectado. Norte exige traslado exterior (enlace accesoSur→accesoNorte). Cancela con cancel_action las tareas que el nuevo contexto invalida. No pongas un lugar en "confirmado": eso solo lo hace un resultado de llamada.
 
 Amplía el JSON con:
 
-"operations": [ { "op": "set_place"|"set_gate"|"reroute_shuttle"|"redirect_delivery"|"set_group"|"cancel_action"|"set_agent"|"log_event"|"add_constraint", ...campos } ],
+"operations": [ { "op": "set_place"|"set_gate"|"reroute_shuttle"|"redirect_delivery"|"redirect_vehicle"|"set_group"|"cancel_action"|"set_agent"|"log_event"|"add_constraint", ...campos } ],
 "queries": [ { "type": "affected_by", "placeId": "..." } | { "type": "alternatives_for", "placeId": "...", "minCapacity": 90 } | { "type": "route", "vehicleId": "BUS-01", "destinationId": "esperaSur" } ],
 "done": true
 `;
@@ -180,6 +180,11 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     }
     for (const delivery of input.deliveries ?? []) {
       lines.push(`- ${delivery.id} · muelle ${delivery.dockId} · llega ${delivery.arriveAt} · ${delivery.status}`);
+    }
+    for (const vehicle of input.vehicles ?? []) {
+      lines.push(
+        `- ${vehicle.id} · ${vehicle.kind} · ${vehicle.who} (${vehicle.count}) · ${vehicle.from} → ${vehicle.destinationId} · llega ${vehicle.arriveAt} · ${vehicle.status}`,
+      );
     }
   }
 
