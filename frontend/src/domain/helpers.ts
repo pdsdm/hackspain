@@ -72,6 +72,17 @@ export function groups(s: CrisisState) {
   return { acceso: g('g-acceso'), shuttles: g('g-shuttles'), propios: g('g-propios') }
 }
 
+/**
+ * Techo de lo que la tarjeta aguanta en pantalla si nadie cierra la llamada. El backend la
+ * cierra al llegar el resultado, pero un callback real perdido —túnel caído, workflow sin
+ * publicar— dejaba «Llamada en curso» colgada encima del mapa para siempre.
+ */
+const CALL_SCREEN_CAP_SECONDS = 30
+
 export function activeCall(s: CrisisState) {
-  return s.calls.find((c) => c.status === 'en_curso') ?? null
+  return s.calls.find((c) => {
+    if (c.status !== 'en_curso') return false
+    const elapsed = s.clock.simSeconds - c.startedAt
+    return elapsed <= Math.max(c.endsAfter ?? 0, CALL_SCREEN_CAP_SECONDS)
+  }) ?? null
 }
