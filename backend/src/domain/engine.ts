@@ -8,7 +8,7 @@ import type { CoordinatorMode, InitialFixture } from "../config.js";
 import { ContractError, parseIntervention, parseTwist, type Intervention } from "../contracts/api.js";
 import { ControlService } from "./control-service.js";
 import type { ActionExecutor } from "../actions/executor.js";
-import { EventRepository, type EventSource } from "../state/event-repository.js";
+import { EventRepository, type CoordinatorRunMode, type EventSource } from "../state/event-repository.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { TaskRepository } from "../state/task-repository.js";
 import type { WorldModel } from "../world/world.js";
@@ -57,8 +57,13 @@ export class Engine {
 
   handle(event: IncomingEvent): Promise<string> {
     const eventId = event.id ?? randomUUID();
-    this.queue = this.queue.then(() => this.process({ ...event, id: eventId }));
-    return this.queue.then(() => eventId);
+    const result = this.queue.then(() => this.process({ ...event, id: eventId }));
+    // Un evento rechazado solo falla para quien lo envió; la cola sigue viva.
+    this.queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result.then(() => eventId);
   }
 
   async reset(fixture?: InitialFixture): Promise<{ runId: string; planVersion: number }> {
@@ -105,6 +110,7 @@ export class Engine {
       event.text ?? `${event.source}:${event.kind}`,
     );
 
+    let mode: CoordinatorRunMode = "none";
     try {
       if (event.source === "human") {
         const intervention = parseIntervention({
@@ -113,22 +119,23 @@ export class Engine {
         });
         this.control.applyIntervention(intervention);
         if (shouldCoordinateIntervention(intervention.type)) {
-          await this.runCoordinator(event);
+          mode = await this.runCoordinator(event);
         }
       } else if (event.source === "jury") {
         const twist = parseTwist({ twist: event.payload?.twist ?? event.kind });
         const before = this.states.ensureActiveRun().state;
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
         this.control.applyTwist(twist);
-        if (!already) await this.runCoordinator(event);
+        if (!already) mode = await this.runCoordinator(event);
       } else {
-        await this.runCoordinator(event);
+        mode = await this.runCoordinator(event);
       }
     } catch (error) {
       logCoordError("excepción al procesar", error);
       if (error instanceof ContractError) throw error;
       this.markCoordinatorDown();
     }
+    this.events.setMode(event.id, mode);
   }
 
   private appendTimeline(kind: string, text: string): void {
