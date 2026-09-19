@@ -125,6 +125,10 @@ Enciende o apaga el «Modo vivo»: microincidencias con semilla que nadie ha ele
 
 `GET /state` expone `clock.live: boolean` y `clock.liveSeed: number`, y `incidentsApplied[]` con los ids ya lanzados. Con el modo encendido, el reloj lanza como máximo una incidencia cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados. Misma semilla, misma secuencia (catálogo en `backend/src/domain/incidents.ts`). Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
 
+### Afluencia en los accesos (`gates[]`)
+
+El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.attendanceSeed`, de `SIM_SEED` o de `liveSeed`) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado`, se anota `incidencia` y, como máximo cada 900 s simulados por acceso (`lastSaturationAt`), entra al coordinador un evento `source: clock`, `kind: gate_saturated`, `payload: { gateId, waiting }`; en `rules` se abre otro acceso cerrado de la misma zona si lo hay. Misma semilla, misma serie.
+
 ### `POST /events`
 
 Ingesta libre. El motor la encola y responde de inmediato; el coordinador corre en proceso.

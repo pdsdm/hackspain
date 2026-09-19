@@ -39,7 +39,7 @@
 | T27 | Panel contra el backend real de punta a punta (`VITE_DATA_SOURCE=api`) | Pep (apoyo: Zhi) | `feat/pep-panel-api` (PR #28, mergeada) | - | done |
 | T28 | Unificar por dónde se lanza la llamada: backend vs servidor de Vite | Álvaro (con Zhi y Pep) | `feat/alvaro-integracion` (PR #26, mergeada) | - | done |
 | T29 | Mundo ampliado: paddock, parkings, más accesos, muelle Norte | Pep | `feat/pep-mundo` | [T29](docs/specs/T29-mundo-ampliado.md) | review |
-| T30 | Afluencia con picos y saturación de accesos en el backend | Zhi (tick) + Ventura (regla) | `feat/zhi-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | todo |
+| T30 | Afluencia con picos y saturación de accesos en el backend | Pep | `feat/pep-afluencia` | [T30](docs/specs/T30-afluencia-picos.md) | review |
 | T31 | Actores móviles: taxis, VIP y repartidores de última hora | Zhi + Pep + Ventura | `feat/zhi-actores` | [T31](docs/specs/T31-actores-moviles.md) | todo |
 | T32 | Incidencias en vivo con semilla («Modo vivo») | Pep (revisa Zhi) | `feat/pep-incidencias` | [T32](docs/specs/T32-incidencias-vivo.md) | review |
 | T33 | El coordinador no se relanza tras un `call_result` aceptado (evita replanificaciones en cascada) | Pep | `feat/pep-engine-callresult` | - | review |
