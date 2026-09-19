@@ -17,8 +17,6 @@ export type AreaHook = "espacios" | "catering" | "transporte" | "asistentes";
 
 export interface AppConfig {
   databasePath: string;
-  supabaseUrl: string | undefined;
-  supabaseServiceRoleKey: string | undefined;
   host: string;
   port: number;
   workflowToken: string | undefined;
@@ -61,21 +59,6 @@ function readDatabasePath(value: string | undefined): string {
   }
 
   return path === ":memory:" ? path : resolve(path);
-}
-
-function readSupabase(
-  urlValue: string | undefined,
-  keyValue: string | undefined,
-): { supabaseUrl: string | undefined; supabaseServiceRoleKey: string | undefined } {
-  const supabaseUrl = urlValue?.trim() || undefined;
-  const supabaseServiceRoleKey = keyValue?.trim() || undefined;
-  if (supabaseUrl && !supabaseServiceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required when SUPABASE_URL is set");
-  }
-  if (supabaseServiceRoleKey && !supabaseUrl) {
-    throw new Error("SUPABASE_URL is required when SUPABASE_SERVICE_ROLE_KEY is set");
-  }
-  return { supabaseUrl, supabaseServiceRoleKey };
 }
 
 function readFixture(value: string | undefined): InitialFixture {
@@ -172,7 +155,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const seed = readSeed(env.SIM_SEED);
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
-    ...readSupabase(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
     host: env.HOST?.trim() || "0.0.0.0",
     port: readPort(env.PORT),
     workflowToken: env.HAPPYROBOT_WEBHOOK_TOKEN?.trim() || undefined,

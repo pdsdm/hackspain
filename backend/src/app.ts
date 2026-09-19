@@ -43,8 +43,6 @@ export interface AppOptions {
 function defaultConfig(workflowToken: string | undefined): AppConfig {
   return {
     databasePath: ":memory:",
-    supabaseUrl: undefined,
-    supabaseServiceRoleKey: undefined,
     host: "127.0.0.1",
     port: 8000,
     workflowToken,
