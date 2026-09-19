@@ -140,7 +140,8 @@ export interface Decision {
   title: string
   summary: string
   rationale?: string
-  cost: number
+  kind?: 'operational'
+  cost: number | null
   conditions: string[]
   effectApprove: string
   effectReject: string
@@ -182,7 +183,7 @@ export interface Budget {
   contingency: number
   autonomousLimit: number
   authorized: number
-  forecast: number
+  forecast: number | null
   committed: number
 }
 
@@ -193,7 +194,6 @@ export type TwistId =
   | 'delivery_delay'
   | 'dock_blocked'
   | 'provider_silent'
-  | 'reject_spend'
   | 'reject_split'
   | 'guest_need'
 
@@ -241,8 +241,8 @@ export interface CrisisState {
 }
 
 export type InterventionType =
-  | 'approve_spend'
-  | 'reject_spend'
+  | 'approve_plan'
+  | 'reject_plan'
   | 'reject_split'
   | 'pause'
   | 'resume'

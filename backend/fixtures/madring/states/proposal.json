@@ -273,7 +273,6 @@
       "counterpart": "Recinto",
       "status": "aceptado_condiciones",
       "conditions": [
-        "Autorización de gasto",
         "Confirmación de reserva"
       ],
       "planVersion": 2,
@@ -288,8 +287,7 @@
       "conditions": [
         "Montaje 13:15",
         "Espera autorizada",
-        "Apertura escalonada aceptada",
-        "Autorización de gasto"
+        "Apertura escalonada aceptada"
       ],
       "planVersion": 2,
       "updatedAt": 44280
@@ -1057,15 +1055,16 @@
   "decisions": [
     {
       "id": "d-plan-sur",
-      "title": "Autorizar Pabellón B + Lounge Sur",
-      "summary": "450 plazas a las 13:00 y 150 a las 13:15 con espera autorizada.",
+      "kind": "operational",
+      "title": "Aceptar apertura escalonada en Sur",
+      "summary": "450 plazas a las 13:00 y 150 a las 13:15 con espera autorizada. Decisión sobre el servicio, no sobre su coste.",
       "cost": 3200,
       "conditions": [
         "Espera para 150",
         "Muelle y recepción",
         "Reserva de espacios"
       ],
-      "effectApprove": "Autoriza gasto y apertura escalonada; las condiciones requieren confirmación.",
+      "effectApprove": "Acepta la apertura escalonada; las reservas y condiciones requieren confirmación.",
       "effectReject": "Evaluar alternativa Norte con permisos, traslado exterior, coste y retraso.",
       "status": "pendiente",
       "createdAt": 44280
@@ -1097,7 +1096,7 @@
       "id": "proposal-decision",
       "time": 44280,
       "kind": "decision",
-      "text": "Se solicitan 3.200 €; ninguna reserva confirmada todavía"
+      "text": "Se consulta apertura escalonada: 150 personas esperan hasta 13:15. Coste informativo 3.200 €; ninguna reserva confirmada todavía"
     }
   ],
   "budget": {
@@ -1108,8 +1107,7 @@
     "committed": 0
   },
   "constraints": [
-    "Norte y Sur sin conexión interior",
-    "Gasto autónomo ≤ 1.500 €"
+    "Norte y Sur sin conexión interior"
   ],
   "twistsApplied": [],
   "selectedId": "principal",

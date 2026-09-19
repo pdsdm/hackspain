@@ -84,6 +84,7 @@ export function scheduleSimResult(input: {
       },
       data: positive
         ? {
+            ...(reply.committedCost === undefined ? {} : { committedCost: reply.committedCost }),
             ...attendeesData(input.task, payload, input.guestGroups),
             ...cateringData(input.task, payload, input.deliveries, input.spaces),
           }

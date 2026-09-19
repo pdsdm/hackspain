@@ -103,16 +103,11 @@ function applyTwistEffect(state: CrisisStateDocument, twist: TwistId): void {
       addEvent(state, "fallo", "El transportista no responde", "transporte");
       break;
     }
-    case "reject_spend": {
-      const pending =
-        (typeof state.waitingForDecision === "string" ? findById(state.decisions, state.waitingForDecision) : undefined) ??
-        state.decisions.find((decision) => decision.status === "pendiente");
-      if (pending && pending.status === "pendiente") pending.status = "rechazada";
-      state.waitingForDecision = null;
-      addEvent(state, "intervencion", "El responsable rechaza el gasto adicional");
-      break;
-    }
     case "reject_split": {
+      for (const decision of state.decisions) {
+        if (decision.status === "pendiente") decision.status = "rechazada";
+      }
+      state.waitingForDecision = null;
       for (const id of ["pabellonB", "loungeSur"]) {
         const space = findById(spaces, id);
         if (space) space.status = "descartado";
@@ -178,18 +173,24 @@ export class ControlService {
       }
       case "approve_spend":
       case "reject_spend":
-      case "reject_split": {
+        throw new ContractError("Economic approvals are disabled", 409);
+      case "reject_split":
+        if (!twists(state).includes("reject_split")) applyTwistEffect(state, "reject_split");
+        break;
+      case "approve_plan":
+      case "reject_plan": {
         const decisionId = intervention.payload!.decisionId!;
         const decision = findById(state.decisions, decisionId);
         if (!decision) throw new ContractError(`Decision not found: ${decisionId}`, 404);
-        if (decision.status !== "pendiente") throw new ContractError(`Decision is already resolved: ${decisionId}`, 409);
-        const approved = intervention.type === "approve_spend";
+        if (decision.kind !== "operational" || decision.status !== "pendiente" || state.waitingForDecision !== decisionId) {
+          throw new ContractError(`Decision is not a pending operational decision: ${decisionId}`, 409);
+        }
+        const approved = intervention.type === "approve_plan";
         decision.status = approved ? "aprobada" : "rechazada";
+        if (!approved) state.rejectedPlanVersion = state.planVersion;
         state.waitingForDecision = null;
-        if (approved) state.budget.authorized = Math.max(state.budget.authorized, Number(decision.cost ?? 0));
-        addEvent(state, "intervencion", `El responsable ${approved ? "autoriza" : "rechaza"} ${String(decision.title)}`);
+        addEvent(state, "intervencion", `El responsable ${approved ? "acepta" : "rechaza"} ${String(decision.title)}`);
         state.coordinatorStatus = "replanificando";
-        if (intervention.type === "reject_split") applyTwistEffect(state, "reject_split");
         break;
       }
     }
