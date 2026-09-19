@@ -72,7 +72,7 @@ export default function App() {
           <CoordinadorPanel s={s} />
           <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
 
-          <AvisarPanel s={s} />
+          <AvisarPanel />
           {ctl.feedback && <p role="status" className="text-[12px] text-muted">{ctl.feedback}</p>}
           <Cronologia s={s} />
           <button onClick={() => setModal('decisiones')} className="self-start text-[11px] text-muted hover:text-ink underline underline-offset-[3px]">Ver decisiones y compromisos</button>

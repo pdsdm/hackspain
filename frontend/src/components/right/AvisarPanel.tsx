@@ -1,44 +1,29 @@
 import { useState } from 'react'
 import { PhoneOutgoing } from 'lucide-react'
-import type { CrisisState } from '../../domain/types'
 import { CONTACTOS, type Contacto } from '../../domain/contactos'
-import { fmtClock } from '../../domain/time'
+import { api } from '../../data/apiClient'
 import { Dialog } from '../ui/Dialog'
 
 type Resultado = { ok: boolean; texto: string }
 
-export function AvisarPanel({ s }: { s: CrisisState }) {
+export function AvisarPanel() {
   const [abierto, setAbierto] = useState(false)
   const [llamando, setLlamando] = useState<string | null>(null)
   const [resultado, setResultado] = useState<Record<string, Resultado>>({})
 
-  // POST al hook del workflow. El teléfono y la API key los pone el servidor
-  // desde el .env de la raíz (ver agent/happyrobot/SPEC.md).
+  // El panel no habla con HappyRobot: manda un evento y el backend despacha la
+  // llamada al hook del área (ver agent/happyrobot/SPEC.md).
   const llamar = async (c: Contacto) => {
     setLlamando(c.id)
     try {
-      const res = await fetch('/api/happyrobot/call', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contacto: c.id,
-          area: c.area,
-          contraparte: `${c.nombre} - ${c.organizacion}`,
-          objetivo: c.objetivo,
-          incidencia: s.spaces.find((x) => x.status === 'cerrado')?.note ?? 'Pabellón Principal cerrado por avería de agua',
-          hora_apertura: fmtClock(s.clock.openingAt),
-          task_id: `t-${c.area}-${Math.floor(s.clock.simSeconds)}`,
-        }),
+      const res = await api.requestCall({
+        area: c.area,
+        counterpart: `${c.nombre} - ${c.organizacion}`,
+        objective: c.objetivo,
       })
-      const data = (await res.json()) as { error?: string; destino?: string; runId?: string }
-      setResultado((r) => ({
-        ...r,
-        [c.id]: res.ok
-          ? { ok: true, texto: `Llamando a ${data.destino ?? 'el número configurado'}${data.runId ? ` · run ${data.runId.slice(0, 8)}` : ''}` }
-          : { ok: false, texto: data.error ?? `HTTP ${res.status}` },
-      }))
+      setResultado((r) => ({ ...r, [c.id]: { ok: true, texto: `Aviso registrado · evento ${res.eventId.slice(0, 8)}` } }))
     } catch (e) {
-      setResultado((r) => ({ ...r, [c.id]: { ok: false, texto: e instanceof Error ? e.message : 'No se pudo lanzar la llamada' } }))
+      setResultado((r) => ({ ...r, [c.id]: { ok: false, texto: e instanceof Error ? e.message : 'No se pudo registrar el aviso' } }))
     } finally {
       setLlamando(null)
     }
@@ -52,7 +37,7 @@ export function AvisarPanel({ s }: { s: CrisisState }) {
 
       {abierto && (
         <Dialog title="Avisar a…" onClose={() => setAbierto(false)}>
-          <p className="text-[12px] text-muted mb-3">Lanza una llamada real por HappyRobot al número de pruebas. El agente llama con el guion del área correspondiente.</p>
+          <p className="text-[12px] text-muted mb-3">El backend lanza la llamada por HappyRobot con el guion del área. El resultado aparece en la cronología y en la tarjeta de llamada.</p>
           <ul className="space-y-2">
             {CONTACTOS.map((c) => {
               const r = resultado[c.id]
@@ -65,7 +50,7 @@ export function AvisarPanel({ s }: { s: CrisisState }) {
                       <div className="text-[12px] mt-1">{c.objetivo}</div>
                     </div>
                     <button className="small-button" disabled={llamando === c.id} onClick={() => void llamar(c)}>
-                      <PhoneOutgoing size={14} /> {llamando === c.id ? 'Llamando…' : 'Llamar'}
+                      <PhoneOutgoing size={14} /> {llamando === c.id ? 'Avisando…' : 'Avisar'}
                     </button>
                   </div>
                   {r && <p role="status" className={`text-[12px] mt-2 ${r.ok ? 'text-green' : 'text-red'}`}>{r.texto}</p>}
