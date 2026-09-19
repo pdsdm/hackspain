@@ -75,3 +75,56 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
 export function crisisInput(name: FixtureName = "crisis"): CoordinatorInput {
   return toCoordinatorInput(loadFixture(name));
 }
+
+function asRecords(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null) : [];
+}
+
+export function liveCoordinatorInput(
+  state: Record<string, unknown>,
+  extras: Partial<CoordinatorInput> = {},
+): CoordinatorInput {
+  const clock = state.clock as CoordinatorInput["clock"];
+  const spaces = asRecords(state.spaces) as CoordinatorInput["spaces"];
+  const guestGroups = asRecords(state.guestGroups) as CoordinatorInput["guestGroups"];
+  const commitments = asRecords(state.commitments) as CoordinatorInput["commitments"];
+  const budget = state.budget as CoordinatorInput["budget"];
+  const constraints = Array.isArray(state.constraints)
+    ? state.constraints.filter((item): item is string => typeof item === "string")
+    : [];
+  const shuttles = asRecords(state.shuttles).map((shuttle) => ({
+    id: String(shuttle.id),
+    passengers: Number(shuttle.passengers ?? 0),
+    origin: String(shuttle.origin ?? ""),
+    destinationId: String(shuttle.destinationId ?? ""),
+    arriveAt: Number(shuttle.arriveAt ?? 0),
+    delayMin: Number(shuttle.delayMin ?? 0),
+    status: String(shuttle.status ?? ""),
+  }));
+  const deliveries = asRecords(state.deliveries).map((delivery) => ({
+    id: String(delivery.id),
+    dockId: String(delivery.dockId ?? ""),
+    arriveAt: Number(delivery.arriveAt ?? 0),
+    status: String(delivery.status ?? ""),
+  }));
+  const gates = asRecords(state.gates).map((gate) => ({
+    id: String(gate.id),
+    status: String(gate.status ?? ""),
+    arrivalsPerMin: Number(gate.arrivalsPerMin ?? 0),
+    throughputPerMin: Number(gate.throughputPerMin ?? 0),
+    waiting: Number(gate.waiting ?? 0),
+  }));
+  return {
+    clock,
+    planVersion: Number(state.planVersion),
+    spaces,
+    guestGroups,
+    commitments,
+    budget,
+    constraints,
+    shuttles,
+    deliveries,
+    gates,
+    ...extras,
+  };
+}
