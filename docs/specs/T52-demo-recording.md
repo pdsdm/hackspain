@@ -14,7 +14,7 @@ Validar y grabar el recorrido congelado con inputs y coordinador HappyRobot real
 - [ ] M3 ocurre después de M2, bloquea Muelle Este y CAT-01/CAT-02, y fuerza una segunda correlación del coordinador.
 - [ ] M4 cambia Catering, Transporte y Asistentes; no repite el primer plan ni propone recursos inventados.
 - [ ] Los dos ciclos provienen de HappyRobot, se aplican en un único `submit_plan` y no tienen errores de validación.
-- [ ] La primera acción de Transporte realiza exactamente una llamada HappyRobot real al teléfono autorizado, termina con transcript y no se repite; las demás acciones usan `sim`.
+- [ ] El primer ciclo invoca exactamente una vez `emitir_llamada` para Transporte; su run hijo termina sin `user_missed_call`, no se repite en M4 y las tareas persistidas usan `sim`.
 - [ ] Los cuatro especialistas terminan con `objective`, `reason` y `lastResult`, sin tareas o llamadas abiertas.
 - [ ] `/state.assignments` conserva B 450 + Lounge 150 y el cierre cuenta 600 asignados sin fingir plazas confirmadas.
 - [ ] El final es `resolved` o `atascado` con `closureSummary`; nunca promete servicio completo con condiciones abiertas.

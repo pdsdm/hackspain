@@ -15,7 +15,7 @@
 | Comprobación | Resultado |
 |---|---|
 | `make check` en `feat/t52-triage-live-transport` | **OK** |
-| Tests backend | 358: **351 pasan, 0 fallan, 7 live omitidos** |
+| Tests backend | 357: **350 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 23.10.0; el repo exige ≥22.13 |
@@ -61,7 +61,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 
 - El primer input es `inbox_batch`: diez mensajes sintéticos en 3,6 s; el Reasoning Agent debe usar `consult_world`, seleccionar la rotura y persistir el triaje 10/1/9.
 - `assignments[]` queda en `/state`; cierre y frontend distinguen 600 asignados de cero plazas confirmadas cuando quedan condiciones.
-- `--confirm-real-transport-call` autoriza exactamente la primera acción real de Transporte; las demás acciones siguen `sim` y el modo seguro no llama.
+- `--confirm-real-transport-call` autoriza una única invocación de `emitir_llamada` desde el coordinador; las tareas persistidas siguen `sim` y el modo seguro no llama.
 - El segundo plan debe redirigir CAT-01/CAT-02 a Muelle Sur y no puede proponer Muelle Norte sin ruta exterior.
 - Código verificado localmente; falta merge, deployment y E2E con el destinatario de la llamada preparado.
 
@@ -82,9 +82,9 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
-1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con transcript y ninguna otra comunicación real.
+1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con run hijo auditable y ninguna otra comunicación real.
 2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
-3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar y el callback debe cerrar la tarea con transcript; si hay `user_missed_call`, el E2E falla.
+3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar; el run hijo de voz debe completar sin `user_missed_call` y quedar en la evidencia del coordinador.
 4. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
 5. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
 6. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
@@ -97,7 +97,7 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 |---|---|---|
 | Servicio en Railway | crédito de prueba casi agotado; hay que pagar el plan | Sí |
 | Rotar bearer | owner actualiza backend, development y production con el mismo valor oculto | Parcial |
-| Llamada real de Transporte | destinatario confirma que puede contestar durante el E2E; telco debe devolver callback y transcript | Sí |
+| Llamada real de Transporte | destinatario confirma que puede contestar durante el E2E; el run de voz debe completar sin `user_missed_call` | Sí |
 | Superar la puerta final T52 | mergear esta rama y pasar triaje, reparto público, llamada única, muelle Sur e idempotencia | No |
 | Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
 

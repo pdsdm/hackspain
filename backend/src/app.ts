@@ -393,10 +393,6 @@ export function createApp(
       response.status(400).json({ error: "realTransportCall must be boolean" });
       return;
     }
-    if (realTransportCall && (!config.hooks.transporte || !config.happyrobotApiKey || !config.happyrobotTestPhone)) {
-      response.status(503).json({ error: "Transport HappyRobot hook, API key and test phone are required" });
-      return;
-    }
     void engine
       .reset("calm")
       .then((result) => {
@@ -413,7 +409,7 @@ export function createApp(
         state.clock.live = false;
         state.clock.speed = 1;
         stateRepository.saveState(run.id, state);
-        response.status(200).json({ ok: true, ...result, externalActions: realTransportCall ? "transport-real-rest-sim" : "sim" });
+        response.status(200).json({ ok: true, ...result, externalActions: realTransportCall ? "coordinator-transport-call-rest-sim" : "sim" });
       })
       .catch(next);
   });

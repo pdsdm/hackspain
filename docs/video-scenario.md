@@ -22,9 +22,9 @@ Zhivel convierte dos incidentes encadenados —la pérdida de la sede de 600 VIP
 | Reasoning Agent `Orquestador`, `consult_world` y `submit_plan` | Coordinador principal real en HappyRobot; el backend valida y aplica |
 | Runs del workflow `Demo Incident Inputs` | Runs reales de HappyRobot |
 | Contenido de la llamada y del SMS | Incidentes simulados para la demo |
-| Telefonía o número SMS | No se usa ni se afirma |
-| Primera acción de Transporte | Llamada real HappyRobot al teléfono de pruebas autorizado; transcript visible |
-| Resto de acciones de especialistas | Simuladas y visibles como `sim` |
+| Telefonía de los inputs | No se usa: lote y SMS son sintéticos |
+| Tool `emitir_llamada` del coordinador | Una llamada real HappyRobot al contacto autorizado de Transporte; run de voz auditable |
+| Acciones persistidas de especialistas | Simuladas y visibles como `sim`; no duplican la llamada |
 | Modo `--inputs=api` | Respaldo simulado sin run HappyRobot |
 
 En pantalla y narración, el lote de centralita y el SMS se presentan como incidentes simulados vía HappyRobot. Solo la acción de Transporte se presenta como «llamada real controlada al teléfono de pruebas»; nunca como conversación con un proveedor externo real.

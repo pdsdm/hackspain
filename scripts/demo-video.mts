@@ -184,7 +184,7 @@ function validateCalm(state: PublicState): void {
   requireCheckpoint(missing.length === 0, `M0 incoherente: faltan especialistas ${missing.join(", ")}`);
 }
 
-function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoEvent, sms: DemoEvent, realTransportCall: boolean): void {
+function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoEvent, sms: DemoEvent): void {
   requireCheckpoint(state.planVersion >= 2, `Final incoherente: planVersion=${state.planVersion}, esperado >=2`);
   requireCheckpoint(observesInput(state, call), `Final incoherente: falta procedencia de llamada ${call.eventId}`);
   requireCheckpoint(observesInput(state, sms), `Final incoherente: falta procedencia de SMS ${sms.eventId}`);
@@ -192,7 +192,7 @@ function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoE
   const openCalls = state.calls.filter((item) => item.status === "en_curso").length;
   requireCheckpoint(openCalls === 0, `Final incoherente: quedan ${openCalls} llamadas abiertas`);
   const realCalls = state.calls.filter((item) => item.simulated === false);
-  requireCheckpoint(realCalls.length === (realTransportCall ? 1 : 0), `Final incoherente: esperadas ${realTransportCall ? 1 : 0} llamadas reales, observadas ${realCalls.length}`);
+  requireCheckpoint(realCalls.length === 0, `Final incoherente: las tareas persistidas deben seguir en sim; observadas ${realCalls.length} llamadas reales`);
   const conditionalConfirmed = state.commitments.filter((item) => item.conditions?.length && item.status === "confirmado");
   requireCheckpoint(conditionalConfirmed.length === 0, `Compromisos condicionados marcados como confirmados: ${conditionalConfirmed.map((item) => item.id).join(", ")}`);
   const incomplete = ["espacios", "catering", "transporte", "asistentes"].flatMap((area) => {
@@ -307,7 +307,7 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         headers: { "Content-Type": "application/json", ...(mode === "happyrobot" ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(mode === "happyrobot" ? (realTransportCall ? { realTransportCall: true } : {}) : { fixture: "calm" }),
       });
-      const expectedActions = realTransportCall ? "transport-real-rest-sim" : "sim";
+      const expectedActions = realTransportCall ? "coordinator-transport-call-rest-sim" : "sim";
       if (mode === "happyrobot" && reset.externalActions !== expectedActions) throw new Error(`El backend no confirmó el modo de acciones ${expectedActions}`);
       if (reset.runId) evidence.backendRunId = reset.runId;
       const calm = await waitFor("estado calm", timeoutMs, readState, (state) => state.spaces.find((space) => space.id === "principal")?.status === "confirmado", diagnostic);
@@ -377,7 +377,7 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         ({ state, actions }) => state.coordinatorStatus !== "replanificando" && actions.tasks.length === 0 && state.calls.every((item) => item.status !== "en_curso"),
         ({ state, actions }) => `${diagnostic(state)}, openTasks=${actions.tasks.length}`,
       );
-      validateFinal(settled.state, settled.actions, call, sms, realTransportCall);
+      validateFinal(settled.state, settled.actions, call, sms);
       evidence.checkpoints.push(checkpoint("final", settled.state, settled.actions.tasks.length));
       evidence.outcome = "passed";
       evidence.finishedAt = new Date().toISOString();

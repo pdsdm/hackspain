@@ -63,11 +63,13 @@ test("the authenticated E2E reset creates an isolated sim-only run", async () =>
     assert(address && typeof address !== "string");
     const base = `http://127.0.0.1:${address.port}`;
     assert.equal((await fetch(`${base}/simulation/e2e/reset`, { method: "POST" })).status, 401);
-    assert.equal((await fetch(`${base}/simulation/e2e/reset`, {
+    const liveReset = await fetch(`${base}/simulation/e2e/reset`, {
       method: "POST",
       headers: { Authorization: "Bearer e2e-token", "Content-Type": "application/json" },
       body: JSON.stringify({ realTransportCall: true }),
-    })).status, 503);
+    });
+    assert.equal(liveReset.status, 200);
+    assert.equal(((await liveReset.json()) as { externalActions: string }).externalActions, "coordinator-transport-call-rest-sim");
     const legacyToken = "legacy-input-token";
     const inputTokenHash = createHash("sha256").update(legacyToken).digest("hex");
     const reset = await fetch(`${base}/simulation/e2e/reset`, {
