@@ -283,6 +283,15 @@ function checkShape(value: unknown): ValidationIssue[] {
   return issues;
 }
 
+function assignmentFingerprint(assignments: CoordinatorOutput["assignments"]): string {
+  const totals = new Map<string, number>();
+  for (const assignment of assignments) {
+    const key = `${assignment.groupId}\u0000${assignment.spaceId}`;
+    totals.set(key, (totals.get(key) ?? 0) + assignment.count);
+  }
+  return JSON.stringify([...totals].sort(([left], [right]) => left.localeCompare(right)));
+}
+
 function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const add = (code: string, detail: string) => issues.push({ code, detail });
@@ -349,6 +358,19 @@ function checkInvariants(output: CoordinatorOutput, input: CoordinatorInput): Va
     const count = groups.get(groupId)?.count ?? 0;
     if (assigned > count) {
       add("grupo_sobreasignado", `${groupId}: ${assigned} > ${count}`);
+    }
+  }
+
+  if (input.event?.kind === "dock_blocked") {
+    const currentAssignments = input.assignments ?? [];
+    if (currentAssignments.length > 0 && assignmentFingerprint(output.assignments) !== assignmentFingerprint(currentAssignments)) {
+      add("asignaciones_vigentes_perdidas", "dock_blocked no inutiliza B ni Lounge; conserva el reparto vigente completo");
+    }
+    const operations = output.operations ?? [];
+    for (const delivery of input.deliveries?.filter((item) => item.status === "bloqueada") ?? []) {
+      if (!operations.some((operation) => operation.op === "redirect_delivery" && operation.id === delivery.id && operation.dockId === "muelleSur")) {
+        add("entrega_sin_redireccion", `${delivery.id} debe redirigirse explícitamente a muelleSur`);
+      }
     }
   }
 

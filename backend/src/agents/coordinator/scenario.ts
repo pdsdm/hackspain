@@ -29,9 +29,11 @@ interface RawState {
   planVersion: number;
   spaces: (InputSpace & { kind: string })[];
   guestGroups: (InputGuestGroup & { confirmedCount: number })[];
+  assignments?: CoordinatorInput["assignments"];
   commitments: (InputCommitment & { planVersion: number })[];
   budget: CoordinatorInput["budget"];
   constraints: string[];
+  e2eRealTransportCall?: boolean;
 }
 
 export function hm(hours: number, minutes: number): number {
@@ -66,6 +68,7 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
       ...(group.informedCount === undefined ? {} : { informedCount: group.informedCount }),
       ...(group.needs === undefined ? {} : { needs: group.needs }),
     })),
+    assignments: state.assignments?.map(({ groupId, spaceId, count }) => ({ groupId, spaceId, count })) ?? [],
     commitments: state.commitments.map((commitment) => ({
       id: commitment.id,
       title: commitment.title,
@@ -76,6 +79,7 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
     })),
     budget: state.budget,
     constraints: coordinatorConstraints(state.constraints),
+    e2eRealTransportCall: state.e2eRealTransportCall === true,
   };
 }
 
@@ -111,6 +115,13 @@ export function liveCoordinatorInput(
     ...(typeof group.informedCount === "number" ? { informedCount: group.informedCount } : {}),
     ...(typeof group.needs === "string" ? { needs: group.needs } : {}),
   }));
+  const assignments = asRecords(state.assignments)
+    .filter((assignment) => typeof assignment.groupId === "string" && typeof assignment.spaceId === "string" && typeof assignment.count === "number")
+    .map((assignment) => ({
+      groupId: String(assignment.groupId),
+      spaceId: String(assignment.spaceId),
+      count: Number(assignment.count),
+    }));
   const commitments = asRecords(state.commitments).map((commitment) => ({
     id: String(commitment.id),
     title: String(commitment.title ?? ""),
@@ -162,9 +173,11 @@ export function liveCoordinatorInput(
     planVersion: Number(state.planVersion),
     spaces,
     guestGroups,
+    assignments,
     commitments,
     budget,
     constraints,
+    e2eRealTransportCall: state.e2eRealTransportCall === true,
     shuttles,
     deliveries,
     vehicles,
