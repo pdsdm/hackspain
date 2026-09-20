@@ -1,12 +1,12 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`6f62593`, T58 ya mergeada en PR #110) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T59). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`685a974`, T58 y T59 ya mergeadas en PRs #110 y #111) más el trabajo sin mergear de `feat/pep-entrega` (T21). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 07:40 CEST |
-| **Base** | `6f62593` (`origin/main`; T57 en PR #109 y T58 en PR #110, las dos mergeadas) + T59 sin mergear |
-| **Trabajo en curso** | T59: el coordinador es el único que lanza llamadas, y su `emitir_llamada` pasa por el backend. Decisión D27 |
+| **Foto tomada** | 20 de septiembre de 2026, 07:20 CEST |
+| **Base** | `685a974` (`origin/main`; T57, T58 y T59 mergeadas) + T21 sin mergear |
+| **Trabajo en curso** | T21: README de entrega con capturas reales e instrucciones de uso, `scripts/screenshots.sh`, `happyrobot_docs/` en `.gitignore` y LICENSE a nombre del equipo |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, sesión de implementación de T58 y T59 |
 
@@ -115,8 +115,8 @@ Cambios:
    [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
    versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
    resultado de cada llamada del coordinador se sigue perdiendo con 404.**
-2. **Mergear T59.** Mientras no se mergee, el backend desplegado no tiene el endpoint al que
-   debe apuntar el nodo nuevo.
+2. **Mergear T21 (`feat/pep-entrega`).** README de entrega con capturas e instrucciones;
+   `main` sigue con el README del enunciado hasta que se mergee.
 3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
    puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
 4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
