@@ -7,7 +7,6 @@ import { TopBar } from './components/layout/TopBar'
 import { NavTabs } from './components/layout/NavTabs'
 import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
-import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
 import { AgentDetailCard, type AgentFocus } from './components/map/AgentDetailCard'
 import { ActiveIncidents } from './components/map/ActiveIncidents'
@@ -65,7 +64,6 @@ export default function App() {
                 <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
-                <KpiOverlay s={s} />
                 <CierreCard s={s} className="w-[440px] max-w-full" />
                 <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
               </div>
