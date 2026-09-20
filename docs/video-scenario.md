@@ -18,7 +18,8 @@ Zhivel convierte dos incidentes encadenados —la pérdida de la sede de 600 VIP
 
 | Elemento | Etiqueta correcta |
 |---|---|
-| Backend, estado, validación T46, coordinador, mapa y replans | Ejecución real del sistema |
+| Backend, estado, validación T46, mapa y aplicación de planes | Ejecución real del sistema |
+| Reasoning Agent `Orquestador`, `consult_world` y `submit_plan` | Coordinador principal real en HappyRobot; el backend valida y aplica |
 | Runs del workflow `Demo Incident Inputs` | Runs reales de HappyRobot |
 | Contenido de la llamada y del SMS | Incidentes simulados para la demo |
 | Telefonía o número SMS | No se usa ni se afirma |
@@ -105,7 +106,7 @@ En pantalla y narración se dice «llamada simulada vía HappyRobot» y «SMS si
 |---|---|---|
 | Apertura | Mostrar mapa estable y panel | «Más de 100.000 personas llegan a MADRING. Zhivel coordina el bloque de hospitalidad de 600 VIP.» |
 | Primer input | Ejecutar el director y mantener Principal visible | «Una llamada simulada, procesada por HappyRobot, informa de una rotura de tubería sin hora de reapertura.» |
-| Primer plan | Seleccionar Principal, B/Lounge y panel de agentes | «El coordinador invalida el plan original y divide la capacidad en Sur: 450 más 150.» |
+| Primer plan | Seleccionar Principal, B/Lounge y panel de agentes | «El Reasoning Agent de HappyRobot propone el plan; nuestro backend lo valida y aplica: 450 más 150 en Sur.» |
 | Segundo input | Seleccionar Muelle Este y entregas | «Un SMS simulado avisa de que un camión de televisión bloquea el muelle del nuevo plan.» |
 | Replan | Recorrer Catering, Transporte y Asistentes | «Zhivel no repite el plan: vuelve a coordinar accesos, entregas, shuttles, recepción y mensajes.» |
 | Cierre | Abrir compromisos y Resultado | «El sistema distingue lo confirmado de lo condicionado y deja un plan que el equipo puede ejecutar.» |
@@ -148,4 +149,4 @@ Si no se confirma una solución completa:
 
 ## Recortes permitidos
 
-Se puede omitir una negociación saliente adicional, el detalle individual del staff y T44. No se recortan los dos incidentes, los dos ciclos del coordinador, las cuatro áreas visibles, la etiqueta de simulación ni el final honesto.
+Se puede omitir una negociación saliente adicional y el detalle individual del staff. No se recortan los dos incidentes, los dos ciclos del coordinador HappyRobot, las cuatro áreas visibles, la etiqueta de simulación ni el final honesto.

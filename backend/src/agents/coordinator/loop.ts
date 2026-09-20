@@ -186,12 +186,6 @@ async function runHappyRobotHarness(
     logCoordError("harness happyrobot sin configuración (HAPPYROBOT_COORDINATOR_WORKFLOW_ID)");
     return "unavailable";
   }
-  const runPrimary = async (reason: string): Promise<"ok" | "unavailable"> => {
-    const primary = deps.config?.textProvider;
-    if (!primary) return "unavailable";
-    logCoord("happyrobot", reason, `continúa ${primary.provider}/${primary.model}`);
-    return runJsonLoop(event, { ...deps, config: primary }, AbortSignal.timeout(120_000));
-  };
   const state = deps.states.ensureActiveRun().state;
   const apply = config.apply || (state.forceSimActions === true && state.e2eCoordinatorApply === true);
   logCoord("bucle", "happyrobot", config.model, apply ? "apply" : "shadow", `tope ${config.timeoutMs}ms`);
@@ -203,11 +197,10 @@ async function runHappyRobotHarness(
       apply,
     });
     logCoord("happyrobot informe\n" + summarizeReport(report));
-    if (report.status !== "accepted") return runPrimary(`estado ${report.status}`);
-    if (!report.applied) return runPrimary("shadow completado");
+    if (report.status !== "accepted" || !report.applied) return "unavailable";
     return "ok";
   } catch (error) {
     logCoordError("excepción en harness happyrobot", error);
-    return runPrimary("excepción");
+    return "unavailable";
   }
 }

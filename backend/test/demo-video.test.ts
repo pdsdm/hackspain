@@ -149,12 +149,27 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
   const fetchFn: typeof fetch = async (input, init) => {
     const url = String(input);
     urls.push(url);
-    if (url.endsWith("/simulation/reset")) {
+    if (url.endsWith("/simulation/e2e/reset")) {
+      assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer test-token");
       posts.length = 0;
-      return response({ ok: true, runId: "run-hook", planVersion: 1 });
+      return response({ ok: true, runId: "run-hook", planVersion: 1, externalActions: "sim" });
     }
     if (url.endsWith("/state")) return response(state(posts));
     if (url.endsWith("/actions")) return response({ tasks: [] });
+    if (url.endsWith("/coordinator/happyrobot/report")) {
+      const second = posts.some((item) => item.incidentId === "dock_blocked");
+      return response({
+        correlationId: second ? "corr-2" : "corr-1",
+        happyrobotRunId: second ? "coord-2" : "coord-1",
+        runId: "run-hook",
+        planVersion: second ? 3 : 2,
+        status: "accepted",
+        applied: true,
+        latencyMs: 100,
+        submissions: 1,
+        validationErrors: [],
+      });
+    }
     if (url === hookUrl) {
       const payload = JSON.parse(String(init?.body)) as PostedEvent & { backend_base_url: string; sessionId: string };
       assert.equal(payload.backend_base_url, "https://backend.example");
@@ -172,6 +187,7 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
       DEMO_API_URL: "http://backend.test",
       DEMO_VIDEO_TIMEOUT_MS: "10000",
       HAPPYROBOT_DEMO_INPUT_HOOK_URL: hookUrl,
+      HAPPYROBOT_WEBHOOK_TOKEN: "test-token",
       PUBLIC_BASE_URL: "https://backend.example",
     };
     await runVideoDirector(fetchFn);

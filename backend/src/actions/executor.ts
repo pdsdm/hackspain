@@ -84,7 +84,8 @@ export class ActionExecutor {
   pump(): void {
     const run = this.states.ensureActiveRun();
     if (run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
-    for (let index = 0; index < 3; index += 1) {
+    const batchSize = run.state.e2eMode === "production-isolated" ? 8 : 3;
+    for (let index = 0; index < batchSize; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
       this.dispatch(task).catch((error) => {
@@ -158,7 +159,7 @@ export class ActionExecutor {
     this.tasks.markDispatchOutcome(task.id, "dispatched");
     const seed = Number(state.clock.liveSeed ?? state.clock.attendanceSeed ?? this.config.simSeed ?? 1);
     const reply = await counterpartReply(task, state, seed, this.engine?.llmDeps() ?? {});
-    const delay = 20 + Math.floor(Math.random() * 21);
+    const delay = state.e2eMode === "production-isolated" ? 3 : 20 + Math.floor(Math.random() * 21);
     const envelope = scheduleSimResult({
       reply,
       task,

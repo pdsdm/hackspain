@@ -5,15 +5,6 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { complete, loadLlmConfig } from "../backend/src/agents/coordinator/llm.js";
-import { SYSTEM_PROMPT, buildUserPrompt } from "../backend/src/agents/coordinator/prompt.js";
-import { answerQuery } from "../backend/src/agents/coordinator/queries.js";
-import { liveCoordinatorInput } from "../backend/src/agents/coordinator/scenario.js";
-import { parseOutput } from "../backend/src/agents/coordinator/validate.js";
-import type { CrisisStateDocument } from "../backend/src/domain/crisis-state.js";
-import { applyOperations } from "../backend/src/domain/apply-coordinator.js";
-import { loadWorld, worldSummary } from "../backend/src/world/world.js";
-
 export interface PublicState {
   planVersion: number;
   coordinatorStatus: string;
@@ -23,6 +14,7 @@ export interface PublicState {
   forceSimActions?: boolean;
   e2eCoordinatorApply?: boolean;
   e2eSuppressResultReplan?: boolean;
+  agentsPaused?: boolean;
   resolved: boolean;
   closureSummary?: string;
   spaces: Array<Record<string, unknown>>;
@@ -62,17 +54,6 @@ interface RunAudit {
   nodes: Array<{ name: string; status: string; error?: string; duplicate?: boolean }>;
 }
 
-interface ProviderBenchmark {
-  provider: string;
-  model: string;
-  latencyMs: number;
-  status: "accepted" | "invalid" | "failed" | "skipped";
-  actions: number;
-  attempts: number;
-  validationErrors: string[];
-  error?: string;
-}
-
 interface CycleTiming {
   inputToEffectMs: number;
   effectToCoordinatorMs: number;
@@ -84,7 +65,6 @@ interface CycleTiming {
 class FatalE2EError extends Error {}
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const WORLD = loadWorld();
 const sleep = (ms: number) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 const requiredNames = ["HAPPYROBOT_API_KEY", "HAPPYROBOT_WEBHOOK_TOKEN"] as const;
 
@@ -316,6 +296,10 @@ function actionAreas(report: CoordinatorReport): Set<string> {
   return new Set(outputRows(report, "actions").map((action) => String(action.area)));
 }
 
+function areaObjectives(report: CoordinatorReport, area: string): string {
+  return outputRows(report, "actions").filter((action) => action.area === area).map((action) => String(action.objective ?? "")).join(" ");
+}
+
 export function assignmentTotals(report: CoordinatorReport): { total: number; pabellonB: number; loungeSur: number; other: number } {
   const result = { total: 0, pabellonB: 0, loungeSur: 0, other: 0 };
   for (const assignment of outputRows(report, "assignments")) {
@@ -343,119 +327,6 @@ export function stateFingerprint(state: PublicState, actions: ActionsResponse, r
     openCalls: state.calls.filter((call) => call.status === "en_curso").length,
     report: report?.correlationId,
   });
-}
-
-async function benchmarkHelmcode(
-  state: PublicState,
-  actions: ActionsResponse,
-  eventInput: { source: string; kind: string; text?: string },
-): Promise<ProviderBenchmark> {
-  if (!process.env.HELMCODE_API_KEY?.trim()) {
-    return { provider: "helmcode", model: "sin configurar", latencyMs: 0, status: "skipped", actions: 0, attempts: 0, validationErrors: [] };
-  }
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    COORDINATOR_HARNESS: "json",
-    COORDINATOR_MODEL: process.env.E2E_HELMCODE_MODEL?.trim() || "deepseek-v4-flash",
-    COGNITION_API_KEY: "",
-    DEVIN_API_KEY: "",
-    OPENAI_API_KEY: "",
-    ANTHROPIC_API_KEY: "",
-  };
-  let config;
-  try {
-    config = loadLlmConfig(env);
-  } catch (error) {
-    return {
-      provider: "helmcode",
-      model: process.env.E2E_HELMCODE_MODEL?.trim() || "deepseek-v4-flash",
-      latencyMs: 0,
-      status: "failed",
-      actions: 0,
-      attempts: 0,
-      validationErrors: [],
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-  const pendingActions = rows(actions.tasks).map((task) => ({
-    taskId: String(task.taskId ?? task.id ?? ""),
-    area: String(task.area ?? ""),
-    objective: String(task.objective ?? ""),
-    counterpart: String(task.counterpart ?? ""),
-  }));
-  const crisisState = state as unknown as CrisisStateDocument;
-  const world = worldSummary(WORLD, crisisState);
-  const openTaskIds = new Set(pendingActions.map((task) => task.taskId));
-  const started = Date.now();
-  const previousVerbose = process.env.COORDINATOR_VERBOSE;
-  process.env.COORDINATOR_VERBOSE = "0";
-  let attempts = 0;
-  let lastActions = 0;
-  let queryAnswers: unknown[] = [];
-  let previousErrors: string[] = [];
-  const validationErrors: string[] = [];
-  try {
-    for (let round = 0; round < 3; round += 1) {
-      attempts = round + 1;
-      const input = liveCoordinatorInput(crisisState, { pendingActions, world, event: eventInput, queryAnswers, previousErrors });
-      const text = await complete(config, SYSTEM_PROMPT, buildUserPrompt(input), {
-        signal: AbortSignal.timeout(120_000),
-      });
-      const parsed = parseOutput(text, input);
-      if (!parsed.output) {
-        previousErrors = parsed.issues.map((issue) => `${issue.code}: ${issue.detail}`);
-        validationErrors.push(...previousErrors);
-        continue;
-      }
-      lastActions = parsed.output.actions.length;
-      queryAnswers = [];
-      for (const query of parsed.output.queries ?? []) {
-        queryAnswers.push(await answerQuery(query, crisisState, WORLD));
-      }
-      const dryErrors = applyOperations(structuredClone(crisisState), WORLD, parsed.output.operations ?? [], openTaskIds).errors;
-      if (dryErrors.length > 0) {
-        previousErrors = dryErrors;
-        validationErrors.push(...dryErrors);
-        continue;
-      }
-      if (parsed.output.done === false) {
-        previousErrors = [];
-        continue;
-      }
-      return {
-        provider: config.provider,
-        model: config.model,
-        latencyMs: Date.now() - started,
-        status: "accepted",
-        actions: lastActions,
-        attempts,
-        validationErrors,
-      };
-    }
-    return {
-      provider: config.provider,
-      model: config.model,
-      latencyMs: Date.now() - started,
-      status: "invalid",
-      actions: lastActions,
-      attempts,
-      validationErrors,
-    };
-  } catch (error) {
-    return {
-      provider: config.provider,
-      model: config.model,
-      latencyMs: Date.now() - started,
-      status: "failed",
-      actions: lastActions,
-      attempts,
-      validationErrors,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    if (previousVerbose === undefined) delete process.env.COORDINATOR_VERBOSE;
-    else process.env.COORDINATOR_VERBOSE = previousVerbose;
-  }
 }
 
 export function latencySummary(values: number[]): { samples: number; meanMs: number; medianMs: number } {
@@ -546,6 +417,7 @@ async function main(): Promise<void> {
     check(report.output !== null, `${label}: informe sin output`);
     check(report.validationErrors.length === 0, `${label}: ${report.validationErrors.length} errores de validación`);
     check(report.submissions === 1, `${label}: necesitó ${report.submissions} submissions`);
+    check(report.latencyMs <= 20_000, `${label}: HappyRobot tardó ${report.latencyMs} ms, esperado <= 20000`);
     const areas = actionAreas(report);
     for (const area of ["espacios", "catering", "transporte", "asistentes"]) {
       check(areas.has(area), `${label}: falta acción de ${area}`);
@@ -572,33 +444,18 @@ async function main(): Promise<void> {
     };
     const triggerInput = async (payload: ReturnType<typeof event>): Promise<string> => {
       const requestPayload = { ...payload, sessionId: payload.evidence.sessionId, backend_base_url: publicUrl };
-      const apiResponse = await fetch(`${inputApiBase}/workflows/${encodeURIComponent(inputWorkflow.id)}/runs`, {
+      const url = inputHookUrl ?? `${inputApiBase}/workflows/${encodeURIComponent(inputWorkflow.id)}/runs`;
+      const direct = Boolean(inputHookUrl);
+      const response = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ environment: inputEnvironment, payload: requestPayload }),
+        body: JSON.stringify(direct ? requestPayload : { environment: inputEnvironment, payload: requestPayload }),
         signal: AbortSignal.timeout(30_000),
       });
-      if (apiResponse.ok) {
-        const result = await apiResponse.json() as { run_id?: string; queued_run_ids?: string[]; id?: string };
-        const runId = result.run_id || result.queued_run_ids?.[0] || result.id;
-        if (!runId) throw new Error("HappyRobot no devolvió run_id");
-        return runId;
-      }
-      const apiError = await apiResponse.text();
-      if (apiResponse.status !== 404 || !inputHookUrl) {
-        throw new Error(`HappyRobot input API ${apiResponse.status}: ${apiError}`);
-      }
-      console.log("[E2E] API de runs no encuentra el workflow; usando hook directo publicado");
-      const hookResponse = await fetch(inputHookUrl, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(requestPayload),
-        signal: AbortSignal.timeout(30_000),
-      });
-      const hookText = await hookResponse.text();
-      if (!hookResponse.ok) throw new Error(`HappyRobot input hook ${hookResponse.status}: ${hookText}`);
+      const text = await response.text();
+      if (!response.ok) throw new Error(`HappyRobot input ${direct ? "hook" : "API"} ${response.status}: ${text}`);
       try {
-        const result = JSON.parse(hookText) as { run_id?: string; queued_run_ids?: string[]; id?: string };
+        const result = JSON.parse(text) as { run_id?: string; queued_run_ids?: string[]; id?: string };
         return result.run_id || result.queued_run_ids?.[0] || result.id || `hook-${payload.eventId}`;
       } catch {
         return `hook-${payload.eventId}`;
@@ -623,11 +480,29 @@ async function main(): Promise<void> {
     if (!reset.runId) throw new Error("El reset E2E no devolvió runId");
     const e2eRunId = reset.runId;
     activeE2ERunId = e2eRunId;
+    const stateReadStartedAt = Date.now();
     const initial = await readState();
-    checkpoints.initial = { runId: e2eRunId, planVersion: initial.planVersion, coordinatorStatus: initial.coordinatorStatus };
+    const stateReadMs = Date.now() - stateReadStartedAt;
+    checkpoints.initial = { runId: e2eRunId, planVersion: initial.planVersion, coordinatorStatus: initial.coordinatorStatus, stateReadMs };
     check(initial.e2eMode === "production-isolated" && initial.forceSimActions === true && initial.e2eCoordinatorApply === true && initial.e2eSuppressResultReplan === true, "M0: el run activo no conserva el aislamiento E2E");
     check(initial.planVersion === 1, `M0: planVersion esperado 1, recibido ${initial.planVersion}`);
     check(initial.spaces.find((space) => space.id === "principal")?.status === "confirmado", "M0: Principal no está confirmado");
+    check(stateReadMs <= 2_000, `M0: /state tardó ${stateReadMs} ms, esperado <= 2000`);
+
+    await json(`${localUrl}/interventions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "pause" }),
+    });
+    const paused = await waitFor("control humano: pausa", 10_000, readState, (state) => state.agentsPaused === true);
+    await json(`${localUrl}/interventions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "resume" }),
+    });
+    const resumed = await waitFor("control humano: reanudación", 10_000, readState, (state) => state.agentsPaused !== true);
+    check(paused.planVersion === initial.planVersion && resumed.planVersion === initial.planVersion, "Control humano: pausa/reanudación alteró planVersion");
+    checkpoints.control = { pauseObserved: paused.agentsPaused === true, resumeObserved: resumed.agentsPaused !== true, planVersion: resumed.planVersion };
 
     const journeyStartedAt = Date.now();
     const callEvent = event(tag, "principal_pipe_burst");
@@ -642,12 +517,6 @@ async function main(): Promise<void> {
       (state) => state.spaces.find((space) => space.id === "principal")?.status === "cerrado",
     );
     const firstEffectAt = Date.now();
-    const firstSnapshotActions = await readActions();
-    const firstHelmcodePromise = benchmarkHelmcode(afterCallEffect, firstSnapshotActions, {
-      source: "happyrobot",
-      kind: callEvent.incidentId,
-      text: callEvent.summary,
-    });
     const firstReport = await waitReport(undefined, e2eRunId);
     const firstReportAt = Date.now();
     const callAudit = await callAuditPromise;
@@ -662,7 +531,6 @@ async function main(): Promise<void> {
     );
     const firstSettledAt = Date.now();
     const firstState = firstSettled.state;
-    const firstHelmcode = await firstHelmcodePromise;
     const firstTiming: CycleTiming = {
       inputToEffectMs: firstEffectAt - firstStartedAt,
       effectToCoordinatorMs: firstReportAt - firstEffectAt,
@@ -670,12 +538,13 @@ async function main(): Promise<void> {
       coordinatorToSettledMs: firstSettledAt - firstReportAt,
       totalMs: firstSettledAt - firstStartedAt,
     };
+    check(firstTiming.inputToEffectMs <= 2_000, `M1: input→efecto tardó ${firstTiming.inputToEffectMs} ms, esperado <= 2000`);
+    check(firstTiming.totalMs <= 30_000, `M2: ciclo completo tardó ${firstTiming.totalMs} ms, esperado <= 30000`);
     checkpoints.first = {
       inputRunId: callRunId,
       inputAudit: callAudit,
       coordinatorAudit: firstCoordinatorAudit,
       timing: firstTiming,
-      helmcode: firstHelmcode,
       planVersion: firstState.planVersion,
       report: firstReport,
       principal: afterCallEffect.spaces.find((space) => space.id === "principal"),
@@ -684,8 +553,16 @@ async function main(): Promise<void> {
     check(Boolean(firstCoordinatorAudit), "M2: run del coordinador no auditable");
     if (firstCoordinatorAudit) checkAudit(firstCoordinatorAudit, "M2 coordinador HappyRobot");
     checkReport(firstReport, "M2", e2eRunId);
-    check(firstHelmcode.provider === "helmcode", `M2 benchmark: proveedor ${firstHelmcode.provider}`);
-    check(firstHelmcode.status === "accepted", `M2 benchmark Helmcode: ${firstHelmcode.status}${firstHelmcode.error ? ` (${firstHelmcode.error})` : ""}`);
+    check(firstReport.planVersion === 2 && firstState.planVersion === 3, `M2: versiones inesperadas informe/estado ${firstReport.planVersion}/${firstState.planVersion}`);
+    const firstActions = outputRows(firstReport, "actions");
+    check(firstActions.length === 5, `M2: esperadas 5 acciones concretas, recibidas ${firstActions.length}`);
+    check(firstActions.filter((action) => action.area === "espacios").length === 2, "M2: Espacios debe consultar B y Lounge por separado");
+    const firstSpacesDue = Math.min(...firstActions.filter((action) => action.area === "espacios").map((action) => Number(action.dueAt ?? Number.POSITIVE_INFINITY)));
+    const firstCateringDue = Math.min(...firstActions.filter((action) => action.area === "catering").map((action) => Number(action.dueAt ?? Number.POSITIVE_INFINITY)));
+    check(firstSpacesDue <= firstCateringDue, "M2: la sede de 600 VIP no está priorizada antes que Catering");
+    check(/600|CAT-01|CAT-02/i.test(areaObjectives(firstReport, "catering")), "M2: Catering no concreta el servicio afectado");
+    check(/BUS-01|cuatro shuttles/i.test(areaObjectives(firstReport, "transporte")) && /Sur/i.test(areaObjectives(firstReport, "transporte")), "M2: Transporte no concreta los cuatro shuttles en Sur");
+    check(/6|seis/i.test(areaObjectives(firstReport, "asistentes")) && /inform|avis|mensaj|segment/i.test(areaObjectives(firstReport, "asistentes")), "M2: Asistentes no distribuye seis personas y segmenta avisos");
     const firstDistribution = assignmentTotals(firstReport);
     check(firstDistribution.total === 600, `M2: asignadas ${firstDistribution.total}/600 plazas`);
     check(firstDistribution.pabellonB === 450 && firstDistribution.loungeSur === 150 && firstDistribution.other === 0, `M2: reparto ${JSON.stringify(firstDistribution)}`);
@@ -711,12 +588,6 @@ async function main(): Promise<void> {
       (state) => state.spaces.find((space) => space.id === "muelleEste")?.status === "cerrado",
     );
     const secondEffectAt = Date.now();
-    const secondSnapshotActions = await readActions();
-    const secondHelmcodePromise = benchmarkHelmcode(afterDockEffect, secondSnapshotActions, {
-      source: "happyrobot",
-      kind: smsEvent.incidentId,
-      text: smsEvent.summary,
-    });
     const secondReport = await waitReport(reportBeforeSecond?.correlationId, e2eRunId);
     const secondReportAt = Date.now();
     const smsAudit = await smsAuditPromise;
@@ -730,7 +601,6 @@ async function main(): Promise<void> {
       ({ state, actions }) => state.coordinatorBusy === undefined && state.coordinatorStatus !== "replanificando" && actions.tasks.length === 0 && !state.calls.some((call) => call.status === "en_curso"),
     );
     const finalAt = Date.now();
-    const secondHelmcode = await secondHelmcodePromise;
     const secondTiming: CycleTiming = {
       inputToEffectMs: secondEffectAt - secondStartedAt,
       effectToCoordinatorMs: secondReportAt - secondEffectAt,
@@ -738,12 +608,13 @@ async function main(): Promise<void> {
       coordinatorToSettledMs: finalAt - secondReportAt,
       totalMs: finalAt - secondStartedAt,
     };
+    check(secondTiming.inputToEffectMs <= 2_000, `M3: input→efecto tardó ${secondTiming.inputToEffectMs} ms, esperado <= 2000`);
+    check(secondTiming.totalMs <= 30_000, `M4: ciclo completo tardó ${secondTiming.totalMs} ms, esperado <= 30000`);
     checkpoints.final = {
       inputRunId: smsRunId,
       inputAudit: smsAudit,
       coordinatorAudit: secondCoordinatorAudit,
       timing: secondTiming,
-      helmcode: secondHelmcode,
       planVersion: final.state.planVersion,
       coordinatorStatus: final.state.coordinatorStatus,
       resolved: final.state.resolved,
@@ -754,11 +625,18 @@ async function main(): Promise<void> {
     check(Boolean(secondCoordinatorAudit), "M4: run del coordinador no auditable");
     if (secondCoordinatorAudit) checkAudit(secondCoordinatorAudit, "M4 coordinador HappyRobot");
     checkReport(secondReport, "M4", e2eRunId);
-    check(secondHelmcode.provider === "helmcode", `M4 benchmark: proveedor ${secondHelmcode.provider}`);
-    check(secondHelmcode.status === "accepted", `M4 benchmark Helmcode: ${secondHelmcode.status}${secondHelmcode.error ? ` (${secondHelmcode.error})` : ""}`);
+    const secondActions = outputRows(secondReport, "actions");
+    check(secondActions.length >= 4, `M4: esperadas acciones de cuatro áreas, recibidas ${secondActions.length}`);
+    check(/muelle|descarga/i.test(areaObjectives(secondReport, "catering")), "M4: Catering no cambia descarga tras bloquearse el muelle");
+    check(/muelle|recepci|inform|avis|mensaj/i.test(areaObjectives(secondReport, "asistentes")), "M4: Asistentes no redistribuye recepción o mensajes tras el muelle");
+    check(/BUS-01|cuatro shuttles/i.test(areaObjectives(secondReport, "transporte")), "M4: Transporte no revisa los cuatro shuttles");
+    for (const area of ["catering", "transporte", "asistentes"]) {
+      check(areaObjectives(secondReport, area) !== areaObjectives(firstReport, area), `M4: ${area} repite el objetivo de M2 sin adaptarse`);
+    }
+    check(/muelle|catering|descarga/i.test(String(secondReport.output?.reading ?? "")), "M4: la lectura no prioriza el nuevo bloqueo de servicio");
     check(firstReport.correlationId !== secondReport.correlationId, "M4: los dos ciclos comparten correlationId");
     check(firstReport.happyrobotRunId !== secondReport.happyrobotRunId, "M4: los dos ciclos comparten run HappyRobot");
-    check(secondReport.planVersion >= firstReport.planVersion, "M4: planVersion retrocedió entre ciclos");
+    check(secondReport.planVersion === 3 && final.state.planVersion === 4, `M4: versiones inesperadas informe/estado ${secondReport.planVersion}/${final.state.planVersion}; debe haber solo dos ciclos`);
     const secondDistribution = assignmentTotals(secondReport);
     check(secondDistribution.total === 600, `M4: asignadas ${secondDistribution.total}/600 plazas`);
     check(secondDistribution.pabellonB === 450 && secondDistribution.loungeSur === 150 && secondDistribution.other === 0, `M4: reparto ${JSON.stringify(secondDistribution)}`);
@@ -786,6 +664,9 @@ async function main(): Promise<void> {
     check(final.state.shuttles.every((shuttle) => places.get(String(shuttle.destinationId))?.zone === "sur"), "Final: algún shuttle salió de Sur");
     check(final.state.calls.every((call) => call.simulated === true), "Final: se ejecutó una comunicación de especialista real");
     check(!final.state.calls.some((call) => call.status === "en_curso"), "Final: quedan llamadas en curso");
+    const provenanceEvents = final.state.events.filter((item) => isRecord(item.provenance));
+    check(provenanceEvents.length === 2, `Final: esperados 2 inputs relevantes, observados ${provenanceEvents.length}`);
+    check(provenanceEvents.every((item) => String(item.actor ?? "").startsWith("SIMULACIÓN ·")), "Final: algún input se presenta como comunicación real");
     const finalActions = await readActions();
     check(finalActions.tasks.length === 0, "Final: quedan tareas abiertas");
     check(final.state.resolved || final.state.coordinatorStatus === "atascado" || Boolean(final.state.closureSummary), "Final: no hay cierre ni limitación explícita");
@@ -806,21 +687,16 @@ async function main(): Promise<void> {
     checkpoints.idempotency = { inputRunId: duplicateRunId, inputAudit: duplicateAudit, stateUnchanged: fingerprintAfterDuplicate === fingerprintBeforeDuplicate };
 
     const happyrobotLatency = latencySummary([firstReport.latencyMs, secondReport.latencyMs]);
-    const helmcodeLatency = latencySummary([firstHelmcode, secondHelmcode].filter((item) => item.status === "accepted").map((item) => item.latencyMs));
-    const deltaMs = happyrobotLatency.meanMs - helmcodeLatency.meanMs;
-    const ratio = helmcodeLatency.meanMs > 0 ? Number((happyrobotLatency.meanMs / helmcodeLatency.meanMs).toFixed(2)) : null;
+    const coreJourneyMs = finalAt - journeyStartedAt;
+    check(coreJourneyMs <= 60_000, `Recorrido M1-M4 tardó ${coreJourneyMs} ms, esperado <= 60000`);
     checkpoints.performance = {
-      note: "Dos snapshots del recorrido grabado; orientativo, no benchmark estadístico",
+      note: "Dos ciclos HappyRobot del recorrido grabado",
       happyrobot: happyrobotLatency,
-      helmcode: helmcodeLatency,
-      deltaMs,
-      ratioHappyRobotOverHelmcode: ratio,
-      fasterProvider: deltaMs === 0 ? "empate" : deltaMs < 0 ? "happyrobot" : "helmcode",
-      coreJourneyMs: finalAt - journeyStartedAt,
+      coreJourneyMs,
       totalWithIdempotencyMs: Date.now() - journeyStartedAt,
       cycles: { first: firstTiming, second: secondTiming },
     };
-    console.log(`[E2E] Latencia coordinador · HappyRobot media ${happyrobotLatency.meanMs} ms · Helmcode media ${helmcodeLatency.meanMs} ms · delta ${deltaMs} ms · ratio ${ratio ?? "n/a"}`);
+    console.log(`[E2E] Latencia HappyRobot · media ${happyrobotLatency.meanMs} ms · mediana ${happyrobotLatency.medianMs} ms · recorrido ${coreJourneyMs} ms`);
 
     const evidence = {
       generatedAt: new Date().toISOString(),

@@ -212,7 +212,7 @@ Una solicitud manual de llamada usa un payload validado y encola una tarea aunqu
 
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador replanifica (Helmcode `deepseek-v4-flash` con harness `json` y `reasoning_effort` `low` por defecto: unos 20-40 s por plan; `tools` o `devin` según `.env`). Si `COORDINATOR_MODE=rules` o el LLM falla, queda el efecto determinista.
+Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador principal de la demo es el Reasoning Agent de HappyRobot (`COORDINATOR_HARNESS=happyrobot`), que usa `consult_world` y `submit_plan`; el backend valida y aplica. Si no entrega un plan válido, no se oculta una segunda inferencia y queda el respaldo determinista disponible.
 
 ### `GET /actions`
 
@@ -304,9 +304,9 @@ Reglas:
 { "ok": true, "duplicate": false, "runId": "3bd0…", "planVersion": 2, "tasks": [{ "actionId": "consultar-pabellon-b", "taskId": "7a31…" }] }
 ```
 
-### Piloto HappyRobot como coordinador (T44)
+### HappyRobot como coordinador principal (T44)
 
-Cuatro endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los cuatro exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
+Cuatro endpoints del coordinador `COORDINATOR_HARNESS=happyrobot`. Los cuatro exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
 
 #### `POST /workflow/coordinator/happyrobot/consult`
 
@@ -328,7 +328,7 @@ Cuatro endpoints del piloto `COORDINATOR_HARNESS=happyrobot`. Los cuatro exigen 
 { "accepted": false, "retry": true, "errors": ["json_invalido: la respuesta no es JSON"], "plan_version": 1 }
 ```
 
-`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan HappyRobot solo si `HAPPYROBOT_COORDINATOR_APPLY=true`; en shadow registra ese plan sin aplicarlo. Si `COORDINATOR_HARNESS=happyrobot` opera el motor en shadow, el proveedor textual configurado continúa el ciclo y aplica el plan principal.
+`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan cuando `HAPPYROBOT_COORDINATOR_APPLY=true` o durante un run E2E aislado. El endpoint shadow registra el plan sin aplicarlo y nunca lanza una segunda inferencia.
 
 #### `GET /coordinator/happyrobot/report`
 

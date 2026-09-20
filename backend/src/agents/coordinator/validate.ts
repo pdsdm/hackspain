@@ -111,7 +111,10 @@ export function operationReady(raw: unknown): boolean {
   // Sin texto no hay nada que contar: una línea vacía en la cronología es ruido en pantalla.
   if (raw.op === "log_event") return typeof raw.text === "string" && raw.text.trim() !== "";
   if (raw.op === "add_constraint") return typeof raw.text === "string" && raw.text.trim() !== "";
-  if (raw.op === "set_agent") return true;
+  if (raw.op === "set_agent") {
+    return AREAS.includes(raw.area as Area) && typeof raw.objective === "string" && raw.objective.trim() !== "" &&
+      typeof raw.reason === "string" && raw.reason.trim() !== "" && typeof raw.status === "string" && raw.status.trim() !== "";
+  }
   return true;
 }
 
@@ -251,6 +254,9 @@ function checkShape(value: unknown): ValidationIssue[] {
         }
         if (raw.op === "cancel_action" && (typeof raw.taskId !== "string" || typeof raw.reason !== "string")) {
           add(`operations[${index}] cancel_action incompleto`);
+        }
+        if (raw.op === "set_agent" && (!AREAS.includes(raw.area as Area) || typeof raw.objective !== "string" || typeof raw.reason !== "string" || typeof raw.status !== "string")) {
+          add(`operations[${index}] set_agent incompleto`);
         }
       }
     }

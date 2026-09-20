@@ -119,6 +119,30 @@ const FALLBACK_CONDITIONS: Record<string, string[]> = {
   asistentes: ["Mensaje con hora y puerta concretas", "Repetir el aviso 15 minutos antes", "Punto de encuentro con personal visible"],
 };
 
+export function e2eReply(task: DispatchTask): SimReply {
+  const payload = isRecord(task.payload) ? task.payload : {};
+  const objective = String(payload.objective ?? "Confirmar la acción vigente");
+  const counterpart = String(payload.counterpart ?? "La contraparte");
+  const transcript = (answer: string): SimReply["transcript"] => [
+    { who: "agente", text: objective, at: 2 },
+    { who: "humano", text: answer, at: 5 },
+  ];
+  if (task.area === "espacios") {
+    const summary = "Simulado: el recinto acepta la alternativa Sur solicitada, condicionada a la comprobación operativa antes de recibir invitados.";
+    return { outcome: "accepted_with_conditions", summary, conditions: ["Comprobación operativa antes de la apertura"], transcript: transcript("Acepto la reserva solicitada en Sur; confirmaremos apertura operativa antes de recibir invitados.") };
+  }
+  if (task.area === "catering") {
+    const summary = "Simulado: Catering confirma 600 servicios y descarga por el muelle alternativo operativo, coordinada con recepción.";
+    return { outcome: "accepted_with_conditions", summary, conditions: ["Recepción disponible en el muelle operativo"], transcript: transcript("Confirmo 600 servicios por el muelle operativo cuando recepción dé paso a la descarga.") };
+  }
+  if (task.area === "transporte") {
+    const summary = "Simulado: Transporte confirma BUS-01, BUS-02, BUS-03 y BUS-04 con destino y acceso Sur coherentes.";
+    return { outcome: "accepted", summary, conditions: [], transcript: transcript("Confirmo los cuatro shuttles hacia Acceso Sur sin desvíos a Norte.") };
+  }
+  const summary = "Simulado: Recepción distribuye exactamente seis personas y segmenta los avisos vigentes a los grupos afectados.";
+  return { outcome: "accepted", summary, conditions: [], transcript: transcript(`${counterpart}: seis personas distribuidas y mensajes segmentados enviados.`) };
+}
+
 export function fallbackReply(task: DispatchTask, seed: number): SimReply {
   const payload = isRecord(task.payload) ? task.payload : {};
   const { mood, figure, lean } = moodFor(seed, task);
@@ -167,6 +191,7 @@ export function fallbackReply(task: DispatchTask, seed: number): SimReply {
 
 export async function counterpartReply(task: DispatchTask, state: CrisisStateDocument, seed: number, deps: SimWorldDeps): Promise<SimReply> {
   const payload = isRecord(task.payload) ? task.payload : {};
+  if (state.e2eMode === "production-isolated") return e2eReply(task);
   if (!deps.config && !deps.completeFn) return fallbackReply(task, seed);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), deps.timeoutMs ?? 45_000);

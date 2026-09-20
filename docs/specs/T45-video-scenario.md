@@ -19,4 +19,4 @@ Congelar una única historia que backend, workflows, frontend y narración pueda
 
 ## Fuera de alcance
 
-Escalar a 6.000 VIP, aprendizaje T20 o activar T44 en producción.
+Escalar a 6.000 VIP, aprendizaje T20 o cambiar el escenario congelado.

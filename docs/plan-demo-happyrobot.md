@@ -24,7 +24,7 @@ Los dos inputs son incidentes simulados lanzados mediante runs reales del workfl
 |---|---|---|
 | Relato y grabación | Ventura, revisión Carlos | T45, T48, T52 |
 | Ingesta y robustez | Zhi | T46, revisión T48, T52 |
-| HappyRobot y coordinación | Ventura | T47, T48, T50 |
+| HappyRobot y coordinación | Ventura | T44, T47, T48, T50 |
 | Transcripción en directo | Devin | T22 |
 | Transporte | Álvaro | T13, parte de T51 |
 | Especialistas y UI | Ventura, revisión Carlos | T49, parte de T51 |
@@ -70,6 +70,6 @@ T47 puede preparar los workflows mientras se cierra el contrato T46. T48 puede p
 
 ## Recorte
 
-Se puede recortar el detalle individual del staff, una negociación saliente y T44. No se recortan los dos incidentes simulados, sus runs HappyRobot en la toma principal, los dos ciclos del coordinador, las cuatro áreas visibles, el director reproducible ni el final honesto.
+Se puede recortar el detalle individual del staff y una negociación saliente. No se recortan los dos incidentes simulados, sus runs HappyRobot, los dos ciclos del Reasoning Agent, las cuatro áreas visibles, el director reproducible ni el final honesto.
 
-T44 continúa en shadow y no bloquea esta demo. El coordinador principal sigue siendo Helmcode hasta completar el E2E del piloto HappyRobot.
+Por D20, T44 es el coordinador principal de la toma: HappyRobot propone mediante herramientas y el backend valida y aplica.
