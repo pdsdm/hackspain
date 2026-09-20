@@ -1,4 +1,4 @@
-import type { CrisisState, LatLng } from './types'
+import type { CrisisState, LatLng, Vehicle } from './types'
 import { hm } from './time'
 
 export const T0 = hm(12, 15)
@@ -28,7 +28,102 @@ export const POS = {
   castilla: [40.4666, -3.6892] as LatLng,
   t4: [40.4919, -3.5928] as LatLng,
   coslada: [40.4405, -3.5850] as LatLng,
+  atocha: [40.4065, -3.6895] as LatLng,
+  nuevosMinisterios: [40.4460, -3.6915] as LatLng,
+  colon: [40.4250, -3.6900] as LatLng,
+  moncloa: [40.4350, -3.7190] as LatLng,
+  alcobendas: [40.5410, -3.6410] as LatLng,
+  sanse: [40.5470, -3.6260] as LatLng,
+  tresCantos: [40.6020, -3.7080] as LatLng,
+  lasTablas: [40.5080, -3.6680] as LatLng,
+  sanchinarro: [40.4940, -3.6560] as LatLng,
+  arturoSoria: [40.4560, -3.6420] as LatLng,
+  canillejas: [40.4470, -3.6100] as LatLng,
+  barajasT1: [40.4730, -3.5760] as LatLng,
+  torrejon: [40.4560, -3.4760] as LatLng,
+  sanFernando: [40.4230, -3.5330] as LatLng,
+  alcala: [40.4820, -3.3640] as LatLng,
+  vicalvaro: [40.4020, -3.6060] as LatLng,
 }
+
+export const ORIGIN_NAMES: Record<string, string> = {
+  atocha: 'Estación de Atocha',
+  nuevosMinisterios: 'Nuevos Ministerios',
+  colon: 'Plaza de Colón',
+  moncloa: 'Moncloa',
+  alcobendas: 'Alcobendas',
+  sanse: 'San Sebastián de los Reyes',
+  tresCantos: 'Tres Cantos',
+  lasTablas: 'Las Tablas',
+  sanchinarro: 'Sanchinarro',
+  arturoSoria: 'Arturo Soria',
+  canillejas: 'Canillejas',
+  barajasT1: 'Aeropuerto T1',
+  torrejon: 'Torrejón de Ardoz',
+  sanFernando: 'San Fernando de Henares',
+  alcala: 'Alcalá de Henares',
+  vicalvaro: 'Vicálvaro',
+}
+
+function driveMinutes(a: LatLng, b: LatLng) {
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(b[0] - a[0])
+  const dLng = toRad(b[1] - a[1])
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng / 2) ** 2
+  const km = 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+  return Math.max(20, Math.round((km / 30) * 60) + 8)
+}
+
+type PosKey = keyof typeof POS
+type TripSpec = [id: string, kind: Vehicle['kind'], who: string, count: number, from: PosKey, destinationId: PosKey, counterpart: string]
+
+function departSlot(index: number) {
+  return index < 4 ? hm(11, 55) + index * 600 : hm(12, 40) + (index - 4) * 165
+}
+
+const EXTRA_TRIPS: TripSpec[] = [
+  ['TX-05', 'taxi', 'Invitados por sus medios', 3, 'atocha', 'accesoSur', 'Central de taxis'],
+  ['BUS-A1', 'bus', 'Autocar · peña Aston Martin', 38, 'alcala', 'parkingSur', 'Autocares Henares'],
+  ['VIP-04', 'vip', 'Director deportivo · Ferrari', 2, 'colon', 'paddockNorte', 'Chófer VIP-04'],
+  ['REP-03', 'repartidor', 'Merchandising · última hora', 1, 'vicalvaro', 'muelleNorte', 'Repartidor REP-03'],
+  ['TX-06', 'taxi', 'Invitados por sus medios', 2, 'moncloa', 'accesoSur2', 'Central de taxis'],
+  ['BUS-A2', 'bus', 'Minibús · patrocinador Iberia', 16, 'barajasT1', 'parkingNorte', 'Iberia Ground'],
+  ['TX-07', 'taxi', 'Invitados por sus medios', 4, 'alcobendas', 'parkingSur', 'Central de taxis'],
+  ['VIP-05', 'vip', 'Piloto reserva · McLaren', 1, 'nuevosMinisterios', 'paddockNorte', 'Chófer VIP-05'],
+  ['REP-04', 'repartidor', 'Equipo audiovisual', 1, 'sanFernando', 'muelleEste', 'Repartidor REP-04'],
+  ['TX-08', 'taxi', 'Invitados por sus medios', 3, 'tresCantos', 'accesoSur', 'Central de taxis'],
+  ['BUS-A3', 'bus', 'Autocar · club de fans', 42, 'torrejon', 'parkingSur', 'Autocares Henares'],
+  ['VIP-06', 'vip', 'Consejero delegado · patrocinador', 3, 'lasTablas', 'parkingNorte', 'Chófer VIP-06'],
+  ['TX-09', 'taxi', 'Invitados por sus medios', 2, 'sanse', 'accesoSur2', 'Central de taxis'],
+  ['REP-05', 'repartidor', 'Hielo adicional', 1, 'canillejas', 'muelleNorte', 'Repartidor REP-05'],
+  ['TX-10', 'taxi', 'Invitados por sus medios', 4, 'sanchinarro', 'parkingSur', 'Central de taxis'],
+  ['BUS-A4', 'bus', 'Minibús · prensa acreditada', 14, 'atocha', 'parkingNorte', 'Prensa GP'],
+  ['VIP-07', 'vip', 'Embajador de marca', 2, 'arturoSoria', 'paddockNorte', 'Chófer VIP-07'],
+  ['TX-11', 'taxi', 'Invitados por sus medios', 3, 'vicalvaro', 'accesoSur', 'Central de taxis'],
+  ['REP-06', 'repartidor', 'Uniformes de recepción', 1, 'alcala', 'muelleNorte', 'Repartidor REP-06'],
+  ['TX-12', 'taxi', 'Invitados por sus medios', 2, 'colon', 'accesoSur2', 'Central de taxis'],
+  ['BUS-A5', 'bus', 'Autocar · escuela de pilotos', 30, 'tresCantos', 'parkingSur', 'Autocares Sierra'],
+  ['VIP-08', 'vip', 'Director de circuito invitado', 2, 'barajasT1', 'paddockNorte', 'Chófer VIP-08'],
+  ['TX-13', 'taxi', 'Invitados por sus medios', 4, 'moncloa', 'parkingSur', 'Central de taxis'],
+  ['REP-07', 'repartidor', 'Cartelería de emergencia', 1, 'torrejon', 'muelleNorte', 'Repartidor REP-07'],
+  ['TX-14', 'taxi', 'Invitados por sus medios', 3, 'sanchinarro', 'accesoSur', 'Central de taxis'],
+  ['BUS-A6', 'bus', 'Minibús · patrocinador Santander', 18, 'alcobendas', 'parkingNorte', 'Santander Events'],
+  ['VIP-09', 'vip', 'Invitado institucional', 3, 'sanFernando', 'parkingNorte', 'Chófer VIP-09'],
+  ['TX-15', 'taxi', 'Invitados por sus medios', 2, 'lasTablas', 'accesoSur2', 'Central de taxis'],
+  ['TX-16', 'taxi', 'Invitados por sus medios', 3, 'nuevosMinisterios', 'parkingSur', 'Central de taxis'],
+  ['BUS-A7', 'bus', 'Autocar · concesionario oficial', 26, 'sanse', 'parkingSur', 'Autocares Sierra'],
+  ['VIP-10', 'vip', 'Jefe de prensa · Red Bull', 2, 'canillejas', 'paddockNorte', 'Chófer VIP-10'],
+  ['REP-08', 'repartidor', 'Repuesto de sonido', 1, 'arturoSoria', 'muelleNorte', 'Repartidor REP-08'],
+  ['TX-17', 'taxi', 'Invitados por sus medios', 4, 'atocha', 'accesoSur', 'Central de taxis'],
+  ['BUS-A8', 'bus', 'Minibús · hotel oficial', 12, 'colon', 'parkingNorte', 'Hotel Oficial GP'],
+  ['TX-18', 'taxi', 'Invitados por sus medios', 2, 'vicalvaro', 'accesoSur2', 'Central de taxis'],
+  ['VIP-11', 'vip', 'Expiloto invitado', 1, 'moncloa', 'paddockNorte', 'Chófer VIP-11'],
+]
+
+const EXTRA_VEHICLES: Vehicle[] = EXTRA_TRIPS.map(([id, kind, who, count, from, destinationId, counterpart], index) => {
+  const departAt = departSlot(index)
+  return { id, kind, name: id, who, count, from, origin: ORIGIN_NAMES[from] ?? from, destinationId, route: [POS[from], POS[destinationId]], departAt, arriveAt: departAt + driveMinutes(POS[from], POS[destinationId]) * 60, delayMin: 0, status: 'en_ruta', counterpart }
+})
 
 export const ZONE_SUR: LatLng[] = [
   [40.46757, -3.62348],
@@ -125,6 +220,7 @@ export function createInitialState(): CrisisState {
       { id: 'TX-04', kind: 'taxi', name: 'TX-04', who: 'Invitados por sus medios', count: 2, from: 'castilla', origin: 'Plaza de Castilla', destinationId: 'accesoSur', route: ROUTE_CASTILLA_PARKING, departAt: hm(12, 30), arriveAt: hm(13, 15), delayMin: 0, status: 'en_ruta', counterpart: 'Central de taxis' },
       { id: 'REP-01', kind: 'repartidor', name: 'REP-01', who: 'Hielo y bebida · última hora', count: 1, from: 'coslada', origin: 'Coslada', destinationId: 'muelleSur', route: ROUTE_COSLADA, departAt: hm(12, 20), arriveAt: hm(12, 55), delayMin: 0, status: 'en_ruta', counterpart: 'Repartidor REP-01', note: 'Destino invalidado: Muelle Sur cerrado' },
       { id: 'REP-02', kind: 'repartidor', name: 'REP-02', who: 'Flores y cartelería · última hora', count: 1, from: 'coslada', origin: 'Coslada', destinationId: 'muelleEste', route: ROUTE_COSLADA_ESTE, departAt: hm(12, 40), arriveAt: hm(13, 18), delayMin: 0, status: 'en_ruta', counterpart: 'Repartidor REP-02' },
+      ...EXTRA_VEHICLES,
     ],
     attendanceExpected: 110000,
     gates: [

@@ -79,7 +79,7 @@ export interface Delivery {
   note?: string
 }
 
-export type VehicleKind = 'taxi' | 'vip' | 'repartidor'
+export type VehicleKind = 'taxi' | 'vip' | 'repartidor' | 'bus'
 export type VehicleStatus = 'en_ruta' | 'retenido' | 'desviado' | 'llegado'
 
 export interface Vehicle {

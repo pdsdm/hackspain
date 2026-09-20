@@ -300,6 +300,166 @@
         40.4405,
         -3.585
       ]
+    },
+    {
+      "id": "atocha",
+      "name": "Estación de Atocha",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.4065,
+        -3.6895
+      ]
+    },
+    {
+      "id": "nuevosMinisterios",
+      "name": "Nuevos Ministerios",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.446,
+        -3.6915
+      ]
+    },
+    {
+      "id": "colon",
+      "name": "Plaza de Colón",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.425,
+        -3.69
+      ]
+    },
+    {
+      "id": "moncloa",
+      "name": "Moncloa",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.435,
+        -3.719
+      ]
+    },
+    {
+      "id": "alcobendas",
+      "name": "Alcobendas",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.541,
+        -3.641
+      ]
+    },
+    {
+      "id": "sanse",
+      "name": "San Sebastián de los Reyes",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.547,
+        -3.626
+      ]
+    },
+    {
+      "id": "tresCantos",
+      "name": "Tres Cantos",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.602,
+        -3.708
+      ]
+    },
+    {
+      "id": "lasTablas",
+      "name": "Las Tablas",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.508,
+        -3.668
+      ]
+    },
+    {
+      "id": "sanchinarro",
+      "name": "Sanchinarro",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.494,
+        -3.656
+      ]
+    },
+    {
+      "id": "arturoSoria",
+      "name": "Arturo Soria",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.456,
+        -3.642
+      ]
+    },
+    {
+      "id": "canillejas",
+      "name": "Canillejas",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.447,
+        -3.61
+      ]
+    },
+    {
+      "id": "barajasT1",
+      "name": "Aeropuerto T1",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.473,
+        -3.576
+      ]
+    },
+    {
+      "id": "torrejon",
+      "name": "Torrejón de Ardoz",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.456,
+        -3.476
+      ]
+    },
+    {
+      "id": "sanFernando",
+      "name": "San Fernando de Henares",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.423,
+        -3.533
+      ]
+    },
+    {
+      "id": "alcala",
+      "name": "Alcalá de Henares",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.482,
+        -3.364
+      ]
+    },
+    {
+      "id": "vicalvaro",
+      "name": "Vicálvaro",
+      "kind": "parada",
+      "zone": null,
+      "pos": [
+        40.402,
+        -3.606
+      ]
     }
   ],
   "links": [
