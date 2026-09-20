@@ -173,7 +173,6 @@ export interface Call {
   startedAt: number
   endsAfter: number
   status: CallStatus
-  simulated?: boolean
   transcript: TranscriptLine[]
 }
 
@@ -187,7 +186,6 @@ export interface TimelineEvent {
   area?: Area
   channel?: 'call' | 'sms' | 'webcall' | 'api'
   actor?: string
-  simulated?: boolean
   /** Hora real (epoch ms) en que el backend registró el evento. */
   realAt?: number
 }
@@ -220,14 +218,9 @@ export interface Clock {
   lunchAt: number
   raceAt: number
   seed?: number
-  live?: boolean
-  liveSeed?: number
-  liveMode?: 'open' | 'catalog'
 }
 
 export interface CrisisState {
-  simulated: boolean
-  inboxTriage?: { received: number; relevant: number; ignored: number; status: 'processing' | 'triaged'; selected?: string; reading?: string }
   clock: Clock
   planVersion: number
   coordinatorStatus: CoordinatorStatus
@@ -248,9 +241,6 @@ export interface CrisisState {
   constraints: string[]
   twistsApplied: TwistId[]
   selectedId: string | null
-  scriptId: 'main' | 'norte' | 'reducido'
-  scriptCursor: number
-  nextScriptAt: number | null
   waitingForDecision: string | null
   agentsPaused: boolean
   resolved: boolean
@@ -270,13 +260,3 @@ export interface Intervention {
   type: InterventionType
   payload?: { text?: string; decisionId?: string; callId?: string }
 }
-
-export type Action =
-  | { type: 'TICK'; deltaSeconds: number }
-  | { type: 'TWIST'; twist: TwistId }
-  | { type: 'INTERVENE'; intervention: Intervention }
-  | { type: 'SET_SPEED'; speed: number }
-  | { type: 'TOGGLE_PAUSE' }
-  | { type: 'SELECT'; id: string | null }
-  | { type: 'RESET' }
-  | { type: 'REPLACE'; state: CrisisState }

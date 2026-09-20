@@ -1,74 +1,45 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
-import type { CrisisState, Intervention, TwistId } from '../domain/types'
-import { createFixtureState, type FixtureName } from '../domain/fixtures'
-import { reducer } from '../domain/reducer'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CrisisState, Intervention } from '../domain/types'
+import { createFixtureState } from '../domain/fixtures'
 import { api } from './apiClient'
 
-export type DataSource = 'sim' | 'api'
 export interface CrisisController {
   state: CrisisState
-  source: DataSource
   ready: boolean
   error: string | null
   stale: boolean
   ageSeconds: number
   pending: boolean
   feedback: string | null
-  reference: CrisisState | null
-  setReference: () => void
   intervene: (i: Intervention) => Promise<boolean>
-  twist: (t: TwistId) => void
-  setLive: (enabled: boolean, seed?: number) => void
   setSpeed: (n: number) => void
   togglePause: () => void
   select: (id: string | null) => void
   reset: () => void
   sendEvent: (text: string) => Promise<boolean>
-  loadFixture: (name: FixtureName) => void
 }
 
-const SOURCE: DataSource = import.meta.env.VITE_DATA_SOURCE === 'api' ? 'api' : 'sim'
-
 export function useCrisisState(): CrisisController {
-  const [state, dispatch] = useReducer(reducer, undefined, () => createFixtureState('calm'))
-  const [reference, setReference] = useState<CrisisState | null>(() => SOURCE === 'sim' ? createFixtureState('calm') : null)
+  const [state, setState] = useState<CrisisState>(() => createFixtureState('calm'))
   const [selectedId, select] = useState<string | null>('principal')
-  const [ready, setReady] = useState(SOURCE === 'sim')
+  const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [receivedAt, setReceivedAt] = useState<number | null>(null)
   const [now, setNow] = useState(Date.now)
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
   const requestInFlight = useRef(false)
-  const previous = useRef<CrisisState | null>(null)
   const pollInFlight = useRef(false)
   const ageSeconds = receivedAt === null ? 0 : Math.floor((now - receivedAt) / 1000)
-  const stale = SOURCE === 'api' && (!ready || ageSeconds >= 10)
+  const stale = !ready || ageSeconds >= 10
 
   const receive = useCallback((s: CrisisState) => {
-    // A server reset begins a new comparison. Do not compare two different runs.
-    const old = previous.current
-    const reset = old && s.clock.simSeconds < old.clock.simSeconds && s.planVersion <= old.planVersion
-    setReference((ref) => !ref || reset ? structuredClone(s) : ref)
-    previous.current = s
-    dispatch({ type: 'REPLACE', state: s })
+    setState(s)
     const at = Date.now()
     setReceivedAt(at); setNow(at); setReady(true); setError(null)
   }, [])
 
   useEffect(() => {
-    if (SOURCE !== 'sim') return
-    let last = performance.now()
-    const id = setInterval(() => {
-      const time = performance.now()
-      dispatch({ type: 'TICK', deltaSeconds: Math.min(2, (time - last) / 1000) })
-      last = time
-    }, 250)
-    return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    if (SOURCE !== 'api') return
     let alive = true
     const poll = async () => {
       if (pollInFlight.current) return
@@ -98,11 +69,6 @@ export function useCrisisState(): CrisisController {
   const intervene = async (i: Intervention) => {
     if (requestInFlight.current || stale) return false
     setFeedback(null)
-    if (SOURCE === 'sim') {
-      dispatch({ type: 'INTERVENE', intervention: i })
-      setFeedback('Intervención aplicada en la simulación.')
-      return true
-    }
     requestInFlight.current = true; setPending(true)
     try {
       await api.intervene(i)
@@ -115,49 +81,16 @@ export function useCrisisState(): CrisisController {
   }
 
   return {
-    state: { ...state, selectedId }, source: SOURCE, ready, error, stale, ageSeconds, pending, feedback, reference,
-    setReference: () => setReference(structuredClone(state)),
+    state: { ...state, selectedId }, ready, error, stale, ageSeconds, pending, feedback,
     intervene,
-    twist: (twist) => {
-      if (SOURCE === 'sim') {
-        dispatch({ type: 'TWIST', twist })
-        return
-      }
-      if (requestInFlight.current || stale) return
-      requestInFlight.current = true
-      setPending(true)
-      void api.twist(twist)
-        .then(() => setFeedback('Giro enviado al backend.'))
-        .catch((e) => setFeedback('No se pudo enviar el giro: ' + (e instanceof Error ? e.message : 'error')))
-        .finally(() => { requestInFlight.current = false; setPending(false) })
-    },
-    setLive: (enabled, seed) => {
-      if (SOURCE !== 'api') {
-        setFeedback('El Modo vivo solo funciona contra el backend (VITE_DATA_SOURCE=api).')
-        return
-      }
-      if (requestInFlight.current) return
-      requestInFlight.current = true
-      setPending(true)
-      void api.live(enabled, seed)
-        .then((r) => setFeedback(r.live ? `Modo vivo activado · semilla ${r.seed}.` : 'Modo vivo desactivado.'))
-        .catch((e) => setFeedback('No se pudo cambiar el Modo vivo: ' + (e instanceof Error ? e.message : 'error')))
-        .finally(() => { requestInFlight.current = false; setPending(false) })
-    },
     setSpeed: (speed) => {
-      if (SOURCE === 'sim') { dispatch({ type: 'SET_SPEED', speed }); return }
       void api.clock({ speed }).catch((e) => setFeedback('No se pudo cambiar la velocidad: ' + (e instanceof Error ? e.message : 'error')))
     },
     togglePause: () => {
-      if (SOURCE === 'sim') { dispatch({ type: 'TOGGLE_PAUSE' }); return }
       void api.clock({ paused: !state.clock.paused }).catch((e) => setFeedback('No se pudo pausar el reloj: ' + (e instanceof Error ? e.message : 'error')))
     },
     select,
     reset: () => {
-      if (SOURCE === 'sim') {
-        dispatch({ type: 'RESET' }); setReference(createFixtureState('calm')); select('principal'); setFeedback(null)
-        return
-      }
       if (requestInFlight.current) return
       requestInFlight.current = true
       setPending(true)
@@ -167,7 +100,6 @@ export function useCrisisState(): CrisisController {
         .finally(() => { requestInFlight.current = false; setPending(false) })
     },
     sendEvent: async (text) => {
-      if (SOURCE !== 'api') return false
       if (requestInFlight.current) {
         setFeedback('Espera: hay un envío en curso (el coordinador va en serie).')
         return false
@@ -186,10 +118,6 @@ export function useCrisisState(): CrisisController {
         requestInFlight.current = false
         setPending(false)
       }
-    },
-    loadFixture: (name) => {
-      if (SOURCE !== 'sim') return
-      dispatch({ type: 'REPLACE', state: createFixtureState(name) }); select(null); setFeedback(null)
     },
   }
 }

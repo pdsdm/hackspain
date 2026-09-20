@@ -202,7 +202,7 @@ start_frontend() {
   fi
   (
     cd "$ROOT/frontend"
-    exec env VITE_API_URL="$BACKEND_URL" VITE_DATA_SOURCE=api \
+    exec env VITE_API_URL="$BACKEND_URL" \
       node node_modules/vite/bin/vite.js --host 127.0.0.1 --port "$FRONTEND_PORT"
   ) >"$RUNTIME_DIR/frontend.log" 2>&1 &
   echo $! >"$RUNTIME_DIR/frontend.pid"

@@ -63,7 +63,6 @@ export interface CoordinatorInput {
   commitments: InputCommitment[];
   budget: InputBudget;
   constraints: string[];
-  e2eRealTransportCall?: boolean;
   shuttles?: InputShuttle[];
   deliveries?: InputDelivery[];
   vehicles?: InputVehicle[];

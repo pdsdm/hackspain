@@ -33,7 +33,6 @@ interface RawState {
   commitments: (InputCommitment & { planVersion: number })[];
   budget: CoordinatorInput["budget"];
   constraints: string[];
-  e2eRealTransportCall?: boolean;
 }
 
 export function hm(hours: number, minutes: number): number {
@@ -79,7 +78,6 @@ export function toCoordinatorInput(state: RawState): CoordinatorInput {
     })),
     budget: state.budget,
     constraints: coordinatorConstraints(state.constraints),
-    e2eRealTransportCall: state.e2eRealTransportCall === true,
   };
 }
 
@@ -177,7 +175,6 @@ export function liveCoordinatorInput(
     commitments,
     budget,
     constraints,
-    e2eRealTransportCall: state.e2eRealTransportCall === true,
     shuttles,
     deliveries,
     vehicles,

@@ -1,6 +1,6 @@
 # Director reproducible de la demo
 
-El director lanza los dos inputs simulados con el contrato real T46 y espera cambios observables en `/state`. No escribe SQLite ni carga snapshots intermedios.
+El director lanza los dos inputs de la demo con el contrato real T46 y espera cambios observables en `/state`. No escribe SQLite ni carga snapshots intermedios.
 
 ## Preparación
 
@@ -52,7 +52,7 @@ El alias `external` equivale a `happyrobot`. Este modo exige `HAPPYROBOT_DEMO_IN
 
 Por defecto se actualiza tras cada checkpoint un informe privado en `.demo/video-rehearsal-<fecha>.json`. Se puede elegir ruta con `--report=ruta.json` u omitir el fichero con `--report=-`.
 
-El director valida M0, el primer ciclo, el bloqueo del muelle y el final usando `/state` y `/actions`: 600/600 al arrancar, versión de plan, procedencia de llamada/SMS, actores `SIMULACIÓN ·`, Principal y Muelle, CAT-01/CAT-02, cuatro especialistas con `objective`, `reason` y `lastResult`, compromisos condicionados, tareas/llamadas abiertas y `closureSummary`. Un timeout incluye el último resumen observable; una incoherencia termina con código distinto de cero y queda en el informe. Superar el comando prueba los checkpoints API, no prueba una grabación.
+El director valida M0, el primer ciclo, el bloqueo del muelle y el final usando `/state` y `/actions`: 600/600 al arrancar, versión de plan, procedencia de llamada/SMS y sus actores, Principal y Muelle, CAT-01/CAT-02, cuatro especialistas con `objective`, `reason` y `lastResult`, compromisos condicionados, tareas/llamadas abiertas y `closureSummary`. Un timeout incluye el último resumen observable; una incoherencia termina con código distinto de cero y queda en el informe. Superar el comando prueba los checkpoints API, no prueba una grabación.
 
 ## Bloqueo de plataforma
 

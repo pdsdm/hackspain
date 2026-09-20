@@ -114,7 +114,7 @@ Cómo está montado el sistema de agentes, qué entidades hay y con qué tiempos
 | Backend | https://hackspain-production.up.railway.app/ | Railway, Node.js 22 y una réplica |
 | Salud | https://hackspain-production.up.railway.app/health | Debe responder `{ "status": "ok" }` |
 
-Vercel usa `VITE_DATA_SOURCE=api` y `VITE_API_URL` sin barra final. Los secretos de LLM y HappyRobot existen solo en Railway. SQLite vive en el volumen persistente `/data` con `DATABASE_URL=/data/crisis.db`.
+Vercel usa `VITE_API_URL` sin barra final. Los secretos de LLM y HappyRobot existen solo en Railway. SQLite vive en el volumen persistente `/data` con `DATABASE_URL=/data/crisis.db`.
 
 Railway aporta `RAILWAY_DEPLOYMENT_ID`. La primera instancia de cada deployment crea una ejecución `calm` nueva y pausada; un reinicio del mismo deployment conserva el progreso. Los runs anteriores permanecen inactivos como auditoría.
 

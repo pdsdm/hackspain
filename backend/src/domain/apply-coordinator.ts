@@ -359,9 +359,6 @@ export function persistCoordinatorOutput(input: {
       planVersion: run.state.planVersion,
     }));
   }
-  if (typeof next.inboxTriage === "object" && next.inboxTriage !== null && (next.inboxTriage as Record<string, unknown>).status === "processing") {
-    next.inboxTriage = { ...(next.inboxTriage as Record<string, unknown>), status: "triaged", selected: "principal_pipe_burst", reading: input.output.reading };
-  }
   applyOperations(next, input.world, input.output.operations ?? [], openTaskIds);
   for (const taskId of cancelled) input.tasks.cancel(taskId, "invalidated by coordinator");
   if (!hasPlan && input.output.estimatedCost !== undefined && input.output.estimatedCost !== null) {

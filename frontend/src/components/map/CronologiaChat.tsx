@@ -62,7 +62,6 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
           const source = e.channel ? CHANNEL[e.channel] : undefined
           const Icon = area?.icon ?? look.icon
           const name = e.actor ?? (e.kind === 'intervencion' ? 'Responsable' : area?.label ?? (e.kind === 'mensaje' ? 'Evento recibido' : 'Zhivel'))
-          const simulated = e.simulated || e.actor?.startsWith('SIMULACIÓN')
           const tone = e.kind === 'intervencion' ? 'intervencion' : look.tone
           return (
               <li key={e.id} className={`timeline-item timeline-item--${tone}${e.id === lastId ? ' is-new' : ''}`}>
@@ -74,10 +73,9 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
                     <time className="timeline-time num">{e.realAt ? fmtRealClock(e.realAt) : fmtClock(e.time)}</time>
                   </div>
                   <p className="timeline-text">{renderText(e.text)}</p>
-                  {(source || simulated) && (
+                  {source && (
                     <span className="timeline-meta">
-                      {source && <><source.icon aria-hidden="true" />{source.label}</>}
-                      {simulated && <span className="sim">simulado</span>}
+                      <source.icon aria-hidden="true" />{source.label}
                     </span>
                   )}
                 </div>

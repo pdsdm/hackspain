@@ -1,6 +1,6 @@
 # Guía de pruebas
 
-Esta guía cubre lo que está implementado en `main`: panel simulado, panel contra el backend, endpoints y el contrato previsto con HappyRobot.
+Esta guía cubre lo que está implementado en `main`: panel contra el backend, endpoints y el contrato previsto con HappyRobot.
 
 ## 1. Preparación
 
@@ -13,25 +13,7 @@ cp frontend/.env.example frontend/.env
 
 El backend carga el `.env` de la raíz. Vite carga `frontend/.env`; las variables `VITE_*` de la raíz no llegan al frontend automáticamente.
 
-## 2. Panel con simulación local
-
-En `frontend/.env`:
-
-```dotenv
-VITE_API_URL=http://127.0.0.1:8000
-VITE_DATA_SOURCE=sim
-```
-
-Arranque:
-
-```bash
-cd frontend
-npm run dev
-```
-
-Abrir `http://127.0.0.1:5173`. Este modo no necesita backend y reproduce el guion local de `frontend/src/domain/`.
-
-## 3. Panel contra el backend real
+## 2. Panel contra el backend real
 
 Configuración mínima en el `.env` de la raíz:
 
@@ -59,7 +41,6 @@ En `frontend/.env`:
 
 ```dotenv
 VITE_API_URL=http://127.0.0.1:8000
-VITE_DATA_SOURCE=api
 ```
 
 Arrancar en dos terminales:
@@ -76,7 +57,7 @@ npm run dev
 
 El panel debe mostrar `Backend conectado`. En desarrollo, Vite reenvía las rutas API al backend de `127.0.0.1:8000`.
 
-## 4. Prueba rápida de endpoints
+## 3. Prueba rápida de endpoints
 
 Las llamadas siguientes pasan por Vite y demuestran el recorrido frontend → backend:
 
@@ -97,7 +78,7 @@ curl -s -X POST http://127.0.0.1:5173/simulation/twists \
 
 El contrato completo, cuerpos y respuestas están en [`docs/api-contract.md`](api-contract.md). Los logs del backend usan los prefijos `[events]`, `[coord]`, `[actions]` y `[workflow]`.
 
-## 5. Recorrido HappyRobot
+## 4. Recorrido HappyRobot
 
 ### Variables locales
 
@@ -124,7 +105,7 @@ Solo hace falta configurar el hook de las áreas que se prueben. Con un hook y `
 
 Resultado esperado: el backend registra `[actions]`, HappyRobot realiza la llamada, el callback registra `[workflow]` y el siguiente `GET /state` muestra la llamada terminada, el resultado del agente y el compromiso actualizado.
 
-## 6. Operación repetible de la demo
+## 5. Operación repetible de la demo
 
 Requisitos: Node 22 o superior, dependencias instaladas con `./scripts/setup.sh` y un túnel para el modo público. El script no instala herramientas ni escribe secretos.
 
@@ -179,38 +160,9 @@ El estado persiste en `backend/data/demo.db`. Los logs y PID quedan en `.demo/`,
 
 `HAPPYROBOT_API_KEY`, `HAPPYROBOT_TEST_PHONE`, `HAPPYROBOT_WEBHOOK_TOKEN` y `HAPPYROBOT_HOOK_*` solo se rellenan en el `.env` raíz. No se copian a argumentos ni logs.
 
-## 7. E2E real de la toma grabada
+## 6. Estado y limitaciones conocidas
 
-Configura en `.env` o `.env.e2e` `HAPPYROBOT_API_KEY` y `HAPPYROBOT_WEBHOOK_TOKEN`. `HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID` es opcional: si falta, el runner descubre `Demo Incident Inputs` por nombre. Los archivos están ignorados por Git.
-
-Contra producción, después de desplegar esta versión:
-
-```bash
-cd backend
-E2E_TARGET_URL=https://hackspain-production.up.railway.app npm run demo:e2e-real -- --confirm-real-happyrobot --confirm-real-transport-call
-```
-
-Sin `--confirm-real-transport-call`, el recorrido es seguro y todos los especialistas usan `sim`. Con el flag, el Reasoning Agent invoca una sola vez la tool `emitir_llamada` de Transporte usando el contacto autorizado configurado en HappyRobot; exige confirmación del destinatario antes de ejecutar. Las tareas persistidas de Espacios, Catering, Transporte y Asistentes siguen en `sim` para no duplicar la llamada. En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend.
-
-Un resultado `OK` exige:
-
-- mismo run aislado durante toda la prueba; un redeploy aborta con diagnóstico explícito;
-- runs y nodos HappyRobot de llamada, SMS y coordinador completados sin errores;
-- dos informes distintos, aceptados y aplicados a la versión correcta sin reintentos de validación;
-- lote visible en menos de dos segundos, `consult_world` usado y triaje persistido como 10 recibidos, 1 relevante y 9 descartados;
-- reparto exacto B 450 + Lounge 150 tanto en el output como en `/state.assignments`, y acciones de las cuatro áreas;
-- Principal y Muelle Este cerrados, CAT-01/CAT-02 redirigidos a Muelle Sur y cuatro shuttles coherentes en Sur;
-- objetivos, motivos y últimos resultados visibles; con el flag, exactamente una invocación de `emitir_llamada`, un único run hijo de voz completado sin `user_missed_call` y tareas persistidas `sim`;
-- cierre resuelto o limitación explícita;
-- tercer run real con el mismo `eventId`, `duplicate: true` y estado inmutable.
-
-El runner registra por ciclo `inputToEffectMs`, `effectToCoordinatorMs`, latencia interna de HappyRobot, tiempo hasta asentarse y total. La evidencia resume media y mediana de los dos ciclos sin llamar a proveedores alternativos.
-
-La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
-
-## 8. Estado y limitaciones conocidas
-
-- Verificado localmente: Vite en modo `api` llega a `/health`, `/state`, `/events` y `/simulation/*`; el backend registra el evento.
+- Verificado localmente: Vite llega a `/health`, `/state`, `/events` y `/simulation/*`; el backend registra el evento.
 - Probado por tests: despacho al hook, timeout sin callback, autenticación e idempotencia de `/workflow/results`.
 - Pendiente real: URL de trigger Webhook, API key de HappyRobot, número de prueba y backend público HTTPS.
 - Los contactos del seed mantienen `phone: null`; el backend inyecta `HAPPYROBOT_TEST_PHONE` solo al payload externo.

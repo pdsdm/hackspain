@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
@@ -25,10 +25,8 @@ import {
   parseHappyRobotIncident,
   parseIntervention,
   parseClock,
-  parseLive,
   parseReset,
   parseSpecialistResult,
-  parseTwist,
   type SpecialistResultEnvelope,
 } from "./contracts/api.js";
 import { ControlService } from "./domain/control-service.js";
@@ -106,7 +104,7 @@ export function createApp(
   const eventRepository = new EventRepository(database.connection);
   const happyrobotEventRepository = new HappyRobotEventRepository(database.connection);
   const pendingHappyRobotEvents = new Map<string, Promise<Record<string, unknown>>>();
-  const controlService = new ControlService(stateRepository, config.simSeed, config.clockSpeed);
+  const controlService = new ControlService(stateRepository, config.clockSpeed);
   const workflowService = new WorkflowService(
     stateRepository,
     taskRepository,
@@ -205,13 +203,6 @@ export function createApp(
     const received = authorization?.startsWith(prefix) ? authorization.slice(prefix.length) : "";
     const token = options.workflowToken ?? config.workflowToken;
     if (received && token && sameToken(received, token)) {
-      next();
-      return;
-    }
-    const state = stateRepository.ensureActiveRun().state;
-    const e2eHash = typeof state.e2eInputTokenHash === "string" ? state.e2eInputTokenHash : "";
-    const receivedHash = received ? createHash("sha256").update(received).digest("hex") : "";
-    if (state.forceSimActions === true && e2eHash && receivedHash && sameToken(receivedHash, e2eHash)) {
       next();
       return;
     }
@@ -364,27 +355,6 @@ export function createApp(
     }
   });
 
-  app.post("/simulation/twists", (request, response, next) => {
-    try {
-      const twist = parseTwist(request.body);
-      void engine
-        .handle({ source: "jury", kind: twist, payload: { twist } })
-        .catch((error) => console.error("[twists] handle", error));
-      response.status(200).json({ ok: true });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  app.post("/simulation/live", (request, response, next) => {
-    try {
-      const body = parseLive(request.body ?? {});
-      response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed, body.mode) });
-    } catch (error) {
-      next(error);
-    }
-  });
-
   app.post("/simulation/clock", (request, response, next) => {
     try {
       const body = parseClock(request.body ?? {});
@@ -404,39 +374,6 @@ export function createApp(
     } catch (error) {
       next(error);
     }
-  });
-
-  app.post("/simulation/e2e/reset", authorizeWorkflow, (request, response, next) => {
-    const body = request.body && typeof request.body === "object" ? request.body as Record<string, unknown> : {};
-    const inputTokenHash = body.inputTokenHash;
-    const realTransportCall = body.realTransportCall === true;
-    if (inputTokenHash !== undefined && (typeof inputTokenHash !== "string" || !/^[a-f0-9]{64}$/.test(inputTokenHash))) {
-      response.status(400).json({ error: "inputTokenHash must be a SHA-256 hex digest" });
-      return;
-    }
-    if (body.realTransportCall !== undefined && typeof body.realTransportCall !== "boolean") {
-      response.status(400).json({ error: "realTransportCall must be boolean" });
-      return;
-    }
-    void engine
-      .reset("calm")
-      .then((result) => {
-        const run = stateRepository.ensureActiveRun();
-        const state = structuredClone(run.state);
-        state.forceSimActions = true;
-        state.e2eCoordinatorApply = true;
-        state.e2eSuppressResultReplan = true;
-        state.e2eRealTransportCall = realTransportCall;
-        state.e2eMode = "production-isolated";
-        if (typeof inputTokenHash === "string") state.e2eInputTokenHash = inputTokenHash;
-        state.agentsPaused = false;
-        state.clock.paused = false;
-        state.clock.live = false;
-        state.clock.speed = 1;
-        stateRepository.saveState(run.id, state);
-        response.status(200).json({ ok: true, ...result, externalActions: realTransportCall ? "coordinator-transport-call-rest-sim" : "sim" });
-      })
-      .catch(next);
   });
 
   app.post("/events", (request, response, next) => {

@@ -41,9 +41,6 @@ export interface CrisisStateDocument {
   assignments?: StateAssignment[];
   decisions: Array<Record<string, unknown>>;
   budget: StateBudget;
-  scriptId: "main" | "norte" | "reducido";
-  scriptCursor: number;
-  nextScriptAt: number | null;
   [key: string]: unknown;
 }
 
@@ -94,11 +91,5 @@ export function toPublicState(state: CrisisStateDocument): CrisisStateDocument {
       return call;
     });
   }
-  return {
-    ...rest,
-    simulated: false,
-    scriptId: "main",
-    scriptCursor: 0,
-    nextScriptAt: null,
-  };
+  return rest;
 }

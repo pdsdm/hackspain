@@ -104,8 +104,6 @@ for (const [name, expected] of Object.entries(expectedCoverage)) {
     assert.deepEqual(createFixtureState(name as FixtureName), json);
     assert.equal(state.clock.paused, true);
     if (name === 'calm') assert.deepEqual(state.events, []);
-    assert.equal(state.nextScriptAt, null);
-    assert.equal(state.simulated, true);
     assert.ok(state.events.every((e) => e.time <= state.clock.simSeconds));
     assert.ok(state.commitments.every((c) => c.updatedAt <= state.clock.simSeconds && c.planVersion <= state.planVersion));
     assert.equal(state.deliveries.reduce((sum, d) => sum + d.services, 0), 600);

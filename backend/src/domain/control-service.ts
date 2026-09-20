@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { ContractError, type HappyRobotIncidentId, type Intervention, type TwistId } from "../contracts/api.js";
 import type { InitialFixture } from "../config.js";
 import type { CrisisStateDocument } from "./crisis-state.js";
-import { findIncident } from "./incidents.js";
 import { createSimulationSeed } from "./random.js";
 import type { StateRepository } from "../state/state-repository.js";
 
@@ -153,7 +152,6 @@ export function applyTwistEffect(state: CrisisStateDocument, twist: TwistId, pro
 export class ControlService {
   constructor(
     private readonly states: StateRepository,
-    private readonly simSeed?: number,
     private readonly clockSpeed = 1,
   ) {}
 
@@ -230,13 +228,6 @@ export class ControlService {
 
   applyHappyRobotIncident(incidentId: HappyRobotIncidentId, summary: string, provenance: IncidentProvenance): boolean {
     const run = this.states.ensureActiveRun();
-    if (incidentId === "inbox_batch") {
-      const state = structuredClone(run.state);
-      state.inboxTriage = { eventId: provenance.eventId, received: 10, relevant: 1, ignored: 9, status: "processing" };
-      addEvent(state, "info", summary, "espacios", provenance);
-      this.states.saveState(run.id, state);
-      return true;
-    }
     if (incidentId === "dock_blocked") {
       if (twists(run.state).includes(incidentId)) return false;
       const state = structuredClone(run.state);
@@ -273,24 +264,6 @@ export class ControlService {
     return true;
   }
 
-  setLive(enabled: boolean, seed?: number, mode?: "open" | "catalog"): { live: boolean; seed: number; mode: "open" | "catalog" } {
-    const run = this.states.ensureActiveRun();
-    const state = structuredClone(run.state);
-    const current = Number(state.clock.liveSeed ?? 0);
-    const nextSeed = seed ?? (current > 0 ? current : 1 + Math.floor(Math.random() * 99_999));
-    state.clock.live = enabled;
-    state.clock.liveSeed = nextSeed;
-    if (mode) state.clock.liveMode = mode;
-    const liveMode: "open" | "catalog" = state.clock.liveMode === "catalog" ? "catalog" : "open";
-    if (enabled && (seed !== undefined || !state.clock.liveLastAt)) {
-      state.clock.liveIndex = 0;
-      state.clock.liveLastAt = 0;
-    }
-    addEvent(state, "info", enabled ? `Modo vivo activado · semilla ${nextSeed} · ${liveMode === "open" ? "incidencias generadas" : "catálogo"}` : "Modo vivo desactivado");
-    this.states.saveState(run.id, state);
-    return { live: enabled, seed: nextSeed, mode: liveMode };
-  }
-
   setClock(speed?: number, paused?: boolean): { speed: number; paused: boolean } {
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
@@ -300,60 +273,12 @@ export class ControlService {
     return { speed: Number(state.clock.speed ?? this.clockSpeed), paused: Boolean(state.clock.paused) };
   }
 
-  applyIncident(id: string): void {
-    const incident = findIncident(id);
-    if (!incident) throw new ContractError(`Unknown incident: ${id}`, 400);
-    const run = this.states.ensureActiveRun();
-    const state = structuredClone(run.state);
-    incident.apply(state);
-    addEvent(state, "incidencia", incident.text, incident.area);
-    const fired = Array.isArray(state.incidentsApplied) ? state.incidentsApplied.filter((value): value is string => typeof value === "string") : [];
-    state.incidentsApplied = [...fired, id];
-    const texts = Array.isArray(state.incidentTexts) ? state.incidentTexts.filter((value): value is string => typeof value === "string") : [];
-    state.incidentTexts = [...texts, incident.text].slice(-20);
-    this.states.saveState(run.id, state);
-  }
-
-  applyGateSaturation(gateId: string): void {
-    const run = this.states.ensureActiveRun();
-    const state = structuredClone(run.state);
-    const gates = records(state, "gates");
-    const gate = findById(gates, gateId);
-    if (!gate) throw new ContractError(`Unknown gate: ${gateId}`, 400);
-    const closed = gates.find((item) => item.zone === gate.zone && item.id !== gate.id && item.status === "cerrado");
-    if (closed) {
-      closed.status = "abierto";
-      addEvent(state, "accion", `Regla: abre ${String(closed.name ?? closed.id)} para descargar ${String(gate.name ?? gate.id)}`, "asistentes");
-    } else {
-      addEvent(state, "info", `Sin acceso cerrado en zona ${String(gate.zone)}; el coordinador decide cómo descargar ${String(gate.name ?? gate.id)}`, "asistentes");
-    }
-    state.gates = gates;
-    this.states.saveState(run.id, state);
-  }
-
   reset(fixture?: InitialFixture): { runId: string; planVersion: number } {
-    // El modo vivo se configura al arrancar el servidor y vive en el reloj, que el
-    // fixture sobrescribe. Sin arrastrarlo, «Reiniciar simulación» dejaba un mundo
-    // quieto: el reloj corría pero no volvía a pasar nada.
-    const previous = this.states.ensureActiveRun().state.clock;
-    const live = previous.live === true;
-    const seed = Number(previous.liveSeed ?? 0);
-    const mode = previous.liveMode === "catalog" ? "catalog" : "open";
-
     const run = this.states.reset(fixture);
     const state = structuredClone(run.state);
     state.clock.speed = this.clockSpeed;
-    state.clock.seed = this.simSeed ?? createSimulationSeed();
+    state.clock.seed = createSimulationSeed();
     delete state.clock.attendanceSeed;
-    if (live) {
-      state.clock.live = true;
-      state.clock.liveSeed = seed > 0 ? seed : 1 + Math.floor(Math.random() * 99_999);
-      state.clock.liveMode = mode;
-      // La secuencia empieza de cero: mundo nuevo, incidencias desde la primera.
-      state.clock.liveIndex = 0;
-      state.clock.liveLastAt = 0;
-      addEvent(state, "info", `Modo vivo mantenido tras el reinicio · semilla ${state.clock.liveSeed}`);
-    }
     this.states.saveState(run.id, state);
     return { runId: run.id, planVersion: state.planVersion };
   }

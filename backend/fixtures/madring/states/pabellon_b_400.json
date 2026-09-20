@@ -1,5 +1,4 @@
 {
-  "simulated": true,
   "clock": {
     "simSeconds": 44760,
     "speed": 1,
@@ -2037,9 +2036,6 @@
     "pabellon_b_400"
   ],
   "selectedId": "principal",
-  "scriptId": "main",
-  "scriptCursor": 0,
-  "nextScriptAt": null,
   "waitingForDecision": null,
   "agentsPaused": false,
   "resolved": false

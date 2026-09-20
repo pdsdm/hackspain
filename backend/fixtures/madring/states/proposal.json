@@ -1,5 +1,4 @@
 {
-  "simulated": true,
   "clock": {
     "simSeconds": 44280,
     "speed": 1,
@@ -2011,9 +2010,6 @@
   ],
   "twistsApplied": [],
   "selectedId": "principal",
-  "scriptId": "main",
-  "scriptCursor": 0,
-  "nextScriptAt": null,
   "waitingForDecision": "d-plan-sur",
   "agentsPaused": false,
   "resolved": false

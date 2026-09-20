@@ -254,24 +254,21 @@ test("el prompt lleva las horas en segundos y las restricciones del escenario", 
   assert.match(prompt, /listo a las 13:45/);
   assert.match(SYSTEM_PROMPT, /sumen como máximo 6/);
   assert.match(SYSTEM_PROMPT, /se bloquea un muelle/);
-  assert.match(SYSTEM_PROMPT, /inbox_batch.*10 recibidos.*1 relevante.*9 descartados/);
   assert.match(SYSTEM_PROMPT, /principal_pipe_burst.*B 450 \+ Lounge 150/);
   assert.match(SYSTEM_PROMPT, /dock_blocked.*acciones distintas y visibles de espacios, catering, transporte y asistentes/);
 });
 
-test("el prompt expone la autorización de llamada y las asignaciones vigentes", () => {
+test("el prompt expone las asignaciones vigentes", () => {
   const state = {
     ...loadFixture("crisis"),
     assignments: [
       { groupId: "g-acceso", spaceId: "pabellonB", count: 90 },
       { groupId: "g-propios", spaceId: "loungeSur", count: 150 },
     ],
-    e2eRealTransportCall: true,
   } as unknown as Record<string, unknown>;
 
   const prompt = buildUserPrompt(liveCoordinatorInput(state));
 
-  assert.match(prompt, /e2eRealTransportCall=true/);
   assert.match(prompt, /g-acceso · 90 personas → pabellonB/);
   assert.match(prompt, /g-propios · 150 personas → loungeSur/);
 });

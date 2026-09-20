@@ -57,8 +57,6 @@ function snapshot(at: number): CrisisState {
   const state = structuredClone(createInitialState());
   // Fixed snapshots are inert: loading one must not resume a scripted negotiation.
   state.clock = { ...state.clock, simSeconds: at, speed: 1, paused: true };
-  state.nextScriptAt = null;
-  state.scriptCursor = 0;
   return state;
 }
 

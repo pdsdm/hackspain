@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { useAcceptingSeed } from "./sim-support.js";
 
 import { extract, guessDeliveryId, parseAnswer, toResultData } from "../src/agents/catering/extract.js";
 import { QUESTION_ORDER, SYSTEM_PROMPT, buildUserPrompt } from "../src/agents/catering/prompt.js";
 import type { CateringBrief } from "../src/agents/catering/types.js";
-import { ActionExecutor } from "../src/actions/executor.js";
-import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
 import { openDatabase } from "../src/state/database.js";
 import { StateRepository } from "../src/state/state-repository.js";
@@ -102,8 +99,6 @@ test("a completed catering result moves the delivery in /state but never onto a 
     const states = new StateRepository(database.connection);
     const tasks = new TaskRepository(database.connection);
     const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
-    const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
-    const executor = new ActionExecutor(states, tasks, workflows, config);
     const run = states.ensureActiveRun();
     const state = structuredClone(run.state);
     const deliveries = state.deliveries as Array<Record<string, unknown>>;
@@ -123,10 +118,22 @@ test("a completed catering result moves the delivery in /state but never onto a 
       payload: { objective: "Confirmar CAT-02 en el muelle este", counterpart: "Responsable de catering" },
       idempotencyKey: "call-cat-02",
     });
-    useAcceptingSeed(states, task);
-    executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
-    executor.fireDue(Number(run.state.clock.simSeconds) + 60);
+    tasks.claimNext();
+    tasks.markDispatchOutcome(task.id, "dispatched");
+    workflows.recordSpecialistResult({
+      eventId: "evt-cat-accept",
+      taskId: task.id,
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "completed",
+      result: {
+        outcome: "accepted",
+        summary: "Responsable de catering acepta confirmar CAT-02 en el muelle este",
+        conditions: [],
+        evidence: {},
+        data: { deliveries: [{ id: "CAT-02", dockId: "muelleEste", status: "confirmada" }] },
+      },
+    });
 
     const acceptedState = states.ensureActiveRun().state;
     const after = (acceptedState.deliveries as Array<Record<string, unknown>>).find((item) => item.id === "CAT-02")!;

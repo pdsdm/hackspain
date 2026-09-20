@@ -34,9 +34,6 @@ export interface AppConfig {
   jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
   publicBaseUrl: string;
-  simIncidents?: boolean;
-  simIncidentsMode?: "open" | "catalog";
-  simSeed?: number;
   deploymentId?: string;
 }
 
@@ -120,15 +117,6 @@ function readPhone(value: string | undefined): string | undefined {
   return phone;
 }
 
-function readSeed(value: string | undefined): number | undefined {
-  if (value === undefined || value.trim() === "") return undefined;
-  const seed = Number(value);
-  if (!Number.isInteger(seed) || seed < 1) {
-    throw new Error(`SIM_SEED must be a positive integer, received "${value}"`);
-  }
-  return seed;
-}
-
 function readJevTimeout(value: string | undefined): number {
   if (value === undefined || value.trim() === "") return 3_000;
   const timeout = Number(value);
@@ -154,7 +142,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
   }
 
-  const seed = readSeed(env.SIM_SEED);
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),
     host: env.HOST?.trim() || "0.0.0.0",
@@ -174,9 +161,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jevModel: env.JEV_MODEL?.trim() || "jev-1.13.0",
     hooks,
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
-    simIncidents: (env.SIM_INCIDENTS?.trim().toLowerCase() ?? "off") === "on",
-    simIncidentsMode: env.SIM_INCIDENTS_MODE?.trim().toLowerCase() === "catalog" ? "catalog" : "open",
-    ...(seed !== undefined ? { simSeed: seed } : {}),
     ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
   };
 }

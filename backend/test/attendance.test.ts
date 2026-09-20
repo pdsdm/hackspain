@@ -68,16 +68,16 @@ test("un acceso cerrado no se mueve", () => {
   assert.equal(gate.status, "cerrado");
 });
 
-test("un reset conserva la velocidad y la semilla configuradas", async () => {
+test("un reset conserva la velocidad configurada y genera una semilla", async () => {
   const { ControlService } = await import("../src/domain/control-service.js");
   const { openDatabase } = await import("../src/state/database.js");
   const { StateRepository } = await import("../src/state/state-repository.js");
   const database = openDatabase(":memory:");
   try {
     const states = new StateRepository(database.connection);
-    new ControlService(states, 7, 30).reset("calm");
+    new ControlService(states, 30).reset("calm");
     const state = states.ensureActiveRun().state;
-    assert.equal(state.clock.seed, 7);
+    assert.ok(Number.isInteger(state.clock.seed) && Number(state.clock.seed) > 0);
     assert.equal(state.clock.speed, 30);
   } finally {
     database.close();
@@ -98,7 +98,7 @@ test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehícul
   const tasks = new TaskRepository(database.connection);
   const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
   const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
-  const clock = new SimulationClock(states, new ActionExecutor(states, tasks, workflows, config), 60, 1);
+  const clock = new SimulationClock(states, new ActionExecutor(states, tasks, workflows, config), 60);
   try {
     const run = states.ensureActiveRun();
     const state = structuredClone(run.state);
@@ -108,12 +108,13 @@ test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehícul
     states.saveState(run.id, state);
     clock.start();
     const started = structuredClone(states.ensureActiveRun().state);
-    assert.equal(started.clock.seed, 1);
+    assert.ok(Number.isInteger(started.clock.seed) && Number(started.clock.seed) > 0);
+    const seed = started.clock.seed;
     started.clock.speed = 3600;
     states.saveState(run.id, started);
     clock.tick();
     const afterState = states.ensureActiveRun().state;
-    assert.equal(afterState.clock.seed, 1);
+    assert.equal(afterState.clock.seed, seed);
     assert.equal(afterState.clock.attendanceSeed, undefined);
     const after = afterState.vehicles as Array<Record<string, unknown>>;
     assert.equal(after.find((item) => item.id === "VIP-01")!.status, "llegado");

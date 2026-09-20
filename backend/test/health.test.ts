@@ -44,10 +44,6 @@ test("GET /state returns the persisted CrisisState contract", async () => {
     const spaces = state.spaces as Array<{ id: string; status: string }>;
     assert.equal(spaces.find((space) => space.id === "principal")?.status, "confirmado");
     assert.notEqual(spaces.find((space) => space.id === "principal")?.status, "cerrado");
-    assert.equal(state.simulated, false);
-    assert.deepEqual(state.scriptId, "main");
-    assert.deepEqual(state.scriptCursor, 0);
-    assert.deepEqual(state.nextScriptAt, null);
   } finally {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));

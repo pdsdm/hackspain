@@ -28,7 +28,7 @@ Los tiempos del escenario son segundos desde medianoche (`12:15 = 44100`) y los 
 
 ## Panel de supervisión
 
-El frontend usa estos endpoints con `VITE_DATA_SOURCE=api`. El tipo público es `CrisisState` en `frontend/src/domain/types.ts` y sus ejemplos completos están en `backend/fixtures/madring/states/`.
+El frontend usa siempre estos endpoints. El tipo público es `CrisisState` en `frontend/src/domain/types.ts` y sus ejemplos completos están en `backend/fixtures/madring/states/`.
 
 ### `GET /state`
 
@@ -36,7 +36,6 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 
 ```json
 {
-  "simulated": false,
   "clock": { "simSeconds": 44100, "speed": 1, "paused": false, "openingAt": 46800, "lunchAt": 48600, "raceAt": 54000 },
   "planVersion": 1,
   "coordinatorStatus": "replanificando",
@@ -50,15 +49,12 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "kind": "operational", "title": "Aceptar apertura escalonada", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
-  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "simulated": true, "transcript": [] }],
+  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "transcript": [] }],
   "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
   "constraints": ["Norte y Sur sin conexión interior"],
   "twistsApplied": [],
   "selectedId": null,
-  "scriptId": "main",
-  "scriptCursor": 0,
-  "nextScriptAt": null,
   "waitingForDecision": "decision-plan-2",
   "agentsPaused": false,
   "resolved": false,
@@ -68,7 +64,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 
 `spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
 
-En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`. En llamadas reales, `calls[].transcript` crece con los callbacks parciales de T22 mientras el estado siga `en_curso`; sus líneas están ordenadas por `at`, no se duplican al reenviar un snapshot y permanecen en `/state` después de pasar a `terminada` y después de reiniciar el backend.
+El roster individual queda fuera de `/state`. Todas las llamadas de `calls[]` son reales, vía HappyRobot; el panel siempre etiqueta «vía HappyRobot». `calls[].transcript` crece con los callbacks parciales de T22 mientras el estado siga `en_curso`; sus líneas están ordenadas por `at`, no se duplican al reenviar un snapshot y permanecen en `/state` después de pasar a `terminada` y después de reiniciar el backend.
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
 
@@ -175,18 +171,6 @@ Para ensayar T38, iniciar una ejecución nueva tras actualizar. Las ejecuciones 
 
 **Respuesta 200**: `{ "ok": true }`.
 
-### `POST /simulation/twists`
-
-```json
-{ "twist": "lounge_unavailable" }
-```
-
-`twist`: `lounge_unavailable` | `pabellon_b_400` | `shuttle_delay` | `delivery_delay` | `dock_blocked` | `provider_silent` | `reject_split` | `guest_need`. `reject_spend` se ha retirado y devuelve `400`; tampoco aparece en los giros automáticos.
-
-Repetir un giro es idempotente. El backend aplica el efecto inmediato comprobable; el nuevo plan pertenece al coordinador/T16.
-
-**Respuesta 200**: `{ "ok": true }`.
-
 ### `POST /simulation/reset`
 
 Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (por defecto `calm`: 12:00, Principal confirmado, sin incidente). La anterior queda inactiva y sus callbacks no alteran la nueva.
@@ -199,18 +183,6 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ```json
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }
-```
-
-### `POST /simulation/e2e/reset`
-
-Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run. Por defecto todas las acciones de especialistas usan `sim`. Con `realTransportCall: true`, el estado autoriza al Reasoning Agent a invocar una sola vez su tool `emitir_llamada` para Transporte antes de `submit_plan`; las tareas persistidas de las cuatro áreas siguen en `sim` para no duplicar la llamada. Los resultados actualizan estado y cierre sin lanzar ciclos extra. Un reset normal elimina las marcas. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
-
-```json
-{ "inputTokenHash": "<sha256-hex>", "realTransportCall": true }
-```
-
-```json
-{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim | coordinator-transport-call-rest-sim" }
 ```
 
 ### `POST /simulation/clock`
@@ -227,27 +199,9 @@ Los dos campos son opcionales, pero hace falta al menos uno. `speed` entre 1 y 6
 { "ok": true, "speed": 5, "paused": false }
 ```
 
-### `POST /simulation/live` (T32)
-
-Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semilla, sin pulsar los botones. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
-
-```json
-{ "enabled": true, "seed": 42 }
-```
-
-`seed` opcional (entero ≥ 1). Sin semilla, la primera activación elige una al azar y las siguientes reutilizan la anterior. Con semilla nueva la secuencia empieza de cero.
-
-```json
-{ "ok": true, "live": true, "seed": 42 }
-```
-
-`mode` opcional: `open` (por defecto) o `catalog`. En `open`, cuando hay LLM, un **agente mundo** inventa cada incidencia a partir del estado real (lugares, vehículos, puertas, grupos, lo ya ocurrido) y de una pista de la semilla (área, gravedad, entidad); devuelve texto + hasta 3 operaciones (`set_place`, `set_gate`, `redirect_vehicle`, `reroute_shuttle`, `redirect_delivery`, `set_group`) que se aplican con el mismo validador del coordinador; el coordinador la recibe como `kind: incident_open`. Sin LLM, o si el agente mundo falla, cae al catálogo. `SIM_INCIDENTS_MODE` fija el modo al arrancar.
-
-`GET /state` expone `clock.live: boolean`, `clock.liveSeed: number`, `clock.liveMode`, `incidentsApplied[]` con los ids ya lanzados (`gen-<n>` para las generadas) e `incidentTexts[]` con los últimos 20 textos. Con el modo encendido, el reloj lanza como máximo un evento cada 180 s simulados, nunca mientras `coordinatorStatus` sea `replanificando` o `esperando_decision` ni con los agentes pausados: en los huecos pares, una incidencia (agente mundo o catálogo de 18); en los impares, el siguiente giro de `TWIST_IDS` que aún no esté aplicado y sea aplicable al estado (sin el giro económico `reject_spend`, retirado por T38). El giro entra como `source: clock`, `kind: twist`, con el mismo efecto que `POST /simulation/twists`. Los botones del jurado siguen valiendo y son idempotentes. Misma semilla, misma secuencia. Cada incidencia aplica su efecto, añade `incidencia` a la cronología y entra al coordinador como evento `source: clock`, `kind: incident`; en modo `rules` solo se aplica y se registra.
-
 ### Afluencia en los accesos (`gates[]`)
 
-El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.seed`, fijada por `SIM_SEED` o generada en cada reset) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado` y se anota `incidencia`. Solo con `clock.live: true` (Modo vivo), y como máximo cada 900 s simulados por acceso (`lastSaturationAt`), entra al coordinador un evento `source: clock`, `kind: gate_saturated`, `payload: { gateId, waiting }`; en `rules` se abre otro acceso cerrado de la misma zona si lo hay. Sin Modo vivo, la saturación solo se ve en el mapa y en la cronología, y el coordinador no actúa hasta que el humano envía algo. Misma semilla, misma serie.
+El reloj del backend mueve los accesos en cada tick, también en modo `api`: `entered`, `waiting`, `status` y `arrivalsPerMin` (valor efectivo del minuto). Las llegadas siguen una curva con picos (apertura y media hora antes de la carrera) sobre `baseArrivalsPerMin`, o `arrivalProfile[]` (`{ at, perMin }`, escalonado) si el acceso lo trae. Ráfagas aleatorias con semilla (`clock.seed`, generada en cada reset) añaden `burstPerMin` hasta `burstUntil` y se anotan como `info` en la cronología. Con más de 2.500 en cola el acceso pasa a `saturado` y se anota `incidencia`; el coordinador no actúa por su cuenta, solo cuando el humano envía algo. Misma semilla, misma serie.
 
 ### Actores móviles (`vehicles[]`, opcional)
 
@@ -295,7 +249,7 @@ Una solicitud manual de llamada usa un payload validado y encola una tarea aunqu
 
 **Respuesta 202**: `{ "ok": true, "eventId": "…" }`.
 
-Los giros (`POST /simulation/twists`) y las intervenciones (`POST /interventions`) validan el cuerpo de forma síncrona (400 si es inválido) y responden `200 { ok: true }` en cuanto el evento entra en la cola, igual que `POST /events`; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador principal de la demo es el Reasoning Agent de HappyRobot (`COORDINATOR_HARNESS=happyrobot`), que usa `consult_world` y `submit_plan`; el backend valida y aplica. Si no entrega un plan válido, no se oculta una segunda inferencia y queda el respaldo determinista disponible.
+Un giro del jurado se envía como `POST /events { "source": "jury", "kind": "twist", "payload": { "twist": "lounge_unavailable" } }`. `twist`: `lounge_unavailable` | `pabellon_b_400` | `shuttle_delay` | `delivery_delay` | `dock_blocked` | `provider_silent` | `reject_split` | `guest_need`. `reject_spend` se ha retirado y devuelve `400`. Repetir un giro es idempotente; el backend aplica el efecto inmediato comprobable, el nuevo plan pertenece al coordinador. Los giros, igual que el resto de `POST /events`, validan el cuerpo de forma síncrona (400 si es inválido) y responden `202` en cuanto el evento entra en la cola; el efecto se ve en `GET /state` cuando el coordinador lo procesa. Las intervenciones (`POST /interventions`) siguen la misma lógica con respuesta `200`. Además se registran como eventos (`jury` / `human`). Tras un giro, el coordinador principal de la demo es el Reasoning Agent de HappyRobot (`COORDINATOR_HARNESS=happyrobot`), que usa `consult_world` y `submit_plan`; el backend valida y aplica. Si no entrega un plan válido, no se oculta una segunda inferencia y queda el respaldo determinista disponible.
 
 ### `GET /actions`
 
@@ -326,10 +280,9 @@ Entrada autenticada y estricta para incidentes reales detectados por workflows d
 }
 ```
 
-- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `inbox_batch` | `principal_pipe_burst` | `dock_blocked`.
+- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `principal_pipe_burst` | `dock_blocked`.
 - El cuerpo y `evidence` no admiten campos adicionales: el workflow no puede enviar operaciones, parches ni versiones de estado.
-- `inbox_batch` conserva en `summary` diez mensajes sintéticos recibidos en menos de cuatro segundos. No aplica por sí solo ningún daño ni incrementa `planVersion`: el Reasoning Agent debe identificar la única señal material, consultar el mundo y generar el plan. `/state.inboxTriage` muestra recibidos, relevantes, descartados, selección y lectura.
-- `principal_pipe_burst` conserva el camino directo de respaldo: cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
+- `principal_pipe_burst` cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
 - Las solicitudes se serializan por orden de llegada. Cada efecto lee el run y la versión vigentes cuando alcanza la cola.
 - Repetir el mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`, sin aplicar ni coordinar de nuevo. Reutilizarlo con otro cuerpo devuelve `409`.
 - La línea añadida a `events[]` puede incluir los campos opcionales y retrocompatibles `channel`, `actor` y `provenance: { source: "happyrobot", eventId, sessionId }`.
@@ -412,11 +365,11 @@ Cuatro endpoints del coordinador `COORDINATOR_HARNESS=happyrobot`. Los cuatro ex
 { "accepted": false, "retry": true, "errors": ["json_invalido: la respuesta no es JSON"], "plan_version": 1 }
 ```
 
-`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan cuando `HAPPYROBOT_COORDINATOR_APPLY=true` o durante un run E2E aislado. El endpoint shadow registra el plan sin aplicarlo y nunca lanza una segunda inferencia.
+`retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan cuando `HAPPYROBOT_COORDINATOR_APPLY=true`. El endpoint shadow registra el plan sin aplicarlo y nunca lanza una segunda inferencia.
 
 #### `GET /coordinator/happyrobot/report`
 
-Devuelve el último informe del coordinador HappyRobot para auditar el E2E: `provider`, `model`, `correlationId`, `happyrobotRunId`, `runId`, `planVersion`, `status`, `applied`, `latencyMs`, `consults`, `submissions`, `validationErrors[]`, `output` y `error?`. Devuelve `404` si aún no hay informe.
+Devuelve el último informe del coordinador HappyRobot para auditar la demo: `provider`, `model`, `correlationId`, `happyrobotRunId`, `runId`, `planVersion`, `status`, `applied`, `latencyMs`, `consults`, `submissions`, `validationErrors[]`, `output` y `error?`. Devuelve `404` si aún no hay informe.
 
 #### `POST /coordinator/happyrobot/shadow`
 
@@ -453,6 +406,7 @@ puerta traducida de abajo.
 - `evidence.sessionId` solo contiene un ID real descubierto en la cuenta.
 - `data` no es un parche: el backend decide mediante adaptadores qué campos seguros mutan.
 - El callback usa el contexto original de la tarea. Una tarea antigua responde `200` con `applied: false` y conserva evidencia. Un `eventId` duplicado no se aplica dos veces.
+- Si un área no tiene hook (`HAPPYROBOT_HOOK_<ÁREA>`) o falta `HAPPYROBOT_API_KEY`, no se despacha ninguna llamada: la tarea termina `failed` con `summary: "Sin canal real configurado para <área>"`, sin entrada en `calls[]` y con el agente en `incidencia`. Ese fallo no relanza al coordinador.
 
 ```json
 { "ok": true, "duplicate": false, "applied": true }
@@ -462,7 +416,7 @@ Solo si `applied && !duplicate`, el motor encola un evento interno `source: happ
 
 #### Verificación opcional JEV (T35)
 
-No cambia el JSON del callback ni su autenticación. El handler evalúa antes de persistir, fuera de SQLite, con límite de 1.500 ms, sin reintentos y fallback conservador. El simulador no utiliza JEV.
+No cambia el JSON del callback ni su autenticación. El handler evalúa antes de persistir, fuera de SQLite, con límite de 1.500 ms, sin reintentos y fallback conservador.
 
 - `JEV_ENABLED=false` por defecto. `true` habilita evaluación con `TYPESAFE_API_KEY` y `JEV_MODEL=jev-1.13.0`; **no habilita efectos**. `JEV_APPLY_CONFIRMATIONS=true` es una activación adicional, solo después de validar el modelo con evidencia en español.
 - La primera demo admite únicamente `payload.verificationTarget = { "commitmentId": "c-pabB", "resourceType": "space", "resourceId": "pabellonB" }` en una acción de llamada de Espacios. El compromiso debe titularse `Reserva de Pabellón B · 450 plazas`. El backend valida ese vínculo y guarda una huella interna de términos al encolar; no infiere targets del objetivo ni acepta un efecto devuelto por HappyRobot. Un target en cualquier otra acción, o mal formado, **se descarta sin invalidar el plan**: es una marca opcional, nunca un motivo para rechazar una replanificación.

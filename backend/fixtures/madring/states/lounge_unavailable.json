@@ -1,5 +1,4 @@
 {
-  "simulated": true,
   "clock": {
     "simSeconds": 44760,
     "speed": 1,
@@ -2031,9 +2030,6 @@
     "lounge_unavailable"
   ],
   "selectedId": "principal",
-  "scriptId": "main",
-  "scriptCursor": 0,
-  "nextScriptAt": null,
   "waitingForDecision": null,
   "agentsPaused": false,
   "resolved": false

@@ -1,14 +1,14 @@
-# T47: workflow HappyRobot de inputs simulados
+# T47: workflow HappyRobot de inputs de demo
 
 ## Qué y para qué
 
-Un workflow determinista en `development` recibe por API los mensajes congelados de T45 y los reenvía al endpoint T46 como llamada y SMS simulados, sin usar telefonía ni LLM.
+Un workflow determinista en `development` recibe por API los mensajes congelados de T45 y los reenvía al endpoint T46 como llamada y SMS, sin usar telefonía ni LLM.
 
 ## Criterios de aceptación
 
 - [x] El instalador define un trigger API con los campos estrictos requeridos por T46.
-- [x] El POST bearer reenvía `inbox_batch`, `principal_pipe_burst` de respaldo y `dock_blocked` sin operaciones ni parches.
-- [x] `channel`, `actor`, URL y session ID vienen del trigger; los actores indican `SIMULACIÓN`.
+- [x] El POST bearer reenvía `principal_pipe_burst` y `dock_blocked` sin operaciones ni parches.
+- [x] `channel`, `actor`, URL y session ID vienen del trigger.
 - [x] El bearer vive en una variable oculta de HappyRobot, no en código ni documentación.
 - [x] El instalador no modifica workflows existentes y es idempotente por nombre.
 - [ ] Un owner crea y publica `Demo Incident Inputs` en `development`.

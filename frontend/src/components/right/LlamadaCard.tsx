@@ -22,15 +22,13 @@ export function LlamadaCard({ s, call, onTake, disabled, className = '' }: { s: 
   if (!call) return null
   const elapsed = Math.max(0, s.clock.simSeconds - call.startedAt)
   const active = call.status === 'en_curso'
-  const simulated = s.simulated || call.simulated
   const sms = call.channel === 'sms'
 
-  const visible = active && simulated ? call.transcript.filter((l) => l.at <= elapsed) : call.transcript
+  const visible = call.transcript
   const lines = active ? visible.slice(-3) : visible
 
-  // El techo esperado marca cuándo la llamada se está alargando de más. En las simuladas
-  // lo fija el propio backend; en las reales, el timeout que acaba en no_answer.
-  const expected = Math.max(1, callCapSeconds(s, call))
+  // El techo esperado marca cuándo la llamada se está alargando de más: el timeout que acaba en no_answer.
+  const expected = Math.max(1, callCapSeconds())
   const overrun = active && elapsed > expected
   const pct = Math.min(100, Math.round((elapsed / expected) * 100))
 
@@ -42,9 +40,7 @@ export function LlamadaCard({ s, call, onTake, disabled, className = '' }: { s: 
   // el panel se quedaba en «Conectando…» todo el rato sin decir qué se está esperando.
   const waiting = elapsed < DIALING_SECONDS
     ? (sms ? 'Enviando…' : 'Marcando…')
-    : simulated
-      ? (sms ? 'Esperando respuesta…' : 'Hablando…')
-      : 'Esperando a que conteste · la transcripción llega al cerrar la llamada'
+    : 'Esperando a que conteste · la transcripción llega al cerrar la llamada'
 
   const outcome = s.agents.find((a) => a.id === call.agent)?.lastResult
   const noAnswer = call.status === 'sin_respuesta'
@@ -55,7 +51,7 @@ export function LlamadaCard({ s, call, onTake, disabled, className = '' }: { s: 
         <span className={`w-2 h-2 flex-none ${active ? (overrun ? 'bg-amber animate-pulse' : 'bg-green animate-pulse') : noAnswer ? 'bg-red' : 'bg-muted'}`} />
         {noAnswer ? <PhoneOff size={14} className="text-red" /> : sms ? <MessageSquareText size={14} className="text-ink" /> : <PhoneCall size={14} className="text-ink" />}
         <h2 className="label text-ink truncate">{title} · {AGENT_NAME[call.agent]}</h2>
-        <span className={`ml-auto flex-none text-[11px] ${simulated ? 'text-muted' : 'text-ink'}`}>{simulated ? 'simulada' : 'vía HappyRobot'}</span>
+        <span className="ml-auto flex-none text-[11px] text-ink">vía HappyRobot</span>
       </div>
       <div className="text-[11px] text-muted mt-0.5 truncate">{call.counterpart}</div>
 
