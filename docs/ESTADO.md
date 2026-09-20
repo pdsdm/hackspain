@@ -1,12 +1,12 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` (PR #105) más T56 en esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` (PR #106). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 03:50 CEST |
-| **Base** | `f13c8c3` (`origin/main`, PR #105) + `fix/pep-deps-retry` |
-| **Trabajo en revisión** | T56 (PR #101): dependencias con `:retry`, sin replan por condiciones, resumen de atasco legible |
+| **Foto tomada** | 20 de septiembre de 2026, 04:05 CEST |
+| **Base** | `origin/main` tras PR #101 (T56) y PR #106 (`GET /events/history`) |
+| **Trabajo en revisión** | ninguno; PR #101 y #106 mergeadas |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Pep, durante T56 |
 
@@ -14,8 +14,8 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `fix/pep-deps-retry` (con `origin/main` integrado) | **OK** |
-| Tests backend | 357: **350 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en `main` (PR #106) | **OK** |
+| Tests backend | 372: **365 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 23.10.0; el repo exige ≥22.13 |
@@ -65,7 +65,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - El segundo plan debe redirigir CAT-01/CAT-02 a Muelle Sur y no puede proponer Muelle Norte sin ruta exterior.
 - Código verificado localmente; falta merge, deployment y E2E con el destinatario de la llamada preparado.
 
-### T56 en `fix/pep-deps-retry` (PR #101)
+### T56 (PR #101, mergeada)
 
 - Con T55 desplegada, el ensayo API local seguía fallando en M2 por timeout. Dos causas, ambas reproducidas y corregidas:
   - Cada `accepted_with_conditions` con texto nuevo contaba como cambio material y relanzaba al coordinador (plan 3 → 6 en dos minutos, 19 llamadas). Ahora solo relanzan los cambios de hechos de `spaces[]`; las condiciones se anotan sin replanificar.
@@ -91,7 +91,7 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
-0b. **Mergear T56 (PR #101) y redesplegar.** Sin T56, un `no_answer` doble sobre una tarea con dependientes deja el plan en `replanificando` para siempre, y las condiciones de la contraparte generan rondas extra de llamadas.
+0b. **Comprobar el despliegue de Railway con PR #101 y #106** y repetir un ensayo API contra producción antes de la toma.
 1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con run hijo auditable y ninguna otra comunicación real.
 2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
 3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar; el run hijo de voz debe completar sin `user_missed_call` y quedar en la evidencia del coordinador.
@@ -113,8 +113,8 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 
 ## Ramas vivas sin mergear
 
-- `fix/pep-deps-retry` (T56, PR #101): dependencias con `:retry`, sin replan por condiciones, resumen de atasco legible.
-- `origin/feat/events-history`: `GET /events/history`; pendiente de revisar y mergear.
+- `origin/feat/ventura-specs-cerebro`: specs T10/T11/T16 anteriores a T38; mergearla revertiría el texto actual. No integrar.
+- `origin/feat/pep-quitar-kpis`: todos sus commits ya están en `main` (PR #96 y #98).
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
