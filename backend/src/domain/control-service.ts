@@ -230,6 +230,13 @@ export class ControlService {
 
   applyHappyRobotIncident(incidentId: HappyRobotIncidentId, summary: string, provenance: IncidentProvenance): boolean {
     const run = this.states.ensureActiveRun();
+    if (incidentId === "inbox_batch") {
+      const state = structuredClone(run.state);
+      state.inboxTriage = { eventId: provenance.eventId, received: 10, relevant: 1, ignored: 9, status: "processing" };
+      addEvent(state, "info", summary, "espacios", provenance);
+      this.states.saveState(run.id, state);
+      return true;
+    }
     if (incidentId === "dock_blocked") {
       if (twists(run.state).includes(incidentId)) return false;
       const state = structuredClone(run.state);

@@ -18,6 +18,14 @@ export interface StateCommitment {
   [key: string]: unknown;
 }
 
+export interface StateAssignment {
+  groupId: string;
+  spaceId: string;
+  count: number;
+  status: "proposed" | "confirmed";
+  planVersion: number;
+}
+
 export interface StateBudget {
   autonomousLimit: number;
   authorized: number;
@@ -30,6 +38,7 @@ export interface CrisisStateDocument {
   planVersion: number;
   spaces: StateSpace[];
   commitments: StateCommitment[];
+  assignments?: StateAssignment[];
   decisions: Array<Record<string, unknown>>;
   budget: StateBudget;
   scriptId: "main" | "norte" | "reducido";

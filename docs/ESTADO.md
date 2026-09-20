@@ -1,25 +1,25 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` (PR #99 T52) más T55 en esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` más el hardening de triaje y llamada controlada de esta rama. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 02:52 CEST |
-| **Base** | `origin/main` (PR #99) + T55 en `fix/pep-replan-loop` |
-| **Trabajo en revisión** | T55: corrección del bucle de replanificación observado en producción |
+| **Foto tomada** | 20 de septiembre de 2026, 03:20 CEST |
+| **Base** | `b74c1bc` (`origin/main`) + `feat/t52-triage-live-transport` |
+| **Trabajo en revisión** | T52: triaje 10/1/9, asignaciones públicas y una llamada real controlada de Transporte |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Pep, durante T55 |
+| **Generado por** | Devin, durante T52 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `fix/pep-replan-loop` | **OK** (antes de reintegrar `origin/main`; revalidar tras el merge) |
-| Tests backend | 353: **346 pasan, 0 fallan, 7 live omitidos** (antes del merge de T52) |
+| `make check` en `feat/t52-triage-live-transport` | **OK** |
+| Tests backend | 358: **351 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 23.10.0; el repo exige ≥22.13 |
-| Producción (`hackspain-production.up.railway.app`) | `/health` OK, pero el estado está en bucle: `planVersion 43`, 168 llamadas, 78 reales |
+| Producción (`hackspain-production.up.railway.app`) | `/health` OK; run activo observado en `planVersion 3`, `replanificando`, 5 llamadas y 3 abiertas (origen del ensayo sin verificar) |
 | Crédito Railway | **"30 days or $4.96 left"**: hay que subir de plan antes de las 11:00 |
 
 Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un test) y el aviso del chunk frontend mayor de 500 kB.
@@ -57,10 +57,18 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - `COORDINATOR_VERBOSE` vacío equivale a `0` cuando existe `RAILWAY_ENVIRONMENT`.
 - Contrato actualizado en `docs/api-contract.md` (resultados de especialistas y timeout de 180 s). Decisión D21.
 
+### T52 en `feat/t52-triage-live-transport`
+
+- El primer input es `inbox_batch`: diez mensajes sintéticos en 3,6 s; el Reasoning Agent debe usar `consult_world`, seleccionar la rotura y persistir el triaje 10/1/9.
+- `assignments[]` queda en `/state`; cierre y frontend distinguen 600 asignados de cero plazas confirmadas cuando quedan condiciones.
+- `--confirm-real-transport-call` autoriza exactamente la primera acción real de Transporte; las demás acciones siguen `sim` y el modo seguro no llama.
+- El segundo plan debe redirigir CAT-01/CAT-02 a Muelle Sur y no puede proponer Muelle Norte sin ruta exterior.
+- Código verificado localmente; falta merge, deployment y E2E con el destinatario de la llamada preparado.
+
 ### Camino de vídeo T45–T52
 
 - **T45, PR #79, en revisión:** `docs/video-scenario.md` congela relato, textos, checkpoints, widgets, etiquetas de simulación y finales principal/respaldo; falta aprobación literal de Carlos/equipo.
-- **T46, PR #71:** `POST /workflow/happyrobot/events` acepta solo `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
+- **T46, PR #71 + rama actual:** `POST /workflow/happyrobot/events` acepta `inbox_batch`, `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
 - **T50, PR #73:** el coordinador conoce seis personas de recepción, las coordina mediante Asistentes y permite que Catering dependa de la apertura del muelle.
 - **T51 parcial, PR #74:** Catering y Asistentes actualizan entregas, informados y `lastResult`; las necesidades de accesibilidad/dieta generan una tarea separada.
 - **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
@@ -69,15 +77,14 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T44, decisión D20:** la toma usa el workflow `Orquestador` como coordinador principal; PR #99 endurece prompt, especialistas, cierre y gates E2E.
 - **T52, PR #99 mergeada:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
 
-V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. El ensayo anterior en `rules` falló la puerta final por falta de `reason`/`lastResult`; `main` sustituye ese camino por HappyRobot principal y especialistas E2E deterministas. Falta repetir el E2E real y grabar.
+El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/aplicados, B 450 + Lounge 150, idempotencia y recorrido de 34,8 s. La revisión de evidencia detectó dos límites: las asignaciones solo estaban en SQLite y los especialistas eran respuestas locales de 3 s. La rama actual expone el reparto en `/state`, añade triaje 10/1/9 y autoriza una única llamada real controlada de Transporte. Falta desplegarla y repetir con el destinatario preparado.
 
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
-0b. **Mergear T55, redesplegar y resetear producción.** `POST /simulation/reset` deja `planVersion 1` y reloj pausado (T42). Sin T55 el bucle vuelve con el primer `no_answer`.
-1. **Superar el E2E completo con HappyRobot coordinador principal.** Deben pasar dos ciclos en un submit cada uno, cuatro especialistas, cierre honesto e idempotencia.
-2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
-3. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
+1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con transcript y ninguna otra comunicación real.
+2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
+3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar y el callback debe cerrar la tarea con transcript; si hay `user_missed_call`, el E2E falla.
 4. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
 5. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
 6. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
@@ -90,13 +97,13 @@ V4 en development y V6 en production de `Demo incident inputs` atravesaron Happy
 |---|---|---|
 | Servicio en Railway | crédito de prueba casi agotado; hay que pagar el plan | Sí |
 | Rotar bearer | owner actualiza backend, development y production con el mismo valor oculto | Parcial |
-| Validar live transcript real | HappyRobot/telco inicia la run pero devuelve `user_missed_call` antes del audio | Sí |
-| Superar la puerta final T52 | `reason` y `lastResult` coherentes en los cuatro especialistas; cerrar Transporte T51 | No |
+| Llamada real de Transporte | destinatario confirma que puede contestar durante el E2E; telco debe devolver callback y transcript | Sí |
+| Superar la puerta final T52 | mergear esta rama y pasar triaje, reparto público, llamada única, muelle Sur e idempotencia | No |
 | Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
 
 ## Ramas vivas sin mergear
 
-- `fix/pep-replan-loop` (T55): corrección del bucle de replanificación; PR #100; se está reintegrando `origin/main`.
+- `feat/t52-triage-live-transport`: triaje 10/1/9, asignaciones públicas y una única llamada real de Transporte; verificada localmente, pendiente de PR y E2E real.
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.

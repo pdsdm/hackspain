@@ -12,12 +12,12 @@ type PostedEvent = {
   eventId: string;
   channel: "call" | "sms";
   actor: string;
-  incidentId: "principal_pipe_burst" | "dock_blocked";
+  incidentId: "inbox_batch" | "principal_pipe_burst" | "dock_blocked";
   evidence: { sessionId: string };
 };
 
 function state(posts: PostedEvent[], incompleteArea?: string) {
-  const hasCall = posts.some((item) => item.incidentId === "principal_pipe_burst");
+  const hasCall = posts.some((item) => item.incidentId === "inbox_batch" || item.incidentId === "principal_pipe_burst");
   const hasSms = posts.some((item) => item.incidentId === "dock_blocked");
   const agents = ["espacios", "catering", "transporte", "asistentes"].map((id) => ({
     id,
@@ -26,7 +26,7 @@ function state(posts: PostedEvent[], incompleteArea?: string) {
     ...(id === incompleteArea ? {} : { reason: `Motivo ${id}`, lastResult: `Resultado ${id}` }),
   }));
   return {
-    planVersion: hasCall ? 2 : 1,
+    planVersion: hasSms ? 3 : hasCall ? 2 : 1,
     coordinatorStatus: hasSms ? "atascado" : "estable",
     resolved: false,
     ...(hasSms ? { closureSummary: "Plan condicionado · 600 plazas pendientes de confirmación" } : {}),
@@ -46,7 +46,7 @@ function state(posts: PostedEvent[], incompleteArea?: string) {
       id: `timeline-${item.eventId}`,
       kind: "incidencia",
       text: item.incidentId,
-      area: item.incidentId === "principal_pipe_burst" ? "espacios" : "catering",
+      area: item.incidentId === "dock_blocked" ? "catering" : "espacios",
       channel: item.channel,
       actor: item.actor,
       provenance: { source: "happyrobot", eventId: item.eventId, sessionId: item.evidence.sessionId },
@@ -162,7 +162,7 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
         correlationId: second ? "corr-2" : "corr-1",
         happyrobotRunId: second ? "coord-2" : "coord-1",
         runId: "run-hook",
-        planVersion: second ? 3 : 2,
+        planVersion: second ? 2 : 1,
         status: "accepted",
         applied: true,
         latencyMs: 100,

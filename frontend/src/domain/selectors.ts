@@ -7,16 +7,22 @@ const HOSPITALITY_KIND = ['pabellon', 'lounge', 'espera']
 
 export function kpis(s: CrisisState) {
   const total = s.guestGroups.reduce((a, g) => a + g.count, 0)
+  const currentAssignments = (s.assignments ?? []).filter((item) => item.planVersion === s.planVersion)
   const coverage = s.guestGroups.map((g) => {
     const count = Math.max(0, g.count)
     const confirmedCount = Math.min(count, Math.max(0, g.confirmedCount))
-    const hasAssignedSpace = typeof g.assignedSpaceId === 'string'
-    const space = hasAssignedSpace ? s.spaces.find((x) => x.id === g.assignedSpaceId) : undefined
-    const hospitality = space && HOSPITALITY_KIND.includes(space.kind)
-    return {
-      assigned: hospitality && ASSIGNABLE_SPACE.includes(space.status) ? count : !hasAssignedSpace ? confirmedCount : 0,
-      confirmed: hospitality && CONFIRMED_SPACE.includes(space.status) ? confirmedCount : !hasAssignedSpace ? confirmedCount : 0,
+    const proposed = currentAssignments.filter((item) => item.groupId === g.id).map((item) => ({ ...item, space: s.spaces.find((space) => space.id === item.spaceId) }))
+    const legacySpace = typeof g.assignedSpaceId === 'string' ? s.spaces.find((space) => space.id === g.assignedSpaceId) : undefined
+    if (!proposed.length) {
+      const hospitality = legacySpace && HOSPITALITY_KIND.includes(legacySpace.kind)
+      return {
+        assigned: hospitality && ASSIGNABLE_SPACE.includes(legacySpace.status) ? count : legacySpace ? 0 : confirmedCount,
+        confirmed: hospitality && CONFIRMED_SPACE.includes(legacySpace.status) ? confirmedCount : legacySpace ? 0 : confirmedCount,
+      }
     }
+    const assigned = proposed.filter((item) => item.space && HOSPITALITY_KIND.includes(item.space.kind) && ASSIGNABLE_SPACE.includes(item.space.status)).reduce((sum, item) => sum + item.count, 0)
+    const confirmedCapacity = proposed.filter((item) => item.space && HOSPITALITY_KIND.includes(item.space.kind) && CONFIRMED_SPACE.includes(item.space.status)).reduce((sum, item) => sum + item.count, 0)
+    return { assigned: Math.min(count, assigned), confirmed: Math.min(confirmedCount, confirmedCapacity) }
   })
   const assigned = coverage.reduce((a, item) => a + item.assigned, 0)
   const confirmed = coverage.reduce((a, item) => a + item.confirmed, 0)

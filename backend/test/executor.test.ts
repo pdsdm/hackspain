@@ -98,6 +98,53 @@ test("an isolated E2E run forces sim even when real hooks are configured", async
   }
 });
 
+test("E2E live mode dispatches exactly the first Transport action through HappyRobot", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const executor = new ActionExecutor(states, tasks, workflows, {
+    ...loadConfig(),
+    coordinatorMode: "rules",
+    hooks: { transporte: "https://hook.test/transporte" },
+    happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
+  });
+  const originalFetch = globalThis.fetch;
+  let externalCalls = 0;
+  globalThis.fetch = async () => {
+    externalCalls += 1;
+    return new Response("{}", { status: 200 });
+  };
+  try {
+    const run = states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    state.forceSimActions = true;
+    state.e2eMode = "production-isolated";
+    state.e2eRealTransportCall = true;
+    states.saveState(run.id, state);
+    for (const index of [1, 2]) {
+      tasks.enqueue({
+        runId: run.id,
+        planVersion: run.state.planVersion,
+        area: "transporte",
+        kind: "call",
+        payload: { objective: `Confirmar shuttle ${index}`, counterpart: "Transportes" },
+        idempotencyKey: `e2e-real-transport-${index}`,
+      });
+    }
+    executor.pump();
+    await new Promise((resolve) => setImmediate(resolve));
+    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
+    assert.equal(externalCalls, 1);
+    assert.equal(calls.filter((call) => call.simulated === false).length, 1);
+    assert.equal(calls.filter((call) => call.simulated === true).length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
 test("E2E specialist replies are deterministic, positive and area-specific", () => {
   const outcomes = Object.fromEntries(["espacios", "catering", "transporte", "asistentes"].map((area) => {
     const reply = e2eReply({

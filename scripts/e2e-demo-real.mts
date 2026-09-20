@@ -14,6 +14,7 @@ export interface PublicState {
   forceSimActions?: boolean;
   e2eCoordinatorApply?: boolean;
   e2eSuppressResultReplan?: boolean;
+  e2eRealTransportCall?: boolean;
   agentsPaused?: boolean;
   resolved: boolean;
   closureSummary?: string;
@@ -23,6 +24,8 @@ export interface PublicState {
   agents: Array<Record<string, unknown>>;
   shuttles: Array<Record<string, unknown>>;
   guestGroups: Array<Record<string, unknown>>;
+  assignments?: Array<Record<string, unknown>>;
+  inboxTriage?: Record<string, unknown>;
   commitments: Array<Record<string, unknown>>;
   events: Array<Record<string, unknown>>;
 }
@@ -274,17 +277,29 @@ async function stop(child: ChildProcess | undefined): Promise<void> {
   if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
 }
 
-function event(tag: string, incidentId: "principal_pipe_burst" | "dock_blocked") {
-  const call = incidentId === "principal_pipe_burst";
+function event(tag: string, incidentId: "inbox_batch" | "dock_blocked") {
+  const batch = incidentId === "inbox_batch";
+  const noise = [
+    "[+0ms] Catering confirma que el menú impreso lleva el logotipo correcto",
+    "[+400ms] Un invitado pregunta si habrá guardarropa",
+    "[+800ms] Marketing solicita una foto del acceso principal",
+    "[+1200ms] El parte meteorológico mantiene cielo despejado",
+    "[+1600ms] Un proveedor confirma que su factura fue recibida",
+    "[+2000ms] Seguridad recuerda el color de las acreditaciones",
+    "[+2400ms] La tienda pide reponer merchandising después de la apertura",
+    "[+2800ms] Un conductor pregunta por el punto de café del personal",
+    "[+3200ms] Producción confirma que la música ambiente está preparada",
+    "[+3600ms] URGENTE: una rotura de tubería obliga a cerrar el Pabellón Principal sin hora confirmada de reapertura",
+  ];
   return {
-    eventId: `e2e-${tag}-${call ? "call" : "sms"}`,
-    channel: call ? "call" : "sms",
-    actor: call ? "SIMULACIÓN · Responsable de recinto" : "SIMULACIÓN · Logística MADRING",
+    eventId: `e2e-${tag}-${batch ? "inbox" : "sms"}`,
+    channel: batch ? "call" : "sms",
+    actor: batch ? "SIMULACIÓN · Centralita MADRING" : "SIMULACIÓN · Logística MADRING",
     incidentId,
-    summary: call
-      ? "Una rotura de tubería obliga a cerrar el Pabellón Principal sin hora confirmada de reapertura"
+    summary: batch
+      ? `Lote de 10 mensajes recibidos en 3,6 segundos:\n${noise.join("\n")}`
       : "Un camión de televisión bloquea el Muelle Este; CAT-01 y CAT-02 no pueden descargar",
-    evidence: { sessionId: `e2e-${tag}-${call ? "call" : "sms"}` },
+    evidence: { sessionId: `e2e-${tag}-${batch ? "inbox" : "sms"}` },
   } as const;
 }
 
@@ -300,9 +315,9 @@ function areaObjectives(report: CoordinatorReport, area: string): string {
   return outputRows(report, "actions").filter((action) => action.area === area).map((action) => String(action.objective ?? "")).join(" ");
 }
 
-export function assignmentTotals(report: CoordinatorReport): { total: number; pabellonB: number; loungeSur: number; other: number } {
+function totalsFromAssignments(assignments: Array<Record<string, unknown>>): { total: number; pabellonB: number; loungeSur: number; other: number } {
   const result = { total: 0, pabellonB: 0, loungeSur: 0, other: 0 };
-  for (const assignment of outputRows(report, "assignments")) {
+  for (const assignment of assignments) {
     const count = Number(assignment.count ?? 0);
     result.total += count;
     if (assignment.spaceId === "pabellonB") result.pabellonB += count;
@@ -310,6 +325,14 @@ export function assignmentTotals(report: CoordinatorReport): { total: number; pa
     else result.other += count;
   }
   return result;
+}
+
+export function assignmentTotals(report: CoordinatorReport): { total: number; pabellonB: number; loungeSur: number; other: number } {
+  return totalsFromAssignments(outputRows(report, "assignments"));
+}
+
+function stateAssignmentTotals(state: PublicState): { total: number; pabellonB: number; loungeSur: number; other: number } {
+  return totalsFromAssignments(rows(state.assignments));
 }
 
 export function incidentCount(state: PublicState, eventId: string): number {
@@ -322,6 +345,7 @@ export function stateFingerprint(state: PublicState, actions: ActionsResponse, r
     spaces: state.spaces.map((item) => [item.id, item.status]),
     deliveries: state.deliveries.map((item) => [item.id, item.status, item.dockId]),
     commitments: state.commitments.map((item) => [item.id, item.status, item.planVersion]),
+    assignments: rows(state.assignments).map((item) => [item.groupId, item.spaceId, item.count, item.planVersion]),
     incidents: state.events.filter((item) => isRecord(item.provenance)).map((item) => (item.provenance as Record<string, unknown>).eventId),
     actions: actions.tasks.length,
     openCalls: state.calls.filter((call) => call.status === "en_curso").length,
@@ -343,12 +367,13 @@ export function latencySummary(values: number[]): { samples: number; meanMs: num
 
 async function main(): Promise<void> {
   if (process.argv.includes("--help")) {
-    console.log("Uso: npm run demo:e2e-real -- --confirm-real-happyrobot");
+    console.log("Uso: npm run demo:e2e-real -- --confirm-real-happyrobot [--confirm-real-transport-call]");
     return;
   }
   if (!process.argv.includes("--confirm-real-happyrobot")) {
     throw new Error("Añade --confirm-real-happyrobot: este E2E crea runs reales de HappyRobot");
   }
+  const realTransportCall = process.argv.includes("--confirm-real-transport-call");
   const missing = requiredNames.filter((name) => !process.env[name]?.trim());
   if (missing.length > 0) throw new Error(`Faltan variables en .env o .env.e2e: ${missing.join(", ")}`);
   const apiKey = required("HAPPYROBOT_API_KEY");
@@ -430,7 +455,7 @@ async function main(): Promise<void> {
     let activeE2ERunId: string | undefined;
     const readState = async () => {
       const state = await json<PublicState>(`${localUrl}/state`);
-      if (activeE2ERunId && (state.e2eMode !== "production-isolated" || state.forceSimActions !== true || state.e2eCoordinatorApply !== true || state.e2eSuppressResultReplan !== true)) {
+      if (activeE2ERunId && (state.e2eMode !== "production-isolated" || state.forceSimActions !== true || state.e2eCoordinatorApply !== true || state.e2eSuppressResultReplan !== true || state.e2eRealTransportCall !== realTransportCall)) {
         throw new FatalE2EError(`El run E2E ${activeE2ERunId} fue reemplazado o Railway se redesplegó`);
       }
       return state;
@@ -474,9 +499,10 @@ async function main(): Promise<void> {
     const reset = await json<{ externalActions?: string; runId?: string }>(`${localUrl}/simulation/e2e/reset`, {
       method: "POST",
       headers: { ...authHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify(inputTokenHash ? { inputTokenHash } : {}),
+      body: JSON.stringify({ ...(inputTokenHash ? { inputTokenHash } : {}), ...(realTransportCall ? { realTransportCall: true } : {}) }),
     });
-    if (reset.externalActions !== "sim") throw new Error("El target no confirmó el aislamiento de acciones externas");
+    const expectedActions = realTransportCall ? "transport-real-rest-sim" : "sim";
+    if (reset.externalActions !== expectedActions) throw new Error(`El target no confirmó el modo de acciones ${expectedActions}`);
     if (!reset.runId) throw new Error("El reset E2E no devolvió runId");
     const e2eRunId = reset.runId;
     activeE2ERunId = e2eRunId;
@@ -484,7 +510,7 @@ async function main(): Promise<void> {
     const initial = await readState();
     const stateReadMs = Date.now() - stateReadStartedAt;
     checkpoints.initial = { runId: e2eRunId, planVersion: initial.planVersion, coordinatorStatus: initial.coordinatorStatus, stateReadMs };
-    check(initial.e2eMode === "production-isolated" && initial.forceSimActions === true && initial.e2eCoordinatorApply === true && initial.e2eSuppressResultReplan === true, "M0: el run activo no conserva el aislamiento E2E");
+    check(initial.e2eMode === "production-isolated" && initial.forceSimActions === true && initial.e2eCoordinatorApply === true && initial.e2eSuppressResultReplan === true && initial.e2eRealTransportCall === realTransportCall, "M0: el run activo no conserva el aislamiento E2E");
     check(initial.planVersion === 1, `M0: planVersion esperado 1, recibido ${initial.planVersion}`);
     check(initial.spaces.find((space) => space.id === "principal")?.status === "confirmado", "M0: Principal no está confirmado");
     check(stateReadMs <= 2_000, `M0: /state tardó ${stateReadMs} ms, esperado <= 2000`);
@@ -505,11 +531,20 @@ async function main(): Promise<void> {
     checkpoints.control = { pauseObserved: paused.agentsPaused === true, resumeObserved: resumed.agentsPaused !== true, planVersion: resumed.planVersion };
 
     const journeyStartedAt = Date.now();
-    const callEvent = event(tag, "principal_pipe_burst");
+    const callEvent = event(tag, "inbox_batch");
     const firstStartedAt = Date.now();
     const callRunId = await triggerInput(callEvent);
     console.log(`[E2E] Input 1 HappyRobot run ${callRunId}`);
     const callAuditPromise = auditHappyRobotRun(inputApiBase, apiKey, callRunId, timeoutMs);
+    const inboxVisible = await waitFor(
+      "M1 lote visible",
+      timeoutMs,
+      readState,
+      (state) => incidentCount(state, callEvent.eventId) === 1,
+    );
+    const inboxVisibleMs = Date.now() - firstStartedAt;
+    check(inboxVisibleMs <= 2_000, `M1: el lote tardó ${inboxVisibleMs} ms en aparecer, esperado <= 2000`);
+    checkpoints.triage = { received: 10, relevant: 1, ignored: 9, visibleMs: inboxVisibleMs, event: inboxVisible.events.find((item) => isRecord(item.provenance) && item.provenance.eventId === callEvent.eventId) };
     const afterCallEffect = await waitFor(
       "M1 Principal cerrado",
       timeoutMs,
@@ -538,8 +573,8 @@ async function main(): Promise<void> {
       coordinatorToSettledMs: firstSettledAt - firstReportAt,
       totalMs: firstSettledAt - firstStartedAt,
     };
-    check(firstTiming.inputToEffectMs <= 2_000, `M1: input→efecto tardó ${firstTiming.inputToEffectMs} ms, esperado <= 2000`);
-    check(firstTiming.totalMs <= 30_000, `M2: ciclo completo tardó ${firstTiming.totalMs} ms, esperado <= 30000`);
+    const firstCycleLimitMs = realTransportCall ? 180_000 : 30_000;
+    check(firstTiming.totalMs <= firstCycleLimitMs, `M2: ciclo completo tardó ${firstTiming.totalMs} ms, esperado <= ${firstCycleLimitMs}`);
     checkpoints.first = {
       inputRunId: callRunId,
       inputAudit: callAudit,
@@ -553,7 +588,10 @@ async function main(): Promise<void> {
     check(Boolean(firstCoordinatorAudit), "M2: run del coordinador no auditable");
     if (firstCoordinatorAudit) checkAudit(firstCoordinatorAudit, "M2 coordinador HappyRobot");
     checkReport(firstReport, "M2", e2eRunId);
-    check(firstReport.planVersion === 2 && firstState.planVersion === 3, `M2: versiones inesperadas informe/estado ${firstReport.planVersion}/${firstState.planVersion}`);
+    check(firstReport.consults >= 1, "M2: el agente no usó consult_world para discriminar la señal");
+    check(/10 recibidos.*1 relevante.*9 descartados/i.test(String(firstReport.output?.reading ?? "")), "M2: el agente no explica el triaje 10/1/9");
+    check(firstState.inboxTriage?.status === "triaged" && firstState.inboxTriage.selected === "principal_pipe_burst", "M2: el triaje no quedó persistido en /state");
+    check(firstReport.planVersion === 1 && firstState.planVersion === 2, `M2: versiones inesperadas informe/estado ${firstReport.planVersion}/${firstState.planVersion}`);
     const firstActions = outputRows(firstReport, "actions");
     check(firstActions.length === 5, `M2: esperadas 5 acciones concretas, recibidas ${firstActions.length}`);
     check(firstActions.filter((action) => action.area === "espacios").length === 2, "M2: Espacios debe consultar B y Lounge por separado");
@@ -562,18 +600,28 @@ async function main(): Promise<void> {
     check(firstSpacesDue <= firstCateringDue, "M2: la sede de 600 VIP no está priorizada antes que Catering");
     check(/600|CAT-01|CAT-02/i.test(areaObjectives(firstReport, "catering")), "M2: Catering no concreta el servicio afectado");
     check(/BUS-01|cuatro shuttles/i.test(areaObjectives(firstReport, "transporte")) && /Sur/i.test(areaObjectives(firstReport, "transporte")), "M2: Transporte no concreta los cuatro shuttles en Sur");
+    check(firstActions.some((action) => action.area === "transporte" && action.channel === "llamada"), "M2: Transporte no genera una llamada");
     check(/6|seis/i.test(areaObjectives(firstReport, "asistentes")) && /inform|avis|mensaj|segment/i.test(areaObjectives(firstReport, "asistentes")), "M2: Asistentes no distribuye seis personas y segmenta avisos");
     const firstDistribution = assignmentTotals(firstReport);
     check(firstDistribution.total === 600, `M2: asignadas ${firstDistribution.total}/600 plazas`);
     check(firstDistribution.pabellonB === 450 && firstDistribution.loungeSur === 150 && firstDistribution.other === 0, `M2: reparto ${JSON.stringify(firstDistribution)}`);
+    const firstStateDistribution = stateAssignmentTotals(firstState);
+    check(JSON.stringify(firstStateDistribution) === JSON.stringify(firstDistribution), `M2: el reparto no quedó visible en /state: ${JSON.stringify(firstStateDistribution)}`);
     const firstPlaces = ["pabellonB", "loungeSur"].map((id) => firstState.spaces.find((space) => space.id === id));
     check(firstPlaces.every((space) => space && !["inactivo", "cerrado", "descartado"].includes(String(space.status))), "M2: B + Lounge no aparecen como alternativas activadas");
     check(firstState.commitments.some((item) => item.id === "c-pabB"), "M2: falta compromiso de Pabellón B");
     check(firstState.commitments.some((item) => ["c-loungeSur", "c-lounge"].includes(String(item.id))), "M2: falta compromiso de Lounge Sur");
-    check(incidentCount(afterCallEffect, callEvent.eventId) === 1, "M1: la llamada no aparece exactamente una vez");
-    const callIncident = afterCallEffect.events.find((item) => item.channel === "call" && item.actor === "SIMULACIÓN · Responsable de recinto");
-    check(Boolean(callIncident), "M1: falta procedencia de llamada simulada");
-    check(firstState.calls.every((call) => call.simulated === true), "M2: se detectó una comunicación de especialista no simulada");
+    check(incidentCount(afterCallEffect, callEvent.eventId) === 1, "M1: el lote no aparece exactamente una vez");
+    const callIncident = afterCallEffect.events.find((item) => item.channel === "call" && item.actor === "SIMULACIÓN · Centralita MADRING");
+    check(Boolean(callIncident), "M1: falta procedencia del lote simulado");
+    const firstRealCalls = firstState.calls.filter((call) => call.simulated === false);
+    if (realTransportCall) {
+      check(firstRealCalls.length === 1 && firstRealCalls[0]?.agent === "transporte", `M2: esperada una llamada real de Transporte, observadas ${firstRealCalls.length}`);
+      check(firstRealCalls[0]?.status === "terminada", `M2: la llamada real terminó como ${String(firstRealCalls[0]?.status)}`);
+      check(Array.isArray(firstRealCalls[0]?.transcript) && firstRealCalls[0].transcript.length > 0, "M2: la llamada real no conserva transcript");
+    } else {
+      check(firstRealCalls.length === 0, "M2: se detectó una comunicación real sin autorización explícita");
+    }
 
     const reportBeforeSecond = await readReport();
     const smsEvent = event(tag, "dock_blocked");
@@ -634,12 +682,19 @@ async function main(): Promise<void> {
       check(areaObjectives(secondReport, area) !== areaObjectives(firstReport, area), `M4: ${area} repite el objetivo de M2 sin adaptarse`);
     }
     check(/muelle|catering|descarga/i.test(String(secondReport.output?.reading ?? "")), "M4: la lectura no prioriza el nuevo bloqueo de servicio");
+    const secondOperations = outputRows(secondReport, "operations");
+    for (const id of ["CAT-01", "CAT-02"]) {
+      check(secondOperations.some((operation) => operation.op === "redirect_delivery" && operation.id === id && operation.dockId === "muelleSur"), `M4: falta redirección explícita de ${id} a Muelle Sur`);
+    }
+    check(!secondOperations.some((operation) => [operation.id, operation.destinationId, operation.dockId].includes("muelleNorte")), "M4: el plan usa Muelle Norte sin ruta exterior");
     check(firstReport.correlationId !== secondReport.correlationId, "M4: los dos ciclos comparten correlationId");
     check(firstReport.happyrobotRunId !== secondReport.happyrobotRunId, "M4: los dos ciclos comparten run HappyRobot");
-    check(secondReport.planVersion === 3 && final.state.planVersion === 4, `M4: versiones inesperadas informe/estado ${secondReport.planVersion}/${final.state.planVersion}; debe haber solo dos ciclos`);
+    check(secondReport.planVersion === 2 && final.state.planVersion === 3, `M4: versiones inesperadas informe/estado ${secondReport.planVersion}/${final.state.planVersion}; debe haber solo dos ciclos`);
     const secondDistribution = assignmentTotals(secondReport);
     check(secondDistribution.total === 600, `M4: asignadas ${secondDistribution.total}/600 plazas`);
     check(secondDistribution.pabellonB === 450 && secondDistribution.loungeSur === 150 && secondDistribution.other === 0, `M4: reparto ${JSON.stringify(secondDistribution)}`);
+    const finalStateDistribution = stateAssignmentTotals(final.state);
+    check(JSON.stringify(finalStateDistribution) === JSON.stringify(secondDistribution), `M4: el reparto no quedó visible en /state: ${JSON.stringify(finalStateDistribution)}`);
     const activeDeliveries = afterDockEffect.deliveries.filter((delivery) => delivery.status !== "entregada");
     check(activeDeliveries.length > 0 && activeDeliveries.every((delivery) => delivery.status === "bloqueada"), "M3: no todas las entregas activas quedaron bloqueadas");
     check(incidentCount(afterDockEffect, smsEvent.eventId) === 1, "M3: el SMS no aparece exactamente una vez");
@@ -662,7 +717,8 @@ async function main(): Promise<void> {
     check(final.state.shuttles.length === 4, `Final: esperados 4 shuttles, recibidos ${final.state.shuttles.length}`);
     check(final.state.shuttles.every((shuttle) => places.has(String(shuttle.destinationId))), "Final: algún shuttle apunta a un destino inexistente");
     check(final.state.shuttles.every((shuttle) => places.get(String(shuttle.destinationId))?.zone === "sur"), "Final: algún shuttle salió de Sur");
-    check(final.state.calls.every((call) => call.simulated === true), "Final: se ejecutó una comunicación de especialista real");
+    const finalRealCalls = final.state.calls.filter((call) => call.simulated === false);
+    check(finalRealCalls.length === (realTransportCall ? 1 : 0), `Final: esperadas ${realTransportCall ? 1 : 0} llamadas reales, observadas ${finalRealCalls.length}`);
     check(!final.state.calls.some((call) => call.status === "en_curso"), "Final: quedan llamadas en curso");
     const provenanceEvents = final.state.events.filter((item) => isRecord(item.provenance));
     check(provenanceEvents.length === 2, `Final: esperados 2 inputs relevantes, observados ${provenanceEvents.length}`);
@@ -670,6 +726,7 @@ async function main(): Promise<void> {
     const finalActions = await readActions();
     check(finalActions.tasks.length === 0, "Final: quedan tareas abiertas");
     check(final.state.resolved || final.state.coordinatorStatus === "atascado" || Boolean(final.state.closureSummary), "Final: no hay cierre ni limitación explícita");
+    check(!String(final.state.closureSummary ?? "").includes("sin sede asignada"), "Final: el cierre perdió las asignaciones propuestas del plan");
 
     const reportBeforeDuplicate = await readReport();
     const fingerprintBeforeDuplicate = stateFingerprint(final.state, finalActions, reportBeforeDuplicate);
@@ -688,7 +745,8 @@ async function main(): Promise<void> {
 
     const happyrobotLatency = latencySummary([firstReport.latencyMs, secondReport.latencyMs]);
     const coreJourneyMs = finalAt - journeyStartedAt;
-    check(coreJourneyMs <= 60_000, `Recorrido M1-M4 tardó ${coreJourneyMs} ms, esperado <= 60000`);
+    const journeyLimitMs = realTransportCall ? 240_000 : 60_000;
+    check(coreJourneyMs <= journeyLimitMs, `Recorrido M1-M4 tardó ${coreJourneyMs} ms, esperado <= ${journeyLimitMs}`);
     checkpoints.performance = {
       note: "Dos ciclos HappyRobot del recorrido grabado",
       happyrobot: happyrobotLatency,

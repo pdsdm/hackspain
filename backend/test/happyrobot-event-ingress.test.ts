@@ -8,13 +8,14 @@ import { StateRepository } from "../src/state/state-repository.js";
 
 const TOKEN = "incident-webhook-token";
 
-function event(eventId: string, incidentId: "principal_pipe_burst" | "dock_blocked" = "principal_pipe_burst") {
+function event(eventId: string, incidentId: "inbox_batch" | "principal_pipe_burst" | "dock_blocked" = "principal_pipe_burst") {
+  const inbox = incidentId === "inbox_batch";
   return {
     eventId,
-    channel: incidentId === "principal_pipe_burst" ? "call" : "sms",
-    actor: incidentId === "principal_pipe_burst" ? "Responsable de recinto" : "Jefe de muelle",
+    channel: incidentId === "dock_blocked" ? "sms" : "call",
+    actor: inbox ? "Centralita MADRING" : incidentId === "principal_pipe_burst" ? "Responsable de recinto" : "Jefe de muelle",
     incidentId,
-    summary: incidentId === "principal_pipe_burst" ? "Una tubería rota obliga a cerrar el Pabellón Principal" : "Un camión de TV bloquea el Muelle Este",
+    summary: inbox ? "Lote de 10 mensajes recibidos en 3,6 segundos" : incidentId === "principal_pipe_burst" ? "Una tubería rota obliga a cerrar el Pabellón Principal" : "Un camión de TV bloquea el Muelle Este",
     evidence: { sessionId: `session-${eventId}` },
   };
 }
@@ -56,6 +57,19 @@ test("HappyRobot incident ingress requires bearer auth and a strict allowlisted 
     ]) {
       assert.equal((await post(base, body)).status, 400);
     }
+  });
+});
+
+test("inbox_batch records ten messages without applying the incident before the coordinator", async () => {
+  await withServer(async (base, _database, states) => {
+    const before = states.ensureActiveRun().state.planVersion;
+    const response = await post(base, event("inbox-1", "inbox_batch"));
+    assert.equal(response.status, 200);
+    const state = states.ensureActiveRun().state;
+    assert.equal(state.planVersion, before);
+    assert.deepEqual(state.inboxTriage, { eventId: "inbox-1", received: 10, relevant: 1, ignored: 9, status: "processing" });
+    const timeline = (state.events as Array<Record<string, unknown>>).find((item) => item.provenance && (item.provenance as Record<string, unknown>).eventId === "inbox-1");
+    assert.equal(timeline?.actor, "Centralita MADRING");
   });
 });
 

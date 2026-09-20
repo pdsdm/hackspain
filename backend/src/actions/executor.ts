@@ -104,7 +104,9 @@ export class ActionExecutor {
 
   private isReal(task: DispatchTask, state: CrisisStateDocument): boolean {
     const hook = this.config.hooks[task.area as AreaHook];
-    return state.forceSimActions !== true && Boolean(hook && this.config.happyrobotApiKey);
+    const firstE2ETransportCall = state.e2eMode === "production-isolated" && state.e2eRealTransportCall === true && task.area === "transporte" &&
+      !records(state, "calls").some((call) => call.agent === "transporte" && call.simulated === false);
+    return (state.forceSimActions !== true || firstE2ETransportCall) && Boolean(hook && this.config.happyrobotApiKey);
   }
 
   private deferRealCall(task: DispatchTask): boolean {

@@ -46,6 +46,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "shuttles": [],
   "deliveries": [],
   "guestGroups": [],
+  "assignments": [{ "groupId": "g-propios", "spaceId": "pabellonB", "count": 180, "status": "proposed", "planVersion": 2 }],
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "kind": "operational", "title": "Aceptar apertura escalonada", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
@@ -70,6 +71,8 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 0` y `nextScriptAt: null`; los workflows no consumen ni modifican esos campos. El roster individual queda fuera de `/state`. Cada `call` lleva `simulated: true` cuando la produce el adaptador `sim` (sin `HAPPYROBOT_API_KEY` o sin hook para esa área); el panel la etiqueta «simulada» y solo muestra «vía HappyRobot» si es `false`. En llamadas reales, `calls[].transcript` crece con los callbacks parciales de T22 mientras el estado siga `en_curso`; sus líneas están ordenadas por `at`, no se duplican al reenviar un snapshot y permanecen en `/state` después de pasar a `terminada` y después de reiniciar el backend.
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
+
+`assignments[]` expone el reparto propuesto del plan vigente, incluso cuando un grupo se divide entre espacios. `status: proposed` cuenta como sede asignada en el panel, pero nunca como plaza confirmada; la confirmación sigue dependiendo de evidencia y `guestGroups[].confirmedCount`.
 
 `coordinatorStatus`: `estable` | `replanificando` | `esperando_decision` | `pausado` | `atascado`. El backend evalúa el cierre después de cada evento, cuando el coordinador no está trabajando:
 
@@ -134,14 +137,14 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ### `POST /simulation/e2e/reset`
 
-Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run; aunque Railway esté en shadow o tenga hooks de especialistas, el plan se aplica y llamadas, SMS y email usan el adaptador `sim`. Los resultados de especialistas actualizan estado y cierre sin lanzar ciclos extra: los dos únicos replans son los dos incidentes del storyboard. Un reset normal elimina la marca. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
+Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run. Por defecto todas las acciones de especialistas usan `sim`. Con `realTransportCall: true`, y solo si existen hook, API key y `HAPPYROBOT_TEST_PHONE`, la primera acción de Transporte usa HappyRobot real; cualquier acción posterior de Transporte y las demás áreas siguen en `sim`. Los resultados actualizan estado y cierre sin lanzar ciclos extra. Un reset normal elimina las marcas. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
 
 ```json
-{ "inputTokenHash": "<sha256-hex>" }
+{ "inputTokenHash": "<sha256-hex>", "realTransportCall": true }
 ```
 
 ```json
-{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim" }
+{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim | transport-real-rest-sim" }
 ```
 
 ### `POST /simulation/clock`
@@ -257,9 +260,10 @@ Entrada autenticada y estricta para incidentes reales detectados por workflows d
 }
 ```
 
-- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `principal_pipe_burst` | `dock_blocked`.
+- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `inbox_batch` | `principal_pipe_burst` | `dock_blocked`.
 - El cuerpo y `evidence` no admiten campos adicionales: el workflow no puede enviar operaciones, parches ni versiones de estado.
-- `principal_pipe_burst` cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
+- `inbox_batch` conserva en `summary` diez mensajes sintéticos recibidos en menos de cuatro segundos. No aplica por sí solo ningún daño ni incrementa `planVersion`: el Reasoning Agent debe identificar la única señal material, consultar el mundo y generar el plan. `/state.inboxTriage` muestra recibidos, relevantes, descartados, selección y lectura.
+- `principal_pipe_burst` conserva el camino directo de respaldo: cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
 - Las solicitudes se serializan por orden de llegada. Cada efecto lee el run y la versión vigentes cuando alcanza la cola.
 - Repetir el mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`, sin aplicar ni coordinar de nuevo. Reutilizarlo con otro cuerpo devuelve `409`.
 - La línea añadida a `events[]` puede incluir los campos opcionales y retrocompatibles `channel`, `actor` y `provenance: { source: "happyrobot", eventId, sessionId }`.
