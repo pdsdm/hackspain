@@ -7,7 +7,6 @@ import { TopBar } from './components/layout/TopBar'
 import { NavTabs } from './components/layout/NavTabs'
 import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
-import { KpiOverlay } from './components/map/KpiOverlay'
 import { AforoOverlay } from './components/map/AforoOverlay'
 import { AgentDetailCard, type AgentFocus } from './components/map/AgentDetailCard'
 import { ActiveIncidents } from './components/map/ActiveIncidents'
@@ -65,7 +64,6 @@ export default function App() {
                 <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">
-                <KpiOverlay s={s} />
                 <CierreCard s={s} className="w-[440px] max-w-full" />
                 <DecisionCard className="glass w-[440px] max-w-full" d={decision} disabled={disabled} onApprove={() => void ctl.intervene({ type: 'approve_plan', payload: { decisionId: decision!.id } })} onReject={() => void ctl.intervene({ type: 'reject_plan', payload: { decisionId: decision!.id } })} />
               </div>
@@ -75,7 +73,7 @@ export default function App() {
           </CrisisMap>
           </div>
               <div className="absolute z-[1000] top-3 right-3 bottom-3 w-[404px] flex flex-col justify-end gap-3 pointer-events-none [&>*]:pointer-events-auto">
-                <LlamadaCard s={s} call={call} disabled={disabled} onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+                <LlamadaCard s={s} call={call} disabled={disabled} className="mx-3" onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
                 <CronologiaChat s={s} className="min-h-0 max-h-full" footer={
                   <EventChat className="event-chat border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
                 } />

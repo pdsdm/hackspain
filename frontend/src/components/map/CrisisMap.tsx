@@ -17,8 +17,8 @@ const COLOR = { ink: '#1a1d24', amber: '#c47a00', red: '#e5484d', green: '#1f9d5
 
 /** Everything outside the two venue zones is dimmed by a single polygon with holes. */
 const WORLD: LatLng[] = [[40.36, -3.86], [40.60, -3.86], [40.60, -3.40], [40.36, -3.40]]
-/** Leaves room for the aforo panel, the chronology rail and the KPI strip. */
-const INSETS = { left: 340, right: 440, top: 150, bottom: 168 }
+/** Leaves room for the aforo panel, the chronology rail and the top cards. */
+const INSETS = { left: 340, right: 440, top: 80, bottom: 168 }
 
 const RANK_PRIORITY = { sede: 0, acceso: 30, servicio: 40, contexto: 50 } as const
 /** Icon, gaps and padding around the text lines of a chip. */
