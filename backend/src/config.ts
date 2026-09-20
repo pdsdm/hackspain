@@ -36,10 +36,7 @@ export interface AppConfig {
   jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
   callsOnDemand: boolean;
-<<<<<<< HEAD
   callCooldownMs: number;
-=======
->>>>>>> origin/main
   publicBaseUrl: string;
   deploymentId?: string;
 }
@@ -188,13 +185,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     // nodo emitir_llamada del workflow: con esto puesto y el nodo apuntando al hook antiguo, no
     // saldría ninguna llamada.
     callsOnDemand: ["1", "true"].includes(env.CALLS_ON_DEMAND?.trim().toLowerCase() ?? ""),
-<<<<<<< HEAD
     // Ventana en la que no se vuelve a marcar a la misma contraparte de la misma área. Cada
     // replanificación encola otra vez la acción equivalente, y la anterior ya despachada no lo
     // impedía: la contraparte recibía dos llamadas por el mismo encargo en menos de un minuto.
     callCooldownMs: readCallCooldown(env.CALL_COOLDOWN_MS),
-=======
->>>>>>> origin/main
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
   };

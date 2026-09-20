@@ -1,6 +1,5 @@
 # Estado del proyecto
 
-<<<<<<< HEAD
 > Foto de `origin/main` (`685a974`, con T58 y T59 mergeadas) más el trabajo sin mergear de `fix/pep-llamada-que-se-sabotea` (T60). Actualizar esta página después de cada merge relevante.
 
 | | |
@@ -10,17 +9,6 @@
 | **Trabajo en curso** | T60: la transcripción dejaba de envenenar la conversación, el mismo encargo no se marca dos veces y un email no llama. Decisión D28 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, sesión de implementación de T59 y T60 |
-=======
-> Foto de `origin/main` (`685a974`, T58 y T59 ya mergeadas en PRs #110 y #111) más el trabajo sin mergear de `feat/pep-entrega` (T21). Actualizar esta página después de cada merge relevante.
-
-| | |
-|---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 07:20 CEST |
-| **Base** | `685a974` (`origin/main`; T57, T58 y T59 mergeadas) + T21 sin mergear |
-| **Trabajo en curso** | T21: README de entrega con capturas reales e instrucciones de uso, `scripts/screenshots.sh`, `happyrobot_docs/` en `.gitignore` y LICENSE a nombre del equipo |
-| **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, sesión de implementación de T58 y T59 |
->>>>>>> origin/main
 
 ## Salud
 
@@ -28,13 +16,8 @@
 |---|---|
 | **Tests en `origin/main`** | **359 pass, 0 fail, 7 skipped.** `main` está verde. Verificado en worktree limpio de `6f62593` |
 | Historia de las 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») dejó 10 tests HTTP rojos: cada ejecución arranca en pausa y `/events`, `/interventions` y `/workflow/happyrobot/events` responden 409 con la mesa detenida. T58 los arregló y el merge #110 ya está en `main` |
-<<<<<<< HEAD
 | Tests en `fix/pep-llamada-que-se-sabotea` | **373 pass, 0 fail, 7 skipped** (380 en total). Los 7 nuevos son de T60 |
 | `make check` en `fix/pep-llamada-que-se-sabotea` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
-=======
-| Tests en `feat/pep-no-y-telefono-ui` | **366 pass, 0 fail, 7 skipped** (373 en total). Los 7 nuevos son de T59 |
-| `make check` en `feat/pep-no-y-telefono-ui` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
->>>>>>> origin/main
 | Lint frontend | 0 avisos, 0 errores |
 | Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
 | Fixtures | `fixtures:check` verifica los 10 JSON reproducibles |
@@ -156,24 +139,16 @@ reescrita es la regla del prompt.
 
 ## Qué falta, por riesgo para la demo
 
-<<<<<<< HEAD
 0. **Silenciar `reportar_transcript` en el workflow de voz.** Es el arreglo con más efecto y no
    depende de ningún merge. Mientras el nodo devuelva su salida al agente, las llamadas se
    seguirán rompiendo solas.
-=======
->>>>>>> origin/main
 1. **Publicar la versión nueva del Orquestador** con `emitir_llamada` apuntando a
    `POST /workflow/coordinator/happyrobot/call`. Guion en
    [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
    versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
    resultado de cada llamada del coordinador se sigue perdiendo con 404.**
-<<<<<<< HEAD
 2. **Mergear T59.** Mientras no se mergee, el backend desplegado no tiene el endpoint al que
    debe apuntar el nodo nuevo.
-=======
-2. **Mergear T21 (`feat/pep-entrega`).** README de entrega con capturas e instrucciones;
-   `main` sigue con el README del enunciado hasta que se mergee.
->>>>>>> origin/main
 3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
    puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
 4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
@@ -202,23 +177,14 @@ reescrita es la regla del prompt.
 
 ## Ramas vivas sin mergear
 
-<<<<<<< HEAD
 - `fix/pep-llamada-que-se-sabotea`: T60. `make check` en verde.
 - `feat/pep-no-y-telefono-ui`: ya mergeada. T58 entró por PR #110 y T59 por PR #111 (`685a974`).
-=======
-- `feat/pep-no-y-telefono-ui`: un commit por delante de `main` (`39c3bfd`, T59). `make check` en
-  verde. T58 ya está en `main` por PR #110, y la rama se reutiliza para T59.
->>>>>>> origin/main
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
 - El resto de ramas remotas no se ha vuelto a auditar en esta sesión (`git branch -r`).
 
 ## Decisiones pendientes
 
-<<<<<<< HEAD
 1. Aprobar y mergear T60 (D28). T58 y T59 ya están en `main`.
-=======
-1. Aprobar y mergear T59 (D27). T58 (D25, D26) ya está en `main`.
->>>>>>> origin/main
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica
