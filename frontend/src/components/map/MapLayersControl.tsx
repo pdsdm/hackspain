@@ -1,3 +1,5 @@
+import { KIND_COLOR, TRACK_COLOR } from './icons'
+
 export interface Layers { transporte: boolean; proveedores: boolean; accesos: boolean; contexto: boolean }
 
 const ITEMS: Array<{ key: keyof Layers; label: string; cls: string }> = [
@@ -27,7 +29,13 @@ export function MapLayersControl({ layers, onChange }: { layers: Layers; onChang
           <div className="flex items-center gap-2"><span className="legend-swatch legend-pending" /> Pendiente de confirmar</div>
           <div className="flex items-center gap-2"><span className="legend-swatch legend-ok" /> Confirmado u operativo</div>
           <div className="flex items-center gap-2"><span className="legend-swatch legend-idle" /> Sin usar en el plan</div>
-          <div className="flex items-center gap-2 pt-1.5 border-t border-line"><span className="w-6 h-[3px] bg-ink" /> Trazado del circuito</div>
+          <div className="flex items-center gap-2 pt-1.5 border-t border-line"><span className="legend-dots" style={{ color: KIND_COLOR.bus }} /> Shuttles y autocares</div>
+          <div className="flex items-center gap-2"><span className="legend-dots" style={{ color: KIND_COLOR.taxi }} /> Taxis</div>
+          <div className="flex items-center gap-2"><span className="legend-dots" style={{ color: KIND_COLOR.vip }} /> Traslados VIP</div>
+          <div className="flex items-center gap-2"><span className="legend-dots" style={{ color: KIND_COLOR.truck }} /> Catering</div>
+          <div className="flex items-center gap-2"><span className="legend-dots" style={{ color: KIND_COLOR.van }} /> Reparto de última hora</div>
+          <div className="flex items-center gap-2"><span className="legend-dots" style={{ color: '#e5484d' }} /> Retenido o con retraso</div>
+          <div className="flex items-center gap-2 pt-1.5 border-t border-line"><span className="w-6 h-[4px]" style={{ background: TRACK_COLOR }} /> Trazado del circuito</div>
           <div className="flex items-center gap-2"><span className="legend-barrier" /> Norte y Sur no conectan</div>
         </div>
       </div>

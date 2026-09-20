@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Activity, AlertTriangle, ArrowUpRight, Check, Clock3, MessageSquare, Phone, Radio, UserRound, Users, Utensils, Bus, Building2, GitBranch, type LucideIcon } from 'lucide-react'
 import type { Area, CrisisState, EventKind } from '../../domain/types'
-import { fmtClock } from '../../domain/time'
+import { fmtClock, fmtRealClock } from '../../domain/time'
 import { Glass } from './Glass'
 
 const EVENT: Record<EventKind, { label: string; tone: string; icon: LucideIcon }> = {
@@ -71,7 +71,7 @@ export function CronologiaChat({ s, className = 'w-[460px] h-[230px]', footer }:
                     <span className="timeline-avatar"><Icon size={13} strokeWidth={1.8} /></span>
                     <span className="timeline-author">{name}</span>
                     <span className="timeline-chip"><look.icon aria-hidden="true" />{look.label}</span>
-                    <time className="timeline-time num">{fmtClock(e.time)}</time>
+                    <time className="timeline-time num">{e.realAt ? fmtRealClock(e.realAt) : fmtClock(e.time)}</time>
                   </div>
                   <p className="timeline-text">{renderText(e.text)}</p>
                   {(source || simulated) && (

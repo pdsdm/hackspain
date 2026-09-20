@@ -1,12 +1,13 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { MapContainer, Pane, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'react-leaflet'
 import type { CrisisState, LatLng, SpaceKind } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
 import { PIT_LANE, TRACK } from '../../domain/track'
 import { spaceLook } from '../ui/status'
-import { barrierLabelIcon, gateIcon, placeIcon, rankOf, vehicleIcon, zIndexOf, zoneLabelIcon } from './icons'
+import { KIND_COLOR, TRACK_COLOR, barrierLabelIcon, gateIcon, placeIcon, rankOf, vehicleIcon, zIndexOf, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { FitVenue, LabelPlanner, ZoomGate, type LabelCandidate } from './LabelPlanner'
+import { HoverReset } from './HoverReset'
 import { MapLayersControl, type Layers } from './MapLayersControl'
 import { useOsrmRoutes } from './routing'
 import { vehicleViews, vehicleRowsHtml, type VehicleView } from './vehicles'
@@ -17,8 +18,8 @@ const COLOR = { ink: '#1a1d24', amber: '#c47a00', red: '#e5484d', green: '#1f9d5
 
 /** Everything outside the two venue zones is dimmed by a single polygon with holes. */
 const WORLD: LatLng[] = [[40.36, -3.86], [40.60, -3.86], [40.60, -3.40], [40.36, -3.40]]
-/** Leaves room for the aforo panel, the chronology rail and the KPI strip. */
-const INSETS = { left: 340, right: 440, top: 150, bottom: 168 }
+/** Leaves room for the aforo panel, the chronology rail and the top cards. */
+const INSETS = { left: 340, right: 440, top: 80, bottom: 168 }
 
 const RANK_PRIORITY = { sede: 0, acceso: 30, servicio: 40, contexto: 50 } as const
 /** Icon, gaps and padding around the text lines of a chip. */
@@ -62,6 +63,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
   const [layers, setLayers] = useState<Layers>({ transporte: true, proveedores: true, accesos: true, contexto: false })
   const [hover, setHover] = useState<string | null>(null)
   const [labelIds, setLabelIds] = useState<Set<string>>(new Set())
+  const resetHover = useCallback(() => setHover(null), [])
   const vehicles = useMemo(() => vehicleViews(s), [s])
   const routes = useOsrmRoutes(vehicles.map((v) => ({ id: v.id, waypoints: v.waypoints, fallback: v.fallback })))
 
@@ -105,6 +107,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
     <div className="relative h-full w-full overflow-hidden bg-panel">
       <MapContainer center={[40.4732, -3.6195]} zoom={15} minZoom={12} zoomSnap={0.25} zoomDelta={0.5} zoomControl={false} attributionControl={false} className="h-full w-full">
         <FitVenue insets={INSETS} />
+        <HoverReset onReset={resetHover} />
         <LabelPlanner candidates={candidates} onPlan={setLabelIds} />
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 
@@ -117,8 +120,8 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
 
         <Pane name="circuit" style={{ zIndex: 455, pointerEvents: 'none' }}>
           <Polyline positions={TRACK} pathOptions={{ color: '#ffffff', weight: 8, opacity: 1, lineJoin: 'round', interactive: false }} />
-          <Polyline positions={TRACK} pathOptions={{ color: '#1a1d24', weight: 4, opacity: 1, lineJoin: 'round', interactive: false }} />
-          <Polyline positions={PIT_LANE} pathOptions={{ color: '#1a1d24', weight: 2, opacity: 0.55, dashArray: '2 4', interactive: false }} />
+          <Polyline positions={TRACK} pathOptions={{ color: TRACK_COLOR, weight: 4.5, opacity: 1, lineJoin: 'round', interactive: false }} />
+          <Polyline positions={PIT_LANE} pathOptions={{ color: TRACK_COLOR, weight: 2.5, opacity: 0.7, dashArray: '2 5', interactive: false }} />
         </Pane>
 
         <ZoomGate min={14.5}>
@@ -172,29 +175,26 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
           )
         })}
 
-        <Pane name="routes" style={{ zIndex: 470 }}>
+        <Pane name="routes" style={{ zIndex: 452 }}>
           {vehicles.map((v) => {
             if (!vehicleVisible(v, layers)) return null
-            const path = routes[v.id] ?? v.fallback
+            const path = routes[v.id]
             if (!path || path.length < 2) return null
             const lit = hover === v.id || hover === v.destId || selected === v.id
-            const color = v.kind === 'truck' || v.kind === 'van' ? (v.delayed ? COLOR.red : COLOR.amber) : COLOR[v.tone === 'green' ? 'ink' : v.tone]
+            const color = v.delayed ? COLOR.red : KIND_COLOR[v.kind]
             return (
               <Fragment key={v.id}>
-                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 8 : 5.5, opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing' }} />
-                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color, weight: lit ? 4.5 : 2.75, opacity: lit ? 1 : 0.85, lineCap: 'round', lineJoin: 'round', className: 'route-hover' }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
+                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 9 : 7, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing' }} />
+                <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color, weight: lit ? 6 : 4.5, opacity: lit ? 1 : 0.95, lineCap: 'round', lineJoin: 'round', dashArray: '1 9', className: `route-hover route-dots${v.pct > 0 ? ' route-flow' : ''}` }} eventHandlers={{ mouseover: () => setHover(v.id), mouseout: () => setHover(null), click: () => onSelect(v.id) }}>
                   <VehicleTip v={v} />
                 </Polyline>
-                {v.pct > 0 && (
-                  <Polyline positions={path} smoothFactor={1.2} pathOptions={{ color: '#ffffff', weight: lit ? 2.5 : 1.5, opacity: 0.95, lineCap: 'round', lineJoin: 'round', interactive: false, className: 'route-casing route-anim' }} />
-                )}
               </Fragment>
             )
           })}
         </Pane>
         {vehicles.map((v) => {
           if (!vehicleVisible(v, layers)) return null
-          const path = routes[v.id] ?? v.fallback
+          const path = routes[v.id]
           if (!path || path.length < 2) return null
           const pos = pointAlong(path, v.pct / 100)
           const lit = hover === v.id || hover === v.destId || selected === v.id

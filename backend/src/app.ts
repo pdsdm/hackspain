@@ -24,6 +24,7 @@ import {
   parseEvent,
   parseHappyRobotIncident,
   parseIntervention,
+  parseClock,
   parseLive,
   parseReset,
   parseSpecialistResult,
@@ -307,6 +308,15 @@ export function createApp(
     try {
       const body = parseLive(request.body ?? {});
       response.status(200).json({ ok: true, ...controlService.setLive(body.enabled, body.seed, body.mode) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/simulation/clock", (request, response, next) => {
+    try {
+      const body = parseClock(request.body ?? {});
+      response.status(200).json({ ok: true, ...controlService.setClock(body.speed, body.paused) });
     } catch (error) {
       next(error);
     }

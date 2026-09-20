@@ -397,6 +397,23 @@ export function parseLive(value: unknown): { enabled: boolean; seed?: number; mo
   return result;
 }
 
+export function parseClock(value: unknown): { speed?: number; paused?: boolean } {
+  const input = record(value, "body");
+  const result: { speed?: number; paused?: boolean } = {};
+  if (input.speed !== undefined) {
+    if (typeof input.speed !== "number" || !Number.isFinite(input.speed) || input.speed < 1 || input.speed > 60) {
+      throw new ContractError("speed must be a number between 1 and 60", 400);
+    }
+    result.speed = input.speed;
+  }
+  if (input.paused !== undefined) {
+    if (typeof input.paused !== "boolean") throw new ContractError("paused must be a boolean", 400);
+    result.paused = input.paused;
+  }
+  if (result.speed === undefined && result.paused === undefined) throw new ContractError("speed or paused is required", 400);
+  return result;
+}
+
 export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {
   if (value === undefined || value === null || (isRecord(value) && Object.keys(value).length === 0)) {
     return {};

@@ -50,6 +50,7 @@
 - **Qué:** el frontend pide la geometría de cada ruta (shuttles y entregas) a `https://router.project-osrm.org` (perfil `driving`) con origen, destino y los puntos intermedios que coinciden con un espacio del escenario. Sin dependencia nueva: `fetch` y caché en memoria. Si la petición falla, se usa la polilínea del dominio (`route`).
 - **Por qué:** los vehículos circulan por calles reales y la ruta cambia sola cuando un evento cambia el destino (`destinationId` / `dockId`). Sin clave de API y sin servidor propio.
 - **Nota:** el servidor demo de OSRM no garantiza disponibilidad. La demo no depende de él: sin red, el mapa muestra las rutas rectas.
+- **Circuito (T54):** se piden `alternatives=3` y se elige la ruta que menos metros comparte con el trazado (`TRACK` y `PIT_LANE`, corredor de 25 m). Cruzar el trazado por un túnel o puente suma pocos metros y no penaliza; ir en paralelo sí. Si la mejor sigue compartiendo más de 150 m, se prueban puntos de paso a 300, 600 y 900 m a cada lado del tramo solapado, parando en cuanto queda por debajo de 60 m, y se conserva la mejor. Las rutas se pintan debajo del trazado para que el resto quede tapado por el circuito. Las peticiones van en cola (2 en vuelo) para no saturar el servidor público. Varios destinos (Muelle Este, Parking Norte, Muelle Norte) están pegados al trazado, así que su aproximación final puede seguir compartiendo calle.
 
 ### D16: orígenes libres con Nominatim + OSRM (amplía D8)
 

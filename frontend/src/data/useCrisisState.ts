@@ -144,8 +144,14 @@ export function useCrisisState(): CrisisController {
         .catch((e) => setFeedback('No se pudo cambiar el Modo vivo: ' + (e instanceof Error ? e.message : 'error')))
         .finally(() => { requestInFlight.current = false; setPending(false) })
     },
-    setSpeed: (speed) => { if (SOURCE === 'sim') dispatch({ type: 'SET_SPEED', speed }) },
-    togglePause: () => { if (SOURCE === 'sim') dispatch({ type: 'TOGGLE_PAUSE' }) },
+    setSpeed: (speed) => {
+      if (SOURCE === 'sim') { dispatch({ type: 'SET_SPEED', speed }); return }
+      void api.clock({ speed }).catch((e) => setFeedback('No se pudo cambiar la velocidad: ' + (e instanceof Error ? e.message : 'error')))
+    },
+    togglePause: () => {
+      if (SOURCE === 'sim') { dispatch({ type: 'TOGGLE_PAUSE' }); return }
+      void api.clock({ paused: !state.clock.paused }).catch((e) => setFeedback('No se pudo pausar el reloj: ' + (e instanceof Error ? e.message : 'error')))
+    },
     select,
     reset: () => {
       if (SOURCE === 'sim') {
