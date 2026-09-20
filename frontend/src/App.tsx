@@ -4,7 +4,6 @@ import { useCrisisState } from './data/useCrisisState'
 import { displayCall, pendingDecision } from './domain/selectors'
 import type { FixtureName } from './domain/fixtures'
 import { TopBar } from './components/layout/TopBar'
-import { NavTabs } from './components/layout/NavTabs'
 import { Drawer } from './components/layout/Drawer'
 import { CrisisMap } from './components/map/CrisisMap'
 import { AforoOverlay } from './components/map/AforoOverlay'
@@ -47,7 +46,6 @@ export default function App() {
     <div className="app-shell h-full bg-bg text-text">
       <div className="desktop-dashboard h-full flex flex-col">
         <TopBar ctl={ctl} onIntervenir={() => setModal('intervenir')} onDrawer={() => setDrawer((v) => !v)} drawerOpen={drawer} />
-        <NavTabs s={s} />
         {ctl.stale && (
           <div role="alert" className="flex items-center gap-2 px-4 py-1.5 bg-red/10 border-b border-red/40 text-red text-[12px]">
             <WifiOff size={13} /> Datos sin actualizar · última recepción hace {ctl.ageSeconds} s. {ctl.error ?? 'Esperando conexión.'} Las acciones están deshabilitadas hasta recuperar el estado.
