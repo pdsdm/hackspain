@@ -1,20 +1,20 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más el hardening de triaje y llamada controlada de esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` (PR #105) más T56 en esta rama. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 03:20 CEST |
-| **Base** | `b74c1bc` (`origin/main`) + `feat/t52-triage-live-transport` |
-| **Trabajo en revisión** | T52: triaje 10/1/9, asignaciones públicas y una llamada real controlada de Transporte |
+| **Foto tomada** | 20 de septiembre de 2026, 03:50 CEST |
+| **Base** | `f13c8c3` (`origin/main`, PR #105) + `fix/pep-deps-retry` |
+| **Trabajo en revisión** | T56 (PR #101): dependencias con `:retry`, sin replan por condiciones, resumen de atasco legible |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, durante T52 |
+| **Generado por** | Pep, durante T56 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `feat/t52-triage-live-transport` | **OK** |
+| `make check` en `fix/pep-deps-retry` (con `origin/main` integrado) | **OK** |
 | Tests backend | 357: **350 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
@@ -49,7 +49,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - La cronología global conserva solo el resumen final de la llamada.
 - El workflow de development tiene `reportar_transcript`, callbacks dinámicos y usa `contact.phone`. Tres intentos llegaron al nodo de voz, pero la telefonía terminó como `user_missed_call` antes de iniciar audio.
 
-### T55 en `fix/pep-replan-loop`
+### T55 (PR #100, mergeada)
 
 - `no_answer` ya no relanza al coordinador: la misma tarea se reencola una vez (`:retry`); al segundo `no_answer` el agente queda en `incidencia` sin nueva tarea.
 - El executor solo mantiene una llamada real en curso; el resto de tareas reales esperan `pending` hasta el siguiente tick.
@@ -57,13 +57,22 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - `COORDINATOR_VERBOSE` vacío equivale a `0` cuando existe `RAILWAY_ENVIRONMENT`.
 - Contrato actualizado en `docs/api-contract.md` (resultados de especialistas y timeout de 180 s). Decisión D21.
 
-### T52 en `feat/t52-triage-live-transport`
+### T52 triaje y llamada controlada (PR #102 y #104, mergeadas)
 
 - El primer input es `inbox_batch`: diez mensajes sintéticos en 3,6 s; el Reasoning Agent debe usar `consult_world`, seleccionar la rotura y persistir el triaje 10/1/9.
 - `assignments[]` queda en `/state`; cierre y frontend distinguen 600 asignados de cero plazas confirmadas cuando quedan condiciones.
 - `--confirm-real-transport-call` autoriza una única invocación de `emitir_llamada` desde el coordinador; las tareas persistidas siguen `sim` y el modo seguro no llama.
 - El segundo plan debe redirigir CAT-01/CAT-02 a Muelle Sur y no puede proponer Muelle Norte sin ruta exterior.
 - Código verificado localmente; falta merge, deployment y E2E con el destinatario de la llamada preparado.
+
+### T56 en `fix/pep-deps-retry` (PR #101)
+
+- Con T55 desplegada, el ensayo API local seguía fallando en M2 por timeout. Dos causas, ambas reproducidas y corregidas:
+  - Cada `accepted_with_conditions` con texto nuevo contaba como cambio material y relanzaba al coordinador (plan 3 → 6 en dos minutos, 19 llamadas). Ahora solo relanzan los cambios de hechos de `spaces[]`; las condiciones se anotan sin replanificar.
+  - La tarea `:retry` tiene otra `idempotencyKey`, así que una tarea con `dependsOn` sobre la original se quedaba `pending` para siempre; el plan nunca llegaba a `atascado`. Ahora la dependencia se satisface con la original o su `:retry`; si ambas fallan, la dependiente se cancela y la cronología lo anota como `fallo`.
+- `closureSummary` en `atascado` enumera como mucho tres condiciones y cuenta el resto (antes salían 38 seguidas).
+- Ensayo API local con `COORDINATOR_HARNESS=tools` y sin hooks reales: **1/1 superado** (M0, M2, M3 y final `atascado` con `closureSummary`, 2 ciclos de coordinador, 11 llamadas, 0 tareas abiertas). Decisión D23.
+- Logs de Railway de las últimas 24 h: solo `SIGTERM` de redeploys y `[sim] contraparte This operation was aborted` (timeouts de DeepSeek; cae al fallback determinista). Desde el arranque de las 02:54 el backend imprime `verbose=no`.
 
 ### Camino de vídeo T45–T52
 
@@ -82,6 +91,7 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
+0b. **Mergear T56 (PR #101) y redesplegar.** Sin T56, un `no_answer` doble sobre una tarea con dependientes deja el plan en `replanificando` para siempre, y las condiciones de la contraparte generan rondas extra de llamadas.
 1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con run hijo auditable y ninguna otra comunicación real.
 2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
 3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar; el run hijo de voz debe completar sin `user_missed_call` y quedar en la evidencia del coordinador.
@@ -103,7 +113,8 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 
 ## Ramas vivas sin mergear
 
-- `feat/t52-triage-live-transport`: triaje 10/1/9, asignaciones públicas y una única llamada real de Transporte; verificada localmente, pendiente de PR y E2E real.
+- `fix/pep-deps-retry` (T56, PR #101): dependencias con `:retry`, sin replan por condiciones, resumen de atasco legible.
+- `origin/feat/events-history`: `GET /events/history`; pendiente de revisar y mergear.
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.

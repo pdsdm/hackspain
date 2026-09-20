@@ -63,7 +63,8 @@
 | T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness`, `feat/t52-triage-live-transport` | [T52](docs/specs/T52-demo-recording.md) | doing |
 | T53 | Pulido UI: mapa a pantalla completa, vidrio más opaco, pines sin recorte y cronología en raíl | Pep | `feat/pep-ui-polish` | - | review |
 | T54 | Más actores con orígenes repartidos por Madrid y rutas que evitan el circuito | Pep | `feat/pep-mas-actores` | [D8](docs/decisions.md) | review |
-| T55 | Corregir el bucle de replanificación en producción: sin replan por `no_answer`, una llamada real en curso, logs legibles | Pep | `fix/pep-replan-loop` | [D21](docs/decisions.md) | review |
+| T55 | Corregir el bucle de replanificación en producción: sin replan por `no_answer`, una llamada real en curso, logs legibles | Pep | `fix/pep-replan-loop` | [D21](docs/decisions.md) | done |
+| T56 | Cierre de la demo: dependencias con `:retry`, sin replan por condiciones, cierre con condiciones informativas, logs sin `answer` | Pep | `fix/pep-deps-retry` | [D23](docs/decisions.md) | in_progress |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

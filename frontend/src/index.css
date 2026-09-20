@@ -454,3 +454,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .agent-detail-body li { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid rgba(26, 29, 36, .06); font-size: 12px; line-height: 1.4; }
 .agent-detail-body li:last-child { border-bottom: 0; padding-bottom: 0; }
 .agent-detail-body small { font-size: 10px; color: var(--color-muted); }
+.agent-learned { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-ink); }
+.agent-learned svg { color: var(--color-ink); }
+.agent-correction { border-left: 2px solid var(--color-ink); padding-left: 10px !important; }
+.agent-correction h3 { display: flex; align-items: center; gap: 6px; }
+.agent-correction h3 svg { color: var(--color-ink); }
+.agent-correction-failed { font-size: 11px; line-height: 1.45; color: var(--color-muted); text-decoration: line-through; }
+.agent-correction-next { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--color-text); }

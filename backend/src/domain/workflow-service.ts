@@ -257,7 +257,6 @@ function applySpecialistState(
           const condition = raw.trim();
           if (condition !== "" && !conditions.includes(condition)) {
             conditions.push(condition);
-            changes.push(`${commitment.id}: condición «${condition}»`);
           }
         }
         commitment.conditions = conditions;
