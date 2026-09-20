@@ -78,7 +78,10 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     jevModel: "jev-1.13.0",
     hooks: {},
     callsOnDemand: false,
+<<<<<<< HEAD
     callCooldownMs: 120_000,
+=======
+>>>>>>> origin/main
     publicBaseUrl: "http://localhost:8000",
   };
 }
