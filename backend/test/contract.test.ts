@@ -147,13 +147,13 @@ test("panel mutations validate, persist and reset the active run", async () => {
     response = await post(base, "/interventions", { type: "set_constraint", payload: {} });
     assert.equal(response.status, 400);
 
-    response = await post(base, "/simulation/twists", { twist: "lounge_unavailable" });
-    assert.equal(response.status, 200);
+    response = await post(base, "/events", { source: "jury", kind: "lounge_unavailable", payload: { twist: "lounge_unavailable" } });
+    assert.equal(response.status, 202);
     const version = states.ensureActiveRun().state.planVersion;
     assert.equal(version, firstRun.state.planVersion + 1);
 
-    response = await post(base, "/simulation/twists", { twist: "lounge_unavailable" });
-    assert.equal(response.status, 200);
+    response = await post(base, "/events", { source: "jury", kind: "lounge_unavailable", payload: { twist: "lounge_unavailable" } });
+    assert.equal(response.status, 202);
     assert.equal(states.ensureActiveRun().state.planVersion, version);
 
     response = await post(base, "/simulation/reset", {});
@@ -508,7 +508,6 @@ test("partial HappyRobot transcripts are authenticated, chronological and idempo
       startedAt: state.clock.simSeconds,
       endsAfter: 90,
       status: "en_curso",
-      simulated: false,
       transcript: [],
     }];
     states.saveState(run.id, state);

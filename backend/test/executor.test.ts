@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { useAcceptingSeed } from "./sim-support.js";
 
 import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
 import { dispatchHappyRobot } from "../src/actions/adapters/happyrobot.js";
-import { e2eReply } from "../src/actions/adapters/sim-world.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
@@ -23,7 +21,7 @@ function harness() {
   return { database, states, tasks, executor };
 }
 
-test("sim adapter opens a call and applies a canned result", async () => {
+test("sin canal real configurado, la tarea termina failed y el agente pasa a incidencia", () => {
   const { database, states, tasks, executor } = harness();
   try {
     const run = states.ensureActiveRun();
@@ -33,23 +31,20 @@ test("sim adapter opens a call and applies a canned result", async () => {
       area: "transporte",
       kind: "call",
       payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
-      idempotencyKey: "sim-call",
+      idempotencyKey: "no-channel-call",
     });
-    useAcceptingSeed(states, task);
     executor.pump();
-    const opened = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
-    assert.equal(opened[0]?.status, "en_curso");
-    await new Promise((resolve) => setImmediate(resolve));
-    executor.fireDue(Number(run.state.clock.simSeconds) + 60);
-    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
-    assert.equal(calls[0]?.status, "terminada");
-    assert.equal(tasks.get(task.id)?.status, "completed");
+    assert.equal((states.ensureActiveRun().state.calls as unknown[]).length, 0);
+    assert.equal(tasks.get(task.id)?.status, "failed");
+    const agent = (states.ensureActiveRun().state.agents as Array<Record<string, unknown>>).find((a) => a.id === "transporte");
+    assert.equal(agent?.status, "incidencia");
+    assert.equal(agent?.lastResult, "Sin canal real configurado para transporte");
   } finally {
     database.close();
   }
 });
 
-test("an isolated E2E run forces sim even when real hooks are configured", async () => {
+test("un resultado fuera de contexto se descarta y no tumba el proceso", async () => {
   const database = openDatabase(":memory:");
   const states = new StateRepository(database.connection);
   const tasks = new TaskRepository(database.connection);
@@ -57,75 +52,13 @@ test("an isolated E2E run forces sim even when real hooks are configured", async
   const config = {
     ...loadConfig(),
     coordinatorMode: "rules" as const,
-    hooks: { transporte: "https://hook.test/transporte" },
+    hooks: { transporte: "http://hook.test/transporte" },
     happyrobotApiKey: "key",
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
   const originalFetch = globalThis.fetch;
-  let externalCalls = 0;
-  globalThis.fetch = async () => {
-    externalCalls += 1;
-    throw new Error("external dispatch must stay disabled");
-  };
-  try {
-    const run = states.ensureActiveRun();
-    const state = structuredClone(run.state);
-    state.forceSimActions = true;
-    state.e2eMode = "production-isolated";
-    states.saveState(run.id, state);
-    const task = tasks.enqueue({
-      runId: run.id,
-      planVersion: run.state.planVersion,
-      area: "transporte",
-      kind: "call",
-      payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
-      idempotencyKey: "e2e-sim-call",
-    });
-    executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
-    const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
-    assert.equal(calls[0]?.simulated, true);
-    assert.equal(externalCalls, 0);
-    const now = Number(run.state.clock.simSeconds);
-    executor.fireDue(now + 2);
-    assert.equal(tasks.get(task.id)?.status, "dispatched");
-    executor.fireDue(now + 3);
-    assert.equal(tasks.get(task.id)?.status, "completed");
-  } finally {
-    globalThis.fetch = originalFetch;
-    database.close();
-  }
-});
-
-test("E2E specialist replies are deterministic, positive and area-specific", () => {
-  const outcomes = Object.fromEntries(["espacios", "catering", "transporte", "asistentes"].map((area) => {
-    const reply = e2eReply({
-      id: `task-${area}`,
-      runId: "run",
-      planVersion: 1,
-      area,
-      kind: "call",
-      payload: { objective: `Objetivo ${area}`, counterpart: `Contraparte ${area}` },
-      idempotencyKey: `e2e-${area}`,
-      status: "dispatching",
-      attempts: 1,
-    });
-    assert.ok(["accepted", "accepted_with_conditions"].includes(reply.outcome));
-    assert.equal(reply.transcript.length, 2);
-    assert.match(reply.summary, /Simulado:/);
-    return [area, reply.outcome];
-  }));
-  assert.deepEqual(outcomes, {
-    espacios: "accepted_with_conditions",
-    catering: "accepted_with_conditions",
-    transporte: "accepted",
-    asistentes: "accepted",
-  });
-});
-
-test("un resultado fuera de contexto se descarta y no tumba el proceso", async () => {
-  const { database, states, tasks, executor } = harness();
+  globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
   try {
     const run = states.ensureActiveRun();
     const task = tasks.enqueue({
@@ -134,11 +67,10 @@ test("un resultado fuera de contexto se descarta y no tumba el proceso", async (
       area: "transporte",
       kind: "call",
       payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
-      idempotencyKey: "sim-call-obsoleta",
+      idempotencyKey: "obsolete-call",
     });
-    useAcceptingSeed(states, task);
     executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     // El plan avanza mientras la llamada está en vuelo: el resultado programado ya no
     // corresponde a la versión de la tarea. Antes esta excepción salía en el tick del reloj
     // y se llevaba el backend por delante.
@@ -147,9 +79,11 @@ test("un resultado fuera de contexto se descarta y no tumba el proceso", async (
     moved.planVersion += 1;
     states.saveState(current.id, moved);
     tasks.carryToPlan(task.id, moved.planVersion);
-    assert.doesNotThrow(() => executor.fireDue(Number(moved.clock.simSeconds) + 60));
+    const now = Number(moved.clock.simSeconds);
+    assert.doesNotThrow(() => executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1));
     assert.equal(tasks.get(task.id)?.status, "dispatched");
   } finally {
+    globalThis.fetch = originalFetch;
     database.close();
   }
 });

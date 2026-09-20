@@ -5,10 +5,7 @@ import { logCoord, logCoordError, logEvent } from "../log.js";
 import { runCoordinatorLoop, type CompleteFn, type CoordinatorLoopDeps } from "../agents/coordinator/loop.js";
 import { buildReplan } from "../agents/coordinator/replan.js";
 import { liveCoordinatorInput } from "../agents/coordinator/scenario.js";
-import { applyOperation } from "./apply-coordinator.js";
 import { applyClosure } from "./closure.js";
-import { generateIncident, type GeneratedIncident } from "./incident-generator.js";
-import { incidentAt } from "./incidents.js";
 import { validateOutput } from "../agents/coordinator/validate.js";
 import type { LlmConfig } from "../agents/coordinator/llm.js";
 import type { CoordinatorMode, InitialFixture } from "../config.js";
@@ -63,34 +60,6 @@ export class Engine {
 
   attachExecutor(executor: ActionExecutor): void {
     this.executor = executor;
-  }
-
-  hasLlm(): boolean {
-    return Boolean(this.options.llmConfig || this.options.completeFn);
-  }
-
-  llmDeps(): { config?: LlmConfig; completeFn?: CompleteFn } {
-    return {
-      ...(this.options.llmConfig ? { config: this.options.llmConfig } : {}),
-      ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
-    };
-  }
-
-  private applyGenerated(incident: GeneratedIncident): void {
-    const run = this.states.ensureActiveRun();
-    const draft = structuredClone(run.state);
-    for (const operation of incident.operations) {
-      const result = applyOperation(draft, this.options.world, operation, new Set());
-      if (!result.ok) logCoord("incidencia generada: operación rechazada", result.error);
-    }
-    const events = records(draft, "events");
-    events.push({ id: `live-${randomUUID()}`, time: draft.clock.simSeconds, kind: "incidencia", text: incident.text, area: incident.area });
-    draft.events = events.slice(-80);
-    const fired = Array.isArray(draft.incidentsApplied) ? draft.incidentsApplied.filter((value): value is string => typeof value === "string") : [];
-    draft.incidentsApplied = [...fired, incident.id];
-    const texts = Array.isArray(draft.incidentTexts) ? draft.incidentTexts.filter((value): value is string => typeof value === "string") : [];
-    draft.incidentTexts = [...texts, incident.text].slice(-20);
-    this.states.saveState(run.id, draft);
   }
 
   handle(event: IncomingEvent): Promise<string> {
@@ -189,39 +158,6 @@ export class Engine {
         const already = Array.isArray(before.twistsApplied) && before.twistsApplied.includes(twist);
         this.control.applyTwist(twist);
         if (!already) mode = await this.runCoordinator(event);
-      } else if (event.source === "clock" && event.kind === "incident") {
-        this.control.applyIncident(String(event.payload?.incident ?? ""));
-        if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
-      } else if (event.source === "clock" && event.kind === "incident_open") {
-        const run = this.states.ensureActiveRun();
-        const happened = Array.isArray(run.state.incidentTexts) ? run.state.incidentTexts.filter((value): value is string => typeof value === "string") : [];
-        const seed = Number(run.state.clock.liveSeed ?? 1);
-        const index = Number(event.payload?.index ?? 0);
-        logCoord("generando incidencia abierta", String(index));
-        const generated = await generateIncident(
-          run.state,
-          {
-            ...(this.options.llmConfig ? { config: this.options.llmConfig } : {}),
-            ...(this.options.completeFn ? { completeFn: this.options.completeFn } : {}),
-          },
-          seed,
-          index,
-          happened,
-        );
-        if (generated) {
-          this.applyGenerated(generated);
-          logCoord("incidencia generada", generated.text);
-          mode = await this.runCoordinator({ ...event, text: generated.text });
-        } else {
-          const fallback = incidentAt(seed, index);
-          if (fallback) {
-            this.control.applyIncident(fallback.id);
-            if (this.hasLlm()) mode = await this.runCoordinator({ ...event, text: fallback.text });
-          }
-        }
-      } else if (event.source === "clock" && event.kind === "gate_saturated") {
-        this.control.applyGateSaturation(String(event.payload?.gateId ?? ""));
-        if (this.options.mode === "llm" || this.options.completeFn) mode = await this.runCoordinator(event);
       } else if (isHappyRobotIncident(event)) {
         const applied = this.control.applyHappyRobotIncident(
           event.kind as HappyRobotIncidentId,
@@ -235,9 +171,15 @@ export class Engine {
         );
         if (applied) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (event.payload?.status === "no_answer" && event.payload.materialChange !== true) {
+        // Un fallo por falta de canal real es instantáneo y masivo: sin esta guarda, cada
+        // plan sin hooks configurados dispara hasta MAX_RESULT_REPLANS replanificaciones
+        // seguidas sin que haya pasado nada nuevo.
+        const isNoChannel = typeof event.payload?.eventId === "string" && event.payload.eventId.startsWith("no-channel-");
+        if (isNoChannel) {
+          // sin replan: solo se limpian las tareas bloqueadas por esta.
+        } else if (event.payload?.status === "no_answer" && event.payload.materialChange !== true) {
           this.retryNoAnswer(event.payload);
-        } else if (run.state.e2eSuppressResultReplan !== true && callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
+        } else if (callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
           if (this.resultReplanStreak() >= Engine.MAX_RESULT_REPLANS) {
             this.skipLoopingReplan();
           } else {
@@ -492,7 +434,7 @@ export class Engine {
 }
 
 function isHappyRobotIncident(event: IncomingEvent): boolean {
-  return event.source === "happyrobot" && (event.kind === "inbox_batch" || event.kind === "principal_pipe_burst" || event.kind === "dock_blocked");
+  return event.source === "happyrobot" && (event.kind === "principal_pipe_burst" || event.kind === "dock_blocked");
 }
 
 function callResultMatchesPlan(

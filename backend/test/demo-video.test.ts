@@ -12,12 +12,12 @@ type PostedEvent = {
   eventId: string;
   channel: "call" | "sms";
   actor: string;
-  incidentId: "inbox_batch" | "principal_pipe_burst" | "dock_blocked";
+  incidentId: "principal_pipe_burst" | "dock_blocked";
   evidence: { sessionId: string };
 };
 
 function state(posts: PostedEvent[], incompleteArea?: string) {
-  const hasCall = posts.some((item) => item.incidentId === "inbox_batch" || item.incidentId === "principal_pipe_burst");
+  const hasCall = posts.some((item) => item.incidentId === "principal_pipe_burst");
   const hasSms = posts.some((item) => item.incidentId === "dock_blocked");
   const agents = ["espacios", "catering", "transporte", "asistentes"].map((id) => ({
     id,
@@ -50,10 +50,9 @@ function state(posts: PostedEvent[], incompleteArea?: string) {
       { groupId: "g-propios", spaceId: "pabellonB", count: 180 },
       { groupId: "g-propios", spaceId: "loungeSur", count: 150 },
     ] : [],
-    ...(posts.some((item) => item.incidentId === "inbox_batch") ? { inboxTriage: { received: 10, relevant: 1, ignored: 9, status: "triaged", selected: "principal_pipe_burst" } } : {}),
     commitments: [{ id: "c-demo", status: "propuesto", conditions: ["Confirmación pendiente"] }],
     agents,
-    calls: hasCall ? [{ agent: "transporte", status: "terminada", simulated: true, transcript: [{ who: "agente", text: "Confirmar shuttles", at: 2 }] }] : [],
+    calls: hasCall ? [{ agent: "transporte", status: "terminada", transcript: [{ who: "agente", text: "Confirmar shuttles", at: 2 }] }] : [],
     events: posts.map((item) => ({
       id: `timeline-${item.eventId}`,
       kind: "incidencia",
@@ -79,6 +78,7 @@ async function withDirector(
   const fetchFn: typeof fetch = async (input, init) => {
     const url = String(input);
     if (url.endsWith("/simulation/reset")) {
+      assert.deepEqual(JSON.parse(String(init?.body)), { fixture: "calm" });
       posts.length = 0;
       resets += 1;
       return response({ ok: true, runId: `run-${resets}`, planVersion: 1 });
@@ -146,10 +146,8 @@ test("demo director repeats API rehearsals from calm and validates observable ch
   assert.equal(resets, 2);
   assert.equal(allPosts.length, 4);
   assert.deepEqual(allPosts.map((item) => item.incidentId), ["principal_pipe_burst", "dock_blocked", "principal_pipe_burst", "dock_blocked"]);
-  assert.equal(allPosts.some((item) => item.incidentId === "inbox_batch"), false);
   assert.deepEqual(allPosts.map((item) => item.channel), ["call", "sms", "call", "sms"]);
   assert.equal(new Set(allPosts.map((item) => item.eventId)).size, 4);
-  assert.ok(allPosts.every((item) => item.actor.startsWith("SIMULACIÓN ·")));
   assert.ok(logs.some((line) => line.includes("Ensayo 2/2")));
   assert.ok(logs.some((line) => line.includes("2/2 ensayos superados")));
 });
@@ -165,11 +163,10 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
   const fetchFn: typeof fetch = async (input, init) => {
     const url = String(input);
     urls.push(url);
-    if (url.endsWith("/simulation/e2e/reset")) {
-      assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer test-token");
-      assert.deepEqual(JSON.parse(String(init?.body)), { realTransportCall: true });
+    if (url.endsWith("/simulation/reset")) {
+      assert.deepEqual(JSON.parse(String(init?.body)), { fixture: "calm" });
       posts.length = 0;
-      return response({ ok: true, runId: "run-hook", planVersion: 1, externalActions: "coordinator-transport-call-rest-sim" });
+      return response({ ok: true, runId: "run-hook", planVersion: 1 });
     }
     if (url.endsWith("/state")) return response(state(posts));
     if (url.endsWith("/actions")) return response({ tasks: [] });
@@ -203,7 +200,7 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
   };
 
   try {
-    process.argv = ["node", "demo-video.mts", "--inputs=happyrobot", "--real-transport-call", "--report=-"];
+    process.argv = ["node", "demo-video.mts", "--inputs=happyrobot", "--report=-"];
     process.env = {
       ...originalEnv,
       DEMO_API_URL: "http://backend.test",
@@ -224,8 +221,7 @@ test("demo director uses the environment-specific HappyRobot hook", async () => 
   assert.deepEqual(posts.map((item) => item.channel), ["call", "sms"]);
   assert.equal(urls.filter((url) => url === hookUrl).length, 2);
   assert.equal(urls.some((url) => url.includes("/workflows/")), false);
-  assert.ok(logs.some((line) => line.includes("llamada real controlada de Transporte está autorizada")));
-  assert.equal(logs.some((line) => line.includes("0 llamadas.")), false);
+  assert.ok(logs.some((line) => line.includes("2/2 ensayos superados") || line.includes("1/1 ensayos superados")));
 });
 
 test("demo director fails with an actionable specialist coherence diagnostic", async () => {

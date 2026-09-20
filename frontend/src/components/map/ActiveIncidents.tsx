@@ -73,7 +73,6 @@ export function ActiveIncidents({ s }: { s: CrisisState }) {
           const Icon = incident.icon
           const source = incident.event?.channel ? CHANNEL[incident.event.channel] : undefined
           const SourceIcon = source?.icon
-          const simulated = incident.event?.simulated || incident.event?.actor?.startsWith('SIMULACIÓN')
           return (
             <li key={incident.id} className="px-4 py-2.5 border-b border-line last:border-0 bg-red/[0.035]">
               <div className="flex items-center gap-2">
@@ -81,7 +80,7 @@ export function ActiveIncidents({ s }: { s: CrisisState }) {
                 <strong className="text-[12px] leading-tight truncate">{incident.title}</strong>
                 {source && SourceIcon && (
                   <span className="ml-auto flex items-center gap-1 text-[9px] uppercase tracking-[0.08em] text-muted">
-                    <SourceIcon size={10} /> {source.label}{simulated ? ' · sim' : ''}
+                    <SourceIcon size={10} /> {source.label}
                   </span>
                 )}
               </div>

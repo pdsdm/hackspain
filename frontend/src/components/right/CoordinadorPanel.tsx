@@ -87,7 +87,6 @@ export function CoordinadorPanel({ s, selected, onSelect, className = '' }: {
           <Pill tone={c.tone} pulse={s.coordinatorStatus === 'replanificando'}>{c.label}</Pill>
           <div className="agent-tile-detail" aria-label="Función del coordinador">
             <p>Coordina a los especialistas y adapta el plan de la operación.</p>
-            {s.inboxTriage && <p className="agent-result"><span>Triaje HappyRobot</span>{s.inboxTriage.received} recibidos · {s.inboxTriage.relevant} relevante · {s.inboxTriage.ignored} descartados</p>}
             <p className="agent-role">Coordinación global · Plan v{s.planVersion}</p>
           </div>
         </Tile>

@@ -1,4 +1,4 @@
-import type { Area, CrisisState, Intervention, TwistId } from '../domain/types'
+import type { Area, CrisisState, Intervention } from '../domain/types'
 
 const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
 const BASE = import.meta.env.DEV
@@ -24,8 +24,6 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   getState: () => req<CrisisState>('/state'),
   intervene: (intervention: Intervention) => req<{ ok: boolean }>('/interventions', { method: 'POST', body: JSON.stringify(intervention) }),
-  twist: (twist: TwistId) => req<{ ok: boolean }>('/simulation/twists', { method: 'POST', body: JSON.stringify({ twist }) }),
-  live: (enabled: boolean, seed?: number) => req<{ ok: boolean; live: boolean; seed: number }>('/simulation/live', { method: 'POST', body: JSON.stringify(seed ? { enabled, seed } : { enabled }) }),
   clock: (body: { speed?: number; paused?: boolean }) => req<{ ok: boolean; speed: number; paused: boolean }>('/simulation/clock', { method: 'POST', body: JSON.stringify(body) }),
   reset: () => req<{ ok: boolean; runId: string; planVersion: number }>('/simulation/reset', { method: 'POST' }),
   requestCall: (input: { area: Area; counterpart: string; objective: string; commitmentId?: string }) =>

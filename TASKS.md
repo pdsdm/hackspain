@@ -65,6 +65,7 @@
 | T54 | Más actores con orígenes repartidos por Madrid y rutas que evitan el circuito | Pep | `feat/pep-mas-actores` | [D8](docs/decisions.md) | review |
 | T55 | Corregir el bucle de replanificación en producción: sin replan por `no_answer`, una llamada real en curso, logs legibles | Pep | `fix/pep-replan-loop` | [D21](docs/decisions.md) | done |
 | T56 | Cierre de la demo: dependencias con `:retry`, sin replan por condiciones, cierre con condiciones informativas, logs sin `answer` | Pep | `fix/pep-deps-retry` | [D23](docs/decisions.md) | done |
+| T57 | Quitar toda la simulación: sin adaptador `sim`, sin modo vivo ni giros, sin `inbox_batch`, sin reset E2E, frontend siempre API | Pep | `feat/pep-sin-simulacion` | [D24](docs/decisions.md) | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

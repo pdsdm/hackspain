@@ -12,7 +12,7 @@ import { WorkflowEventRepository } from "../src/state/workflow-event-repository.
 import { WorkflowService } from "../src/domain/workflow-service.js";
 import { ControlService } from "../src/domain/control-service.js";
 import { PlanService } from "../src/domain/plan-service.js";
-import { scheduleSimResult } from "../src/actions/adapters/sim.js";
+import type { SpecialistResultEnvelope } from "../src/contracts/api.js";
 import { buildUserPrompt } from "../src/agents/coordinator/prompt.js";
 import { createApp } from "../src/app.js";
 
@@ -25,6 +25,23 @@ const decision = {
   conditions: ["Espera accesible"], effectApprove: "Continuar las consultas", effectReject: "Buscar otra distribución",
   rationale: "Mantener a todos en Sur",
 };
+function acceptedEnvelope(task: { id: string; planVersion: number }, runId: string, eventId: string): SpecialistResultEnvelope {
+  return {
+    eventId,
+    taskId: task.id,
+    runId,
+    planVersion: task.planVersion,
+    status: "completed",
+    result: {
+      outcome: "accepted",
+      summary: "Reserva acordada",
+      conditions: [],
+      evidence: { callId: `call-${task.id}`, transcript: [{ who: "humano", text: "Confirmo la reserva por 6000 euros", at: 10 }] },
+      data: { committedCost: 6000 },
+    },
+  };
+}
+
 const output = () => ({
   reading: "Consultar espacios", planVersion: 2, coordinatorStatus: "replanificando", estimatedCost: 6000,
   actions: [], commitments: [], assignments: [], decision: null, unverified: [],
@@ -144,11 +161,7 @@ for (const variant of ["accepted", "conditional", "rejected", "missing_evidence"
         tasks.claimNext();
         tasks.markDispatchOutcome(task.id, "dispatched");
       }
-      const envelope = scheduleSimResult({
-        task, runId: run.id, planVersion: task.planVersion, callId: `call-${task.id}`, eventId: variant,
-        reply: { outcome: "accepted", summary: "Reserva acordada", conditions: [], committedCost: 6000,
-          transcript: [{ who: "humano", text: "Confirmo la reserva por 6000 euros", at: 10 }] },
-      });
+      const envelope = acceptedEnvelope(task, run.id, variant);
       if (variant === "conditional") envelope.result.conditions = ["Acceso pendiente"];
       if (variant === "rejected") envelope.result.outcome = "rejected";
       if (variant === "missing_evidence") envelope.result.evidence.transcript = [];

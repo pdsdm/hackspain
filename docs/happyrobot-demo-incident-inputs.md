@@ -41,9 +41,9 @@ Nombre: `Demo incident request`. Declara **siete** parámetros:
 |---|---|---|
 | `eventId` | `demo-event-1` | Clave de idempotencia. Dos runs con el mismo valor producen una sola línea |
 | `channel` | `call` | Solo `call` o `sms` |
-| `actor` | `SIMULACIÓN · Centralita MADRING` | Quién informa. **Tiene que empezar por `SIMULACIÓN ·`** |
-| `incidentId` | `inbox_batch` | `inbox_batch`, respaldo `principal_pipe_burst` o `dock_blocked` |
-| `summary` | `Lote de 10 mensajes...` | El lote con marcas `+0 ms`…`+3600 ms` que recibe el coordinador |
+| `actor` | `Responsable de recinto` | Quién informa |
+| `incidentId` | `principal_pipe_burst` | `principal_pipe_burst` o `dock_blocked` |
+| `summary` | `Rotura de tubería, Pabellón Principal cerrado` | El texto que recibe el coordinador |
 | `sessionId` | `demo-session-1` | Va dentro de `evidence` |
 | `backend_base_url` | `https://<túnel>.lhr.life` | Base del backend, **sin barra final** |
 
@@ -79,11 +79,11 @@ Cuerpo, tomando cada valor del trigger:
 
 | | Incidente 1 | Incidente 2 |
 |---|---|---|
-| `incidentId` | `inbox_batch` | `dock_blocked` |
+| `incidentId` | `principal_pipe_burst` | `dock_blocked` |
 | `channel` | `call` | `sms` |
-| `actor` | `SIMULACIÓN · Centralita MADRING` | `SIMULACIÓN · Jefe de muelle` |
-| `summary` | Diez mensajes en 3,6 s; nueve ruido y una rotura del Principal | Un camión de TV bloquea el Muelle Este |
-| Efecto | El agente selecciona la rotura, consulta el mundo y aplica el primer plan | Bloquea el Muelle Este Sur |
+| `actor` | `Responsable de recinto` | `Jefe de muelle` |
+| `summary` | Rotura de tubería, Pabellón Principal cerrado | Un camión de TV bloquea el Muelle Este |
+| Efecto | El agente consulta el mundo y aplica el primer plan | Bloquea el Muelle Este Sur |
 
 ## 6. Comprobar que funciona
 

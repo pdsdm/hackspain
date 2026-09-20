@@ -166,7 +166,6 @@ export const ROUTE_NORTE_FROM_SUR: LatLng[] = [POS.accesoSur, [40.4640, -3.6120]
 
 export function createInitialState(): CrisisState {
   return {
-    simulated: true,
     clock: { simSeconds: T0, speed: 5, paused: false, openingAt: hm(13, 0), lunchAt: hm(13, 30), raceAt: hm(15, 0) },
     planVersion: 1,
     coordinatorStatus: 'replanificando',
@@ -244,9 +243,6 @@ export function createInitialState(): CrisisState {
     constraints: ['Norte y Sur sin conexión interior'],
     twistsApplied: [],
     selectedId: 'principal',
-    scriptId: 'main',
-    scriptCursor: 0,
-    nextScriptAt: T0 + 20,
     waitingForDecision: null,
     agentsPaused: false,
     resolved: false,

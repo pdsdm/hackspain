@@ -22,8 +22,8 @@
 
 ## Estructura
 
-- `src/domain/`: tipos (`types.ts`), estado inicial del escenario, reducer, guion 12:15→12:25 (`script.ts`), giros e intervenciones (`twists.ts`), KPIs (`selectors.ts`).
-- `src/data/`: `useCrisisState.ts` elige simulación local o backend según `VITE_DATA_SOURCE`; `apiClient.ts` habla con `VITE_API_URL`.
+- `src/domain/`: tipos (`types.ts`), estado inicial del escenario, KPIs (`selectors.ts`).
+- `src/data/`: `useCrisisState.ts` sondea el backend (siempre real, sin simulación local); `apiClient.ts` habla con `VITE_API_URL`.
 - `src/components/layout/`: barra superior y pestañas.
 - `src/components/left/`: operaciones por área, incidencia seleccionada, compromisos.
 - `src/components/map/`: mapa Leaflet, iconos, capas.

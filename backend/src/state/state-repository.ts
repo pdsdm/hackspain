@@ -60,17 +60,10 @@ export class StateRepository {
     state.events = [];
     state.calls = [];
     state.decisions = [];
-    state.incidentsApplied = [];
-    state.incidentTexts = [];
     state.twistsApplied = [];
     state.waitingForDecision = null;
     state.agentsPaused = false;
     state.coordinatorStatus = "estable";
-    state.clock.live = false;
-    delete state.clock.liveSeed;
-    delete state.clock.liveMode;
-    delete state.clock.liveIndex;
-    delete state.clock.liveLastAt;
     delete state.coordinatorBusy;
 
     const run = this.createRun(state);

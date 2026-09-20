@@ -1,165 +1,145 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más la corrección T52 lista para merge. Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`3223b2d`) más el trabajo sin mergear de `feat/pep-sin-simulacion` (T57). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 04:06 CEST |
-| **Base** | `651be61` (`origin/main`, PR #101 y #106) + `fix/t52-e2e-plan-invariants` |
-| **Trabajo en revisión** | T52: contexto del Reasoning Agent, invariantes de M4 y separación de inputs HappyRobot/API |
+| **Foto tomada** | 20 de septiembre de 2026, ~05:30 CEST |
+| **Base** | `3223b2d` (`origin/main`, PR #108 mergeada) + `feat/pep-sin-simulacion` sin mergear |
+| **Trabajo en curso** | T57: elimina todo el comportamiento simulado (adaptador `sim`, Modo vivo, giros automáticos, `inbox_batch`, reset E2E, motor de simulación local del frontend). Decisión D24 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, revisión del fallo E2E T52 |
+| **Generado por** | Devin, sesión de implementación de T57 |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en la corrección T52 antes de integrar PR #106 | **OK** |
-| `make check` de `main` con PR #106 | **OK**; combinación sin repetir por urgencia de la grabación |
-| Lint y builds | Backend y frontend OK |
-| Fixtures | 10 JSON reproducibles OK |
-| Node verificado | 23.10.0; el repo exige ≥22.13 |
-| Producción (`hackspain-production.up.railway.app`) | `/health` OK a las 03:51; `planVersion 2`, `estable`, 1 llamada terminada y 0 abiertas; sin modo E2E activo |
-| Crédito Railway | **"30 days or $4.96 left"**: hay que subir de plan antes de las 11:00 |
+| `make check` en `feat/pep-sin-simulacion` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
+| Tests backend | **346 pass, 0 fail, 7 skipped** (los 7 skipped son evidencia JEV en vivo, gateada por red) |
+| Lint backend | 0 errores, 2 avisos preexistentes (`openaiUsable` sin usar, optional chaining en `closure.test.ts`) |
+| Lint frontend | 0 avisos, 0 errores |
+| Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
+| Fixtures | `npm run fixtures:generate` y `fixtures:check` OK; los 10 JSON ya no llevan `simulated`/`scriptId`/`scriptCursor`/`nextScriptAt` |
+| Node usado en esta sesión | según `node --version` del entorno; el repo exige ≥22.13 |
+| Producción / Railway | no verificado en esta sesión |
 
-Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un test) y el aviso del chunk frontend mayor de 500 kB.
+## Qué cambió: T57, sin comportamiento simulado (D24)
 
-## Producción a las 02:00: qué se observó
+Decisión humana del 20/09 04:20: eliminar todo lo que fingía una llamada, una incidencia o
+un giro. A partir de esta rama, **todo es real**: solo existen las llamadas reales de
+HappyRobot y las entradas reales (`principal_pipe_burst`, `dock_blocked`, texto libre).
 
-- Logs de Railway: `[coord] bucle happyrobot gpt-5.6-luna-low apply` cada 15–25 s desde las 23:46 sin parar. Producción corre T44 como coordinador principal con `APPLY=true` (decisión del equipo, D20).
-- `/state`: `planVersion 43`, `coordinatorStatus replanificando`, 168 llamadas, 78 reales al teléfono de pruebas, 54 con `sin_respuesta`. Dos llamadas reales a Espacios arrancaron con 1 s de diferencia; la segunda dio ocupado.
-- Causa: cada `no_answer` relanzaba al coordinador (`engine.ts`, `callResultChangesPlan`), el coordinador creaba otra llamada a Espacios, el executor marcaba mientras la anterior aún sonaba, el teléfono daba ocupado y volvía el `no_answer`.
-- Logs ilegibles: `[coord] think` imprime el razonamiento línea a línea (`verbose=sí`). Los únicos errores de nivel `error` en 24 h son 4 `[sim] contraparte This operation was aborted` (timeouts de DeepSeek en la contraparte simulada).
+Eliminado:
 
-## Qué funciona
+- Backend: `src/actions/adapters/sim.ts`, `sim-world.ts`, `src/domain/incidents.ts`,
+  `auto-twists.ts`, `incident-generator.ts`. `ActionExecutor` ya no tiene adaptador `sim`;
+  sin hook de HappyRobot configurado para un área (o sin `HAPPYROBOT_API_KEY`), la tarea
+  termina `failed` con `"Sin canal real configurado para <área>"`, sin entrada en `calls[]`
+  y con el agente en `incidencia`. Ese fallo nunca dispara un replan (guarda `no-channel-`
+  en `engine.ts`).
+- Backend: `/simulation/twists`, `/simulation/live`, `/simulation/e2e/reset` (y sus
+  variables de estado `forceSimActions`, `e2eMode`, `e2eCoordinatorApply`,
+  `e2eSuppressResultReplan`, `e2eRealTransportCall`, `e2eInputTokenHash`). `Modo vivo`,
+  `SIM_INCIDENTS`, `SIM_SEED` y `SIM_INCIDENTS_MODE` desaparecen de `config.ts`.
+  `SimulationClock` ya no genera incidencias ni giros automáticos, solo avanza vehículos,
+  entregas y afluencia.
+- `inbox_batch`: fuera de `HAPPYROBOT_INCIDENT_IDS`, del prompt del coordinador y de
+  `apply-coordinator.ts`. Los únicos `incidentId` de HappyRobot son `principal_pipe_burst`
+  y `dock_blocked`.
+- `scripts/e2e-demo-real.mts` y `backend/test/demo-e2e-real.test.ts` borrados; `npm run
+  demo:e2e-real` ya no existe. `scripts/demo-video.mts` usa siempre `principal_pipe_burst`
+  como input 1 y `POST /simulation/reset {"fixture":"calm"}` (sin `realTransportCall`).
+- Frontend: `src/domain/reducer.ts`, `script.ts`, `twists.ts` borrados. `useCrisisState.ts`
+  ya no tiene `DataSource`/`VITE_DATA_SOURCE`: siempre hace polling a `/state`. Sin
+  `ctl.twist`, `ctl.setLive`, `ctl.loadFixture`, `ctl.reference`, `ctl.source`. `TopBar`,
+  `App.tsx`, `LlamadaCard`, `CronologiaChat`, `ActiveIncidents` sin chips ni ramas de
+  `SIMULACIÓN`/`sim`. `VITE_DATA_SOURCE` fuera de `.env`/`.env.example` (raíz y frontend).
 
-### Base operativa
+Conservado a propósito (no es simulación, lo usan flujos reales):
 
-- Estado SQLite, cola serial por `planVersion`, callbacks idempotentes y frontend en modo API.
-- Por D20, HappyRobot Reasoning Agent es el coordinador principal de la toma; el backend valida y aplica `submit_plan`. `rules` queda como contingencia técnica.
-- Cuatro especialistas visibles: Espacios, Catering, Transporte y Asistentes.
-- Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
-- Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
+- `applyTwistEffect`/`twistsApplied`/`parseTwist`/`TWIST_IDS`: los usa `dock_blocked`
+  (entrada real de HappyRobot) y `reject_split` (intervención humana). Solo se retiraron
+  el endpoint `/simulation/twists` y el cliente del frontend; el camino interno
+  `POST /events {"source":"jury","kind":"<twist>","payload":{"twist":"<twist>"}}` sigue
+  vivo y tiene ~12 tests.
+- `frontend/src/domain/initialState.ts` (`createInitialState()`): es la fuente de los
+  fixtures del backend (`backend/fixtures/madring.ts` la importa en build-time). Solo se le
+  quitaron `simulated`, `scriptId`, `scriptCursor`, `nextScriptAt`.
+- `frontend/src/domain/fixtures.ts`: loader estático usado como placeholder antes del
+  primer `/state` y por 3 tests del backend.
+- `random.ts`/`createSimulationSeed`: las ráfagas de afluencia siguen usando `clock.seed`
+  (nombre interno; no tiene relación con `VITE_DATA_SOURCE=sim`).
 
-### T22 (PR #89, mergeada)
+Consecuencia aceptada: sin hooks de HappyRobot configurados, el panel no mostrará ninguna
+llamada — cada tarea despachada termina `failed` de inmediato y el plan puede acabar
+`atascado`. Es el comportamiento esperado, documentado en D24 y en `docs/api-contract.md`.
 
-- `POST /workflow/happyrobot/transcript` acepta snapshots acumulativos autenticados, los ordena, fusiona sin duplicar y persiste en SQLite.
-- El callback final conserva las líneas recibidas en vivo y el panel mantiene accesible el transcript completo al terminar.
-- Las llamadas reales muestran las líneas recibidas aunque el reloj de simulación esté pausado; las simuladas conservan la revelación por `at`.
-- La cronología global conserva solo el resumen final de la llamada.
-- El workflow de development tiene `reportar_transcript`, callbacks dinámicos y usa `contact.phone`. Tres intentos llegaron al nodo de voz, pero la telefonía terminó como `user_missed_call` antes de iniciar audio.
+## Qué funciona (verificado en esta sesión)
 
-### T55 (PR #100, mergeada)
+- `make check` completo en verde sobre `feat/pep-sin-simulacion`.
+- Backend compila (`tsc`) y sus 353 tests corren (346 pass, 7 skip por red).
+- Frontend compila (`tsc -b && vite build`) y pasa lint sin avisos.
+- `npm run fixtures:generate` y `fixtures:check` regeneran y validan los 10 JSON sin los
+  campos retirados.
+- Base operativa previa (no tocada por T57): estado SQLite, cola serial por `planVersion`,
+  callbacks idempotentes, cuatro especialistas, cierre honesto por `resolved`/
+  `closureSummary`/`atascado`, costes informativos sin aprobación económica, D20 (HappyRobot
+  Reasoning Agent como coordinador principal), D21/D23 (sin bucle de replan).
 
-- `no_answer` ya no relanza al coordinador: la misma tarea se reencola una vez (`:retry`); al segundo `no_answer` el agente queda en `incidencia` sin nueva tarea.
-- El executor solo mantiene una llamada real en curso; el resto de tareas reales esperan `pending` hasta el siguiente tick.
-- Tras 3 relanzamientos seguidos provocados por resultados sin input externo nuevo, el coordinador se pausa y la cronología lo anota (`espera`). Cualquier input humano, giro o incidencia lo reactiva.
-- `COORDINATOR_VERBOSE` vacío equivale a `0` cuando existe `RAILWAY_ENVIRONMENT`.
-- Contrato actualizado en `docs/api-contract.md` (resultados de especialistas y timeout de 180 s). Decisión D21.
+## Qué falta
 
-### T52 triaje y llamada controlada (PR #102 y #104 mergeadas + corrección local)
-
-- El primer input es `inbox_batch`: diez mensajes sintéticos en 3,6 s; el Reasoning Agent debe usar `consult_world`, seleccionar la rotura y persistir el triaje 10/1/9.
-- `assignments[]` queda en `/state`; cierre y frontend distinguen 600 asignados de cero plazas confirmadas cuando quedan condiciones.
-- `--confirm-real-transport-call` autoriza una única invocación de `emitir_llamada` desde el coordinador; las tareas persistidas siguen `sim` y el modo seguro no llama.
-- El segundo plan debe redirigir CAT-01/CAT-02 a Muelle Sur y no puede proponer Muelle Norte sin ruta exterior.
-- El E2E de las 03:41 falló porque `e2eRealTransportCall` y `assignments` no llegaban al snapshot del Reasoning Agent; M4 perdió 180 plazas y omitió las dos operaciones de Catering.
-- `fix/t52-e2e-plan-invariants` expone ambos datos y rechaza un `dock_blocked` que pierda el reparto vigente o no redirija todas las entregas bloqueadas.
-- El director usa `inbox_batch` solo con `--inputs=happyrobot` y `principal_pipe_burst` con `--inputs=api`. También valida triaje, `consult_world`, B 450 + Lounge 150 en `/state`, redirecciones de Catering, cuatro shuttles y evidencia visible de Transporte.
-- Código y director verificados por tests; falta merge, deployment y E2E con el destinatario preparado.
-
-### T56 (PR #101, mergeada)
-
-- Con T55 desplegada, el ensayo API local seguía fallando en M2 por timeout. Dos causas, ambas reproducidas y corregidas:
-  - Cada `accepted_with_conditions` con texto nuevo contaba como cambio material y relanzaba al coordinador (plan 3 → 6 en dos minutos, 19 llamadas). Ahora solo relanzan los cambios de hechos de `spaces[]`; las condiciones se anotan sin replanificar.
-  - La tarea `:retry` tiene otra `idempotencyKey`, así que una tarea con `dependsOn` sobre la original se quedaba `pending` para siempre; el plan nunca llegaba a `atascado`. Ahora la dependencia se satisface con la original o su `:retry`; si ambas fallan, la dependiente se cancela y la cronología lo anota como `fallo`.
-- `closureSummary` en `atascado` enumera como mucho tres condiciones y cuenta el resto (antes salían 38 seguidas).
-- Ensayo API local con `COORDINATOR_HARNESS=tools` y sin hooks reales: **1/1 superado** (M0, M2, M3 y final `atascado` con `closureSummary`, 2 ciclos de coordinador, 11 llamadas, 0 tareas abiertas). Decisión D23.
-- Logs de Railway de las últimas 24 h: solo `SIGTERM` de redeploys y `[sim] contraparte This operation was aborted` (timeouts de DeepSeek; cae al fallback determinista). Desde el arranque de las 02:54 el backend imprime `verbose=no`.
-
-### Camino de vídeo T45–T52
-
-- **T45, PR #79, en revisión:** `docs/video-scenario.md` congela relato, textos, checkpoints, widgets, etiquetas de simulación y finales principal/respaldo; falta aprobación literal de Carlos/equipo.
-- **T46, PR #71 + rama actual:** `POST /workflow/happyrobot/events` acepta `inbox_batch`, `principal_pipe_burst` y `dock_blocked`, con bearer, idempotencia, serialización y procedencia `call | sms`.
-- **T50, PR #73:** el coordinador conoce seis personas de recepción, las coordina mediante Asistentes y permite que Catering dependa de la apertura del muelle.
-- **T51 parcial, PR #74:** Catering y Asistentes actualizan entregas, informados y `lastResult`; las necesidades de accesibilidad/dieta generan una tarea separada.
-- **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
-- **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
-- **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
-- **T44, decisión D20:** la toma usa el workflow `Orquestador` como coordinador principal; PR #99 endurece prompt, especialistas, cierre y gates E2E.
-- **T52, PR #99 mergeada:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
-
-El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/aplicados, B 450 + Lounge 150, idempotencia y recorrido de 34,8 s. La revisión de evidencia detectó dos límites: las asignaciones solo estaban en SQLite y los especialistas eran respuestas locales de 3 s. PR #104 expone el reparto en `/state`, añade triaje 10/1/9 y autoriza una única llamada real controlada de Transporte. El primer E2E posterior falló por contexto incompleto del Reasoning Agent; la corrección está verificada localmente y falta desplegarla y repetir con el destinatario preparado.
-
-## Qué falta, por riesgo para la demo
-
-0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
-0b. **Comprobar el despliegue de Railway con PR #101, #106 y la corrección T52** antes de la toma.
-1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con run hijo auditable y ninguna otra comunicación real.
-2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
-3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar; el run hijo de voz debe completar sin `user_missed_call` y quedar en la evidencia del coordinador.
-4. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
-5. **Completar y superar tres ensayos API (T52).** El director ya usa `principal_pipe_burst`, pero una pasada local con coordinador `rules` queda en M2 sin asignaciones B + Lounge; el respaldo completo sin Reasoning Agent todavía no existe.
-6. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
-7. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
-8. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
+1. **Verificación manual de extremo a extremo** (pasos 3-5 del plan de T57, no ejecutados
+   en esta sesión por requerir un backend en marcha y/o hooks reales de HappyRobot):
+   - Backend sin hooks: `POST /events` con texto libre debe terminar en `failed`/`incidencia`
+     con `"Sin canal real configurado…"` y sin más de un replan.
+   - Backend con los hooks reales del `.env`: una llamada real debe aparecer en
+     `LlamadaCard` como «vía HappyRobot», sin ninguna etiqueta `sim`/`SIMULACIÓN`.
+   - `npm --prefix backend run demo:video -- --inputs=api --rehearsals=1` contra un backend
+     con hooks reales, para confirmar que llega a M0/M2/M3 con `principal_pipe_burst`.
+2. **Revisión y merge de `feat/pep-sin-simulacion`** a `main`. Sin esto, `main` sigue
+   ofreciendo el camino `sim` a quien lo despliegue.
+3. **Actualizar `TASKS.md`** cuando T57 pase de `review` a `done` tras el merge.
+4. Todo lo que ya estaba pendiente antes de T57 (rotar el bearer de HappyRobot, verificar
+   Railway, aprobar textos y grabar la toma) sigue pendiente y no se ha vuelto a comprobar
+   en esta sesión: ver el histórico de este documento en `git log -p docs/ESTADO.md` para
+   el detalle previo a T57.
 
 ## Bloqueos
 
 | Qué | Depende de | Externo |
 |---|---|---|
-| Servicio en Railway | crédito de prueba casi agotado; hay que pagar el plan | Sí |
-| Rotar bearer | owner actualiza backend, development y production con el mismo valor oculto | Parcial |
-| Llamada real de Transporte | destinatario confirma que puede contestar durante el E2E; el run de voz debe completar sin `user_missed_call` | Sí |
-| Superar la puerta final T52 | mergear esta rama y pasar triaje, reparto público, llamada única, muelle Sur e idempotencia | No |
-| Grabar T52 | tres ensayos superados y ordenador de grabación | Parcial |
+| Verificación manual con hooks reales de HappyRobot | acceso a `HAPPYROBOT_API_KEY`, `HAPPYROBOT_HOOK_*` y un teléfono de pruebas | Sí |
+| Merge de T57 a `main` | revisión humana de la rama `feat/pep-sin-simulacion` | No |
+| Estado de Railway/crédito, rotación de bearer, grabación | sin comprobar en esta sesión; ver decisiones D20-D23 y el histórico de este archivo | Parcial |
 
 ## Ramas vivas sin mergear
 
-- `fix/t52-e2e-plan-invariants`: corrige el contexto del Reasoning Agent, el director API y las invariantes de M4; PR #108 pendiente de merge y deployment.
-- `origin/feat/ventura-specs-cerebro`: specs T10/T11/T16 anteriores a T38; mergearla revertiría el texto actual. No integrar.
-- `origin/feat/pep-quitar-kpis`: todos sus commits ya están en `main` (PR #96 y #98).
-- `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
-- `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
-- `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
-- `origin/docs/estado-1200`: fotografía antigua.
+- `feat/pep-sin-simulacion`: T57 completa (backend, frontend, scripts, tests, docs);
+  `make check` en verde; pendiente de PR y revisión humana.
 
-Las ramas `feat/t52-triage-live-transport`, `feat/t52-happyrobot-primary-demo`, `feat/devin-transcripcion`, `feat/zhi-demo-recording-readiness`, `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists`, `feat/ventura-demo-incidents-ui`, `feat/ventura-happyrobot-incident-inputs`, `feat/ventura-demo-director` y `docs/ventura-video-scenario` ya están mergeadas.
+No se ha vuelto a auditar el resto de ramas remotas en esta sesión (ver `git branch -r`).
 
 ## Decisiones pendientes
 
-1. Carlos/equipo aprueban los textos literales y la narración de T45.
-2. Quién rota el bearer en backend y en ambas versiones live de HappyRobot.
-3. Quién termina Transporte y verifica los cuatro shuttles.
-4. Qué ordenador graba la toma maestra y quién opera el frontend.
-5. Si la toma principal usa HappyRobot y la de respaldo `--inputs=api` — recomendación actual: sí.
+1. Aprobar y mergear T57 (D24) a `main`.
+2. Todo lo que ya figuraba pendiente antes de T57 (rotación de bearer, aprobación de
+   textos T45, quién graba la toma) sigue abierto; no se ha vuelto a preguntar en esta
+   sesión.
 
 ## Avisos para el siguiente agente
 
-- Ejecutar siempre `git fetch` antes de analizar; `main` se mueve rápido.
-- No presentar la llamada/SMS simulados como telefonía real. Los actores llevan el prefijo `SIMULACIÓN ·`.
-- La key HappyRobot actual puede leer y ejecutar workflows, pero no crearlos.
-- Para crear/publicar el workflow con una key owner:
-
-```bash
-node --env-file-if-exists=.env --import tsx scripts/setup-happyrobot-demo-inputs.mts --publish
-```
-
-- Para los tres ensayos HappyRobot, después de publicar T47:
-
-```bash
-npm --prefix backend run demo:video -- --inputs=happyrobot --rehearsals=3
-```
-
-- Para los tres ensayos API:
-
-```bash
-npm --prefix backend run demo:video -- --inputs=api --rehearsals=3
-```
-
-- La evidencia queda en `.demo/` y está ignorada por Git. Tras endurecer los checks, el ensayo API con `COORDINATOR_MODE=rules` aplica el cierre directo de Principal, pero falla en M2 porque no crea el reparto B 450 + Lounge 150.
-- Ningún ensayo de este documento demuestra por sí solo que exista una grabación.
-- T44 es el coordinador principal en producción desde el 19/09 a las 23:46 (`COORDINATOR_HARNESS=happyrobot`, `HAPPYROBOT_COORDINATOR_APPLY=true`). El equipo lo confirmó el 20/09 (D20). Todo lo observado en el bucle de producción es con este harness.
-- T44 forma parte del camino crítico por D20. No grabar hasta que el E2E demuestre dos planes HappyRobot aplicados sin reintentos ni errores de validación.
-- Después de desplegar T55: filtra los logs de Railway por `"bucle"` durante 10 minutos; debe aparecer solo tras inputs reales, no cada 20 s. En `/state.calls` nunca debe haber más de una llamada `simulated:false` en `en_curso`.
-- La evidencia fallida está en `.demo/e2e-real-mu95fsx1.json`. No relanzar con `--confirm-real-transport-call` hasta desplegar `fix/t52-e2e-plan-invariants`, comprobar que el workflow publicado conserva la tool `emitir_llamada` y tener al destinatario preparado.
+- `main` no tiene todavía T57: si trabajas desde `origin/main` sin traer esta rama, verás
+  otra vez el adaptador `sim`, `inbox_batch` y `VITE_DATA_SOURCE`.
+- Después de mergear T57: sin hooks de HappyRobot configurados el panel no mostrará
+  ninguna llamada. No es un bug — es D24. Configura `HAPPYROBOT_HOOK_<ÁREA>` y
+  `HAPPYROBOT_API_KEY` para ver llamadas reales.
+- `docs/api-contract.md` documenta el fallo `"Sin canal real configurado para <área>"`.
+- Los tests de `applyTwistEffect`/`twistsApplied` siguen vivos: no los borres pensando que
+  son simulación; los usa `dock_blocked` (entrada real) y `reject_split` (intervención
+  humana).
+- `frontend/AGENTS.md` ya no menciona `script.ts`/`twists.ts`/`VITE_DATA_SOURCE` (se
+  actualizó como parte de T57, con permiso explícito del humano).
+- Antes de este documento, la foto anterior (04:06 CEST) documentaba el estado de
+  producción, Railway y el camino de vídeo T45–T52 con mucho más detalle. Ese contenido
+  no se ha vuelto a verificar en esta sesión: consúltalo en el historial de git si lo
+  necesitas, pero no lo des por vigente sin comprobarlo de nuevo.

@@ -44,9 +44,6 @@ test("CrisisState survives restart without dropping future contract fields", () 
       status: "en_curso",
       transcript: [{ who: "humano", text: "Persisto tras reiniciar", at: 3 }],
     }]);
-    assert.equal(state.scriptId, "main");
-    assert.equal(state.scriptCursor, 0);
-    assert.equal(state.nextScriptAt, null);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

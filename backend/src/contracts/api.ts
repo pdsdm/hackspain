@@ -7,7 +7,7 @@ const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "approve_plan", "re
 export const TWIST_IDS = ["lounge_unavailable", "pabellon_b_400", "shuttle_delay", "delivery_delay", "dock_blocked", "provider_silent", "reject_split", "guest_need"] as const;
 const EVENT_SOURCES = ["chat", "happyrobot", "jury", "human"] as const;
 const HAPPYROBOT_INCIDENT_CHANNELS = ["call", "sms"] as const;
-const HAPPYROBOT_INCIDENT_IDS = ["inbox_batch", "principal_pipe_burst", "dock_blocked"] as const;
+const HAPPYROBOT_INCIDENT_IDS = ["principal_pipe_burst", "dock_blocked"] as const;
 const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
 
@@ -380,22 +380,6 @@ const FIXTURE_NAMES = [
   "lounge_unavailable",
   "pabellon_b_400",
 ] as const;
-
-export function parseLive(value: unknown): { enabled: boolean; seed?: number; mode?: "open" | "catalog" } {
-  const input = record(value, "body");
-  if (typeof input.enabled !== "boolean") throw new ContractError("enabled must be a boolean", 400);
-  const result: { enabled: boolean; seed?: number; mode?: "open" | "catalog" } = { enabled: input.enabled };
-  if (input.mode !== undefined) {
-    if (input.mode !== "open" && input.mode !== "catalog") throw new ContractError("mode must be open or catalog", 400);
-    result.mode = input.mode;
-  }
-  if (input.seed === undefined) return result;
-  if (typeof input.seed !== "number" || !Number.isInteger(input.seed) || input.seed < 1) {
-    throw new ContractError("seed must be a positive integer", 400);
-  }
-  result.seed = input.seed;
-  return result;
-}
 
 export function parseClock(value: unknown): { speed?: number; paused?: boolean } {
   const input = record(value, "body");

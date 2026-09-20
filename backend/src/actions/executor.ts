@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import type { AppConfig, AreaHook } from "../config.js";
 import type { SpecialistResultEnvelope } from "../contracts/api.js";
 import type { CrisisStateDocument } from "../domain/crisis-state.js";
@@ -9,8 +7,6 @@ import type { StateRepository } from "../state/state-repository.js";
 import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import { logAction, logActionError } from "../log.js";
 import { dispatchHappyRobot } from "./adapters/happyrobot.js";
-import { scheduleSimResult } from "./adapters/sim.js";
-import { counterpartReply } from "./adapters/sim-world.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -21,7 +17,7 @@ function records(state: CrisisStateDocument, field: string): Array<Record<string
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
-interface DueSim {
+interface DueResult {
   at: number;
   envelope: SpecialistResultEnvelope;
   // Un timeout solo se entrega si la tarea sigue esperando el callback real.
@@ -50,14 +46,28 @@ function noAnswerEnvelope(input: {
   };
 }
 
-/** Techo de la llamada en pantalla. El resultado simulado llega antes (12-24 s). */
-const SIM_CALL_SECONDS = 30;
+function noChannelEnvelope(input: { task: DispatchTask; runId: string }): SpecialistResultEnvelope {
+  return {
+    eventId: `no-channel-${input.task.id}`,
+    taskId: input.task.id,
+    runId: input.runId,
+    planVersion: input.task.planVersion,
+    status: "failed",
+    result: {
+      outcome: "failed",
+      summary: `Sin canal real configurado para ${input.task.area}`,
+      conditions: [],
+      evidence: {},
+      data: {},
+    },
+  };
+}
 
 export class ActionExecutor {
   // Segundos de reloj que esperamos el callback de HappyRobot antes de dar la tarea por no contestada.
   static readonly DISPATCH_TIMEOUT_SECONDS = 180;
 
-  private due: DueSim[] = [];
+  private due: DueResult[] = [];
   private engine: Engine | undefined;
 
   constructor(
@@ -87,8 +97,7 @@ export class ActionExecutor {
   pump(): void {
     const run = this.states.ensureActiveRun();
     if (run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
-    const batchSize = run.state.e2eMode === "production-isolated" ? 8 : 3;
-    for (let index = 0; index < batchSize; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
       if (this.deferRealCall(task)) return;
@@ -102,16 +111,16 @@ export class ActionExecutor {
     }
   }
 
-  private isReal(task: DispatchTask, state: CrisisStateDocument): boolean {
+  private isReal(task: DispatchTask): boolean {
     const hook = this.config.hooks[task.area as AreaHook];
-    return state.forceSimActions !== true && Boolean(hook && this.config.happyrobotApiKey);
+    return Boolean(hook && this.config.happyrobotApiKey);
   }
 
   private deferRealCall(task: DispatchTask): boolean {
+    if (!this.isReal(task)) return false;
     const state = this.states.ensureActiveRun().state;
-    if (!this.isReal(task, state)) return false;
     const busy = records(state, "calls").some((call) =>
-      call.simulated === false && call.status === "en_curso" &&
+      call.status === "en_curso" &&
       ["dispatching", "dispatched"].includes(this.tasks.get(String(call.id).replace(/^call-/, ""))?.status ?? ""));
     if (!busy) return false;
     this.tasks.release(task.id);
@@ -120,21 +129,32 @@ export class ActionExecutor {
 
   private async dispatch(task: DispatchTask): Promise<void> {
     const run = this.states.ensureActiveRun();
+    const hook = this.config.hooks[task.area as AreaHook];
+    const real = this.isReal(task);
+    if (!real) {
+      logAction("dispatch", {
+        taskId: task.id,
+        runId: run.id,
+        planVersion: task.planVersion,
+        area: task.area,
+        kind: task.kind,
+        adapter: "none",
+      });
+      this.deliver(noChannelEnvelope({ task, runId: run.id }));
+      return;
+    }
+
     const payload = isRecord(task.payload) ? task.payload : {};
     const callId = `call-${task.id}`;
     const state = structuredClone(run.state);
     const calls = records(state, "calls");
-    const hook = this.config.hooks[task.area as AreaHook];
-    const real = this.isReal(task, state);
     calls.push({
       id: callId,
       agent: task.area,
       counterpart: String(payload.counterpart ?? "Interlocutor"),
       channel: task.kind === "sms" ? "sms" : task.kind === "email" ? "email" : "llamada",
       startedAt: state.clock.simSeconds,
-      endsAfter: SIM_CALL_SECONDS,
       status: "en_curso",
-      simulated: !real,
       transcript: [],
     });
     state.calls = calls;
@@ -143,57 +163,34 @@ export class ActionExecutor {
     state.agents = records(state, "agents");
     this.states.saveState(run.id, state);
 
-    const adapter = real ? "happyrobot" : "sim";
     logAction("dispatch", {
       taskId: task.id,
       runId: run.id,
       planVersion: task.planVersion,
       area: task.area,
       kind: task.kind,
-      adapter,
+      adapter: "happyrobot",
     });
-    if (real && hook && this.config.happyrobotApiKey) {
-      const outcome = await dispatchHappyRobot({
-        hookUrl: hook,
-        apiKey: this.config.happyrobotApiKey,
-        task,
-        runId: run.id,
-        planVersion: task.planVersion,
-        callId,
-        publicBaseUrl: this.config.publicBaseUrl,
-        testPhone: this.config.happyrobotTestPhone,
-        state,
-      });
-      this.tasks.markDispatchOutcome(task.id, outcome);
-      logAction("dispatch outcome", { taskId: task.id, adapter, outcome });
-      if (outcome === "dispatched") {
-        this.due.push({
-          at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
-          envelope: noAnswerEnvelope({ task, runId: run.id, callId }),
-          onlyIfDispatched: true,
-        });
-      }
-      return;
-    }
-
-    this.tasks.markDispatchOutcome(task.id, "dispatched");
-    const seed = Number(state.clock.liveSeed ?? state.clock.attendanceSeed ?? this.config.simSeed ?? 1);
-    const reply = await counterpartReply(task, state, seed, this.engine?.llmDeps() ?? {});
-    const delay = state.e2eMode === "production-isolated" ? 3 : 12 + Math.floor(Math.random() * 13);
-    const envelope = scheduleSimResult({
-      reply,
+    const outcome = await dispatchHappyRobot({
+      hookUrl: hook!,
+      apiKey: this.config.happyrobotApiKey!,
       task,
       runId: run.id,
       planVersion: task.planVersion,
       callId,
-      eventId: `sim-${randomUUID()}`,
-      guestGroups: records(state, "guestGroups"),
-      deliveries: records(state, "deliveries"),
-      spaces: records(state, "spaces"),
+      publicBaseUrl: this.config.publicBaseUrl,
+      testPhone: this.config.happyrobotTestPhone,
+      state,
     });
-    const nowAfter = Number(this.states.ensureActiveRun().state.clock.simSeconds);
-    this.due.push({ at: nowAfter + delay, envelope });
-    logAction("dispatch outcome", { taskId: task.id, adapter, outcome: "dispatched", delay, reply: reply.outcome });
+    this.tasks.markDispatchOutcome(task.id, outcome);
+    logAction("dispatch outcome", { taskId: task.id, adapter: "happyrobot", outcome });
+    if (outcome === "dispatched") {
+      this.due.push({
+        at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
+        envelope: noAnswerEnvelope({ task, runId: run.id, callId }),
+        onlyIfDispatched: true,
+      });
+    }
   }
 
   private deliver(envelope: SpecialistResultEnvelope): void {

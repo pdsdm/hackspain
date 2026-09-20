@@ -1,4 +1,4 @@
-import { Pause, Play, RotateCcw, Radio } from 'lucide-react'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 import type { CrisisController } from '../../data/useCrisisState'
 import { fmtClock, fmtCountdown } from '../../domain/time'
 
@@ -18,15 +18,6 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
         <span className="display font-bold text-[14px] uppercase tracking-[0.02em]">Centro de operaciones</span>
         <span className="text-[12px] text-muted">MADRING · Hospitalidad · Domingo de Gran Premio</span>
       </div>
-      {s.simulated && (
-        <span className="ml-1 px-2 py-[3px] border border-line-2 text-muted display font-semibold text-[10px] tracking-[0.14em] uppercase">Simulación</span>
-      )}
-      {ctl.source === 'api' && (
-        <span className={`flex items-center gap-1 text-[11px] ${ctl.stale ? 'text-red' : 'text-green'}`}>
-          <Radio size={12} /> {ctl.stale ? 'Datos sin actualizar' : 'Backend conectado'}
-        </span>
-      )}
-
       <div className="flex-1" />
 
       <div className="flex items-baseline gap-2.5">
@@ -35,26 +26,18 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
         <span className="text-[12px] text-muted">→ {fmtClock(s.clock.openingAt)}</span>
       </div>
 
-      {(s.simulated || ctl.source === 'api') && (
-        <>
-          <span className="w-px h-6 bg-line-2" />
-          <div className="flex items-center gap-1">
-            {(s.simulated || ctl.source === 'api') && (
-              <>
-            <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
-              {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
-            </button>
-            <button onClick={() => ctl.setSpeed(nextSpeed)} title={`Velocidad ×${s.clock.speed} · pulsa para ×${nextSpeed}`} aria-label={`Velocidad ×${s.clock.speed}, cambiar a ×${nextSpeed}`} className={`h-9 min-w-12 px-3 border display font-bold text-[12px] num ${s.clock.speed !== 1 && !s.clock.paused ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
-              ×{s.clock.speed}
-            </button>
-              </>
-            )}
-            <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">
-              <RotateCcw size={14} />
-            </button>
-          </div>
-        </>
-      )}
+      <span className="w-px h-6 bg-line-2" />
+      <div className="flex items-center gap-1">
+        <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
+          {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
+        </button>
+        <button onClick={() => ctl.setSpeed(nextSpeed)} title={`Velocidad ×${s.clock.speed} · pulsa para ×${nextSpeed}`} aria-label={`Velocidad ×${s.clock.speed}, cambiar a ×${nextSpeed}`} className={`h-9 min-w-12 px-3 border display font-bold text-[12px] num ${s.clock.speed !== 1 && !s.clock.paused ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
+          ×{s.clock.speed}
+        </button>
+        <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">
+          <RotateCcw size={14} />
+        </button>
+      </div>
 
     </header>
   )

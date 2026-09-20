@@ -14,38 +14,34 @@ Zhivel convierte dos incidentes encadenados —la pérdida de la sede de 600 VIP
 - El bloqueo de Muelle Este afecta al catering de B y Lounge; no reduce sus plazas.
 - Recepción dispone de seis personas y se coordina mediante Asistentes, no mediante un quinto agente.
 
-## Qué es real y qué es simulado
+## Qué dispara cada paso
 
-| Elemento | Etiqueta correcta |
+| Elemento | Origen |
 |---|---|
 | Backend, estado, validación T46, mapa y aplicación de planes | Ejecución real del sistema |
 | Reasoning Agent `Orquestador`, `consult_world` y `submit_plan` | Coordinador principal real en HappyRobot; el backend valida y aplica |
-| Runs del workflow `Demo Incident Inputs` | Runs reales de HappyRobot |
-| Contenido de la llamada y del SMS | Incidentes simulados para la demo |
-| Telefonía de los inputs | No se usa: lote y SMS son sintéticos |
-| Tool `emitir_llamada` del coordinador | Una llamada real HappyRobot al contacto autorizado de Transporte; run de voz auditable |
-| Acciones persistidas de especialistas | Simuladas y visibles como `sim`; no duplican la llamada |
-| Modo `--inputs=api` | Respaldo simulado sin run HappyRobot |
+| Runs del workflow `Demo Incident Inputs` | Runs reales de HappyRobot que reenvían los dos inputs de la toma |
+| Contenido de la llamada y del SMS | Los dos inputs de la demo: `principal_pipe_burst` y `dock_blocked` |
+| Acciones de especialistas | Llamadas, SMS o email reales vía HappyRobot; sin hook configurado, la tarea termina `failed` con «Sin canal real configurado» |
+| Modo `--inputs=api` | Envía los mismos dos inputs directo a `/workflow/happyrobot/events`, sin pasar por el workflow de HappyRobot |
 
-En pantalla y narración, el lote de centralita y el SMS se presentan como incidentes simulados vía HappyRobot. Solo la acción de Transporte se presenta como «llamada real controlada al teléfono de pruebas»; nunca como conversación con un proveedor externo real.
+En pantalla y narración, los dos inputs se presentan como lo que son: eventos reales enviados a través de HappyRobot (o directo a la API en el modo de respaldo). Todas las acciones de especialistas dependen de los hooks de HappyRobot configurados.
 
 ## Inputs literales
 
-### Input 1 · lote de centralita simulado
+### Input 1 · rotura del Pabellón Principal
 
 - `channel`: `call`
-- `actor`: `SIMULACIÓN · Centralita MADRING`
-- `incidentId`: `inbox_batch`
-- Contenido: diez mensajes sintéticos con marcas entre `+0 ms` y `+3600 ms`. Nueve son ruido operativo —guardarropa, marketing, tiempo, facturas, acreditaciones, tienda, café y música— y uno informa de la rotura:
+- `actor`: `Responsable de recinto`
+- `incidentId`: `principal_pipe_burst`
+- Texto:
 
-> URGENTE: una rotura de tubería obliga a cerrar el Pabellón Principal de hospitalidad. No tenemos una hora confirmada de reapertura.
+> Una rotura de tubería obliga a cerrar el Pabellón Principal de hospitalidad. No tenemos una hora confirmada de reapertura.
 
-El Reasoning Agent debe mostrar `10 recibidos · 1 relevante · 9 descartados`, consultar el mundo y actuar solo por la rotura.
-
-### Input 2 · SMS simulado
+### Input 2 · SMS del bloqueo del muelle
 
 - `channel`: `sms`
-- `actor`: `SIMULACIÓN · Logística MADRING`
+- `actor`: `Jefe de muelle`
 - `incidentId`: `dock_blocked`
 - Texto:
 
@@ -56,9 +52,9 @@ El Reasoning Agent debe mostrar `10 recibidos · 1 relevante · 9 descartados`, 
 | Momento | Estado esperado | Versión y semántica | Evidencia visual |
 |---|---|---|---|
 | M0 · inicio | `calm`; Principal confirmado; cero incidentes | `planVersion=1` | Mapa estable, 600/600 y cronología limpia |
-| M1 · triaje | Lote visible; 9 mensajes descartados; Principal cerrado por la única señal material; 600 VIP sin sede confirmada | El coordinador parte de `planVersion=1` y aplica el primer plan como v2 | Contador 10/1/9, Principal rojo, actor simulado y 600 afectados |
+| M1 · primer input | Principal cerrado por la rotura de tubería; 600 VIP sin sede confirmada | El coordinador parte de `planVersion=1` y aplica el primer plan como v2 | Principal rojo, actor y canal del input, 600 afectados |
 | M2 · primer ciclo | Propuesta B 450 + Lounge 150; acciones de las cuatro áreas; condiciones aún visibles | Primer ciclo del coordinador sobre v2; propuesta no equivale a confirmación | B/Lounge pendientes, panel de agentes, compromisos y razones |
-| M3 · SMS | Muelle Este cerrado; CAT-01 y CAT-02 bloqueadas; el plan de plazas pierde viabilidad de servicio | T46 aplica el giro sobre el estado vigente y lanza otro ciclo; no se promete un número de versión nuevo | Muelle y rutas de entrega rojos, incidencia «SMS · simulado» |
+| M3 · SMS | Muelle Este cerrado; CAT-01 y CAT-02 bloqueadas; el plan de plazas pierde viabilidad de servicio | T46 aplica el giro sobre el estado vigente y lanza otro ciclo; no se promete un número de versión nuevo | Muelle y rutas de entrega rojos, incidencia del SMS con su procedencia |
 | M4 · segundo ciclo | Espacios conserva o revisa plazas; Catering busca descarga alternativa; Transporte revisa shuttles; Asistentes redistribuye recepción y segmenta mensajes | Segundo ciclo del coordinador con ambos fallos presentes | Objetivos, dependencias, resultados y cronología de las cuatro áreas |
 | Final | Plan cerrado si todas las condiciones se confirman; en otro caso, plan condicionado con plazas, servicio y pendientes explícitos | Nunca `resolved=true` con capacidad, acceso, catering o ejecución abiertos | Tarjeta Resultado, compromisos y cero afirmaciones falsas |
 
@@ -79,13 +75,13 @@ El Reasoning Agent debe mostrar `10 recibidos · 1 relevante · 9 descartados`, 
 
 ### Incidencias activas
 
-- Principal: cerrado, 600 VIP afectados, canal llamada y actor simulado.
-- Muelle Este: bloqueado, 600 servicios afectados, canal SMS y actor simulado.
+- Principal: cerrado, 600 VIP afectados, canal llamada y actor del input.
+- Muelle Este: bloqueado, 600 servicios afectados, canal SMS y actor del input.
 - Máximo tres incidencias; no se crea otra fuente de verdad.
 
 ### Cronología
 
-- Distingue llamada, SMS, sistema y simulación.
+- Distingue llamada, SMS y sistema, y muestra la procedencia HappyRobot de cada input.
 - Muestra primero el cierre del Principal y después el bloqueo del muelle.
 - Conserva las acciones y resultados sin ocultar condiciones.
 
@@ -108,9 +104,9 @@ El Reasoning Agent debe mostrar `10 recibidos · 1 relevante · 9 descartados`, 
 | Bloque | Acción del operador | Narración recomendada |
 |---|---|---|
 | Apertura | Mostrar mapa estable y panel | «Más de 100.000 personas llegan a MADRING. Zhivel coordina el bloque de hospitalidad de 600 VIP.» |
-| Primer input | Mostrar el contador 10/1/9 y mantener Principal visible | «Diez mensajes llegan en menos de cuatro segundos. HappyRobot descarta nueve y actúa solo por la rotura de tubería.» |
-| Primer plan | Seleccionar Principal, B/Lounge y la llamada de Transporte | «El Reasoning Agent propone el plan; nuestro backend lo valida y aplica: 450 más 150 en Sur. Transporte negocia ahora mediante una llamada real controlada.» |
-| Segundo input | Seleccionar Muelle Este y entregas | «Un SMS simulado avisa de que un camión de televisión bloquea el muelle del nuevo plan.» |
+| Primer input | Mostrar la llamada de HappyRobot y mantener Principal visible | «Llega el aviso: una rotura de tubería cierra el Pabellón Principal.» |
+| Primer plan | Seleccionar Principal, B/Lounge y la llamada de Transporte | «El Reasoning Agent propone el plan; nuestro backend lo valida y aplica: 450 más 150 en Sur. Transporte confirma ahora mediante una llamada real de HappyRobot.» |
+| Segundo input | Seleccionar Muelle Este y entregas | «Un SMS avisa de que un camión de televisión bloquea el muelle del nuevo plan.» |
 | Replan | Recorrer Catering, Transporte y Asistentes | «Zhivel no repite el plan: vuelve a coordinar accesos, entregas, shuttles, recepción y mensajes.» |
 | Cierre | Abrir compromisos y Resultado | «El sistema distingue lo confirmado de lo condicionado y deja un plan que el equipo puede ejecutar.» |
 
@@ -152,4 +148,4 @@ Si no se confirma una solución completa:
 
 ## Recortes permitidos
 
-Se puede omitir una negociación saliente adicional y el detalle individual del staff. No se recortan los dos incidentes, los dos ciclos del coordinador HappyRobot, las cuatro áreas visibles, la etiqueta de simulación ni el final honesto.
+Se puede omitir una negociación saliente adicional y el detalle individual del staff. No se recortan los dos incidentes, los dos ciclos del coordinador HappyRobot, las cuatro áreas visibles ni el final honesto.

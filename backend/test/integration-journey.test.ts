@@ -4,8 +4,9 @@ import test from "node:test";
 
 import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
-import { COUNTERPART_SYSTEM_PROMPT } from "../src/actions/adapters/sim-world.js";
 import { openDatabase } from "../src/state/database.js";
+
+const HOOK_URL = "http://hook.test/espacios";
 
 const TOKEN = "integration-token";
 
@@ -74,17 +75,25 @@ function result(task: { id: string; runId: string; planVersion: number }, eventI
   };
 }
 
-test("costly event, simulated callbacks and replan finish without financial approval or duplicate spending", async () => {
+test("costly event, real-channel callbacks and replan finish without financial approval or duplicate spending", async () => {
   const database = openDatabase(":memory:");
   let coordinatorCalls = 0;
   const app = createApp(database, {
     workflowToken: TOKEN,
-    config: loadConfig({ DATABASE_URL: ":memory:", INITIAL_FIXTURE: "calm", COORDINATOR_MODE: "rules" }),
-    completeFn: async (_config, system) => system === COUNTERPART_SYSTEM_PROMPT
-      ? JSON.stringify({ outcome: "accepted", summary: "Simulado", conditions: [], transcript: [{ who: "humano", text: "Acepto" }] })
-      : output(++coordinatorCalls),
+    config: {
+      ...loadConfig({ DATABASE_URL: ":memory:", INITIAL_FIXTURE: "calm", COORDINATOR_MODE: "rules" }),
+      hooks: { espacios: HOOK_URL },
+      happyrobotApiKey: "key",
+      happyrobotTestPhone: "+34600000000",
+    },
+    completeFn: async () => output(++coordinatorCalls),
   });
   const server = app.listen(0, "127.0.0.1");
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input, init) => {
+    if (String(input) === HOOK_URL) return new Response("{}", { status: 200 });
+    return originalFetch(input, init);
+  }) as typeof fetch;
   try {
     await once(server, "listening");
     const address = server.address();
@@ -103,8 +112,7 @@ test("costly event, simulated callbacks and replan finish without financial appr
     const firstTask = app.locals.taskRepository.get(firstOpen.taskId);
     assert(firstTask);
     assert.equal(firstOpen.status, "dispatched");
-    assert.equal(current.calls[0]?.simulated, true);
-    const firstResult = result(firstTask, "simulated-callback-1", 3200);
+    const firstResult = result(firstTask, "real-callback-1", 3200);
     let response = await post(base, "/workflow/results", firstResult, TOKEN);
     assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
     await waitFor(async () => (await state(base)).calls[0]?.status === "terminada");
@@ -116,7 +124,7 @@ test("costly event, simulated callbacks and replan finish without financial appr
     assert.deepEqual(await response.json(), { ok: true, applied: false, duplicate: false });
     assert.equal((await state(base)).budget.committed, 3200);
     const version = (await state(base)).planVersion;
-    assert.equal((await post(base, "/simulation/twists", { twist: "lounge_unavailable" })).status, 200);
+    assert.equal((await post(base, "/events", { source: "jury", kind: "lounge_unavailable", payload: { twist: "lounge_unavailable" } })).status, 202);
     await waitFor(async () => (await state(base)).calls.length === 2);
     current = await state(base);
     assert(current.planVersion > version);
@@ -124,7 +132,7 @@ test("costly event, simulated callbacks and replan finish without financial appr
     assert.equal(current.budget.committed, 3200);
     assert.equal(current.commitments.find((item) => item.id === "c-lounge-demo")?.status, "invalidado");
     const secondTask = app.locals.taskRepository.get((await actions(base))[0]!.taskId);
-    response = await post(base, "/workflow/results", result(secondTask, "simulated-callback-2", 4000), TOKEN);
+    response = await post(base, "/workflow/results", result(secondTask, "real-callback-2", 4000), TOKEN);
     assert.equal(response.status, 200);
     await waitFor(async () => (await actions(base)).length === 0);
     current = await state(base);
@@ -133,8 +141,8 @@ test("costly event, simulated callbacks and replan finish without financial appr
     assert.equal(current.calls.filter((item) => item.status === "en_curso").length, 0);
     assert.equal(coordinatorCalls, 2);
     assert.equal((await post(base, "/interventions", { type: "approve_spend", payload: { decisionId: "old" } })).status, 409);
-    assert.equal((await post(base, "/simulation/twists", { twist: "reject_spend" })).status, 400);
   } finally {
+    globalThis.fetch = originalFetch;
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database.close();
   }

@@ -324,7 +324,7 @@ test("consecutive result-driven replans stop after the limit until a new externa
   }
 });
 
-test("an isolated E2E run records specialist results without cascading replans", async () => {
+test("a no-channel call_result never cascades into a replan", async () => {
   let calls = 0;
   const { database, states, instance } = engine(undefined, async () => {
     calls += 1;
@@ -332,17 +332,13 @@ test("an isolated E2E run records specialist results without cascading replans",
   });
   try {
     const run = states.ensureActiveRun();
-    const state = structuredClone(run.state);
-    state.e2eSuppressResultReplan = true;
-    states.saveState(run.id, state);
     const payload = {
+      eventId: "no-channel-t1",
       taskId: "t1",
       runId: run.id,
       planVersion: run.state.planVersion,
-      status: "completed",
-      materialChange: true,
-      materialSummary: "Pabellón B reduce capacidad",
-      result: { outcome: "accepted_with_conditions", summary: "aceptado", conditions: ["confirmar"], evidence: {}, data: {} },
+      status: "failed",
+      result: { outcome: "failed", summary: "Sin canal real configurado para espacios", conditions: [], evidence: {}, data: {} },
     };
     await instance.handle({ source: "happyrobot", kind: "call_result", payload });
     assert.equal(calls, 0);

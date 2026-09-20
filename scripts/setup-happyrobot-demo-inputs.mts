@@ -32,7 +32,7 @@ export function createWorkflowBody(webhookToken: string, sampleBackendBaseUrl: s
     }],
     version: {
       name: "v1",
-      description: "Pasarela determinista de inputs simulados de llamada y SMS para la demo",
+      description: "Pasarela determinista de inputs de demo (llamada y SMS) hacia el backend",
       nodes: [{
         type: "trigger",
         event_id: PREDEFINED_REQUEST_EVENT_ID,
@@ -41,7 +41,7 @@ export function createWorkflowBody(webhookToken: string, sampleBackendBaseUrl: s
         webhook_payload: {
           eventId: "demo-event",
           channel: "call",
-          actor: "SIMULACIÓN · Responsable de recinto",
+          actor: "Responsable de recinto",
           incidentId: "principal_pipe_burst",
           summary: "Incidente de prueba",
           sessionId: "demo-session",

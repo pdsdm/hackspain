@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { useAcceptingSeed } from "./sim-support.js";
 
 import { extract, guessGroupId, toResultData } from "../src/agents/attendees/extract.js";
 import { SMS_MAX_CHARS, buildMessage, buildNeedsMessage } from "../src/agents/attendees/templates.js";
 import type { AttendeesBrief } from "../src/agents/attendees/types.js";
-import { ActionExecutor } from "../src/actions/executor.js";
-import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
 import { openDatabase } from "../src/state/database.js";
 import { StateRepository } from "../src/state/state-repository.js";
@@ -66,8 +63,6 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
     const states = new StateRepository(database.connection);
     const tasks = new TaskRepository(database.connection);
     const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
-    const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
-    const executor = new ActionExecutor(states, tasks, workflows, config);
     const run = states.ensureActiveRun();
     const state = structuredClone(run.state);
     const groups = state.guestGroups as Array<Record<string, unknown>>;
@@ -84,10 +79,22 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
       payload: { objective: "Avisar del nuevo destino", counterpart: "g-shuttles (180 en ruta)" },
       idempotencyKey: "sms-shuttles",
     });
-    useAcceptingSeed(states, task);
-    executor.pump();
-    await new Promise((resolve) => setImmediate(resolve));
-    executor.fireDue(Number(run.state.clock.simSeconds) + 60);
+    tasks.claimNext();
+    tasks.markDispatchOutcome(task.id, "dispatched");
+    workflows.recordSpecialistResult({
+      eventId: "evt-asist-accept",
+      taskId: task.id,
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "completed",
+      result: {
+        outcome: "accepted",
+        summary: "g-shuttles acepta el nuevo destino",
+        conditions: [],
+        evidence: {},
+        data: { guestGroups: [{ id: "g-shuttles", informedCount: 171, acceptedCount: 171 }] },
+      },
+    });
 
     const acceptedState = states.ensureActiveRun().state;
     const after = (acceptedState.guestGroups as Array<Record<string, unknown>>).find((group) => group.id === "g-shuttles")!;
@@ -97,9 +104,6 @@ test("a completed asistentes result moves informedCount and acceptedCount in /st
     assert.equal(after.acceptedCount, after.informedCount);
     assert.match(String(asistentesAgent?.lastResult), /acepta/i);
     assert.equal(acceptedState.events.some((event) => event.area === "asistentes"), true);
-    const call = (acceptedState.calls as Array<Record<string, unknown>>)[0]!;
-    assert.equal(call.channel, "sms");
-    assert.equal(call.simulated, true);
   } finally {
     database.close();
   }

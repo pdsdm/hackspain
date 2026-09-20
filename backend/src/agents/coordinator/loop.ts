@@ -186,8 +186,7 @@ async function runHappyRobotHarness(
     logCoordError("harness happyrobot sin configuración (HAPPYROBOT_COORDINATOR_WORKFLOW_ID)");
     return "unavailable";
   }
-  const state = deps.states.ensureActiveRun().state;
-  const apply = config.apply || (state.forceSimActions === true && state.e2eCoordinatorApply === true);
+  const apply = config.apply;
   logCoord("bucle", "happyrobot", config.model, apply ? "apply" : "shadow", `tope ${config.timeoutMs}ms`);
   try {
     const report = await runHappyRobotCoordinator({

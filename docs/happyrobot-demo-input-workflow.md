@@ -1,4 +1,4 @@
-# Workflow HappyRobot — inputs simulados de la demo
+# Workflow HappyRobot — inputs de demo
 
 `Demo Incident Inputs` es una pasarela determinista: un trigger API recibe el mensaje ya escrito y un Webhook POST lo reenvía al endpoint autenticado T46. No usa telefonía ni LLM; cada ejecución queda registrada como run real de HappyRobot.
 
@@ -28,4 +28,4 @@ HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID=
 
 Campos del trigger: `eventId`, `channel`, `actor`, `incidentId`, `summary`, `sessionId`, `backend_base_url`.
 
-El primer run usa `channel=call` e `incidentId=inbox_batch` con diez mensajes sintéticos en `summary`; el SMS simulado usa `channel=sms` e `incidentId=dock_blocked`. `principal_pipe_burst` queda como respaldo directo. Los actores empiezan por `SIMULACIÓN ·` para que la grabación no presente los inputs como telefonía real.
+El primer run usa `channel=call` e `incidentId=principal_pipe_burst`; el segundo usa `channel=sms` e `incidentId=dock_blocked`. `actor` lleva el nombre de quien informa (por ejemplo «Responsable de recinto»), sin prefijos.
