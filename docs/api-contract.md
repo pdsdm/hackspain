@@ -46,6 +46,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "shuttles": [],
   "deliveries": [],
   "guestGroups": [],
+  "assignments": [{ "groupId": "g-propios", "spaceId": "pabellonB", "count": 180, "status": "proposed", "planVersion": 2 }],
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "kind": "operational", "title": "Aceptar apertura escalonada", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
@@ -71,6 +72,8 @@ En API el backend fuerza `simulated: false`, `scriptId: "main"`, `scriptCursor: 
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
 
+`assignments[]` expone el reparto propuesto del plan vigente, incluso cuando un grupo se divide entre espacios. `status: proposed` cuenta como sede asignada en el panel, pero nunca como plaza confirmada; la confirmación sigue dependiendo de evidencia y `guestGroups[].confirmedCount`.
+
 `coordinatorStatus`: `estable` | `replanificando` | `esperando_decision` | `pausado` | `atascado`. El backend evalúa el cierre después de cada evento, cuando el coordinador no está trabajando:
 
 - **`resolved: true`** cuando `guestGroups[].confirmedCount` cubre a todos los invitados, las sedes asignadas son de hospitalidad y tienen aforo y acceso operativo en su zona, ningún compromiso vigente sigue en `propuesto` ni `en_consulta`, no queda ninguna condición abierta, hay al menos un acuerdo aceptado y no quedan tareas, llamadas, decisiones ni pausa. `propuesto` y `pendiente` cuentan como sede asignada, pero no como plaza confirmada. Al cerrar, `coordinatorStatus` pasa a `estable` y se añade una línea `acuerdo` a la cronología.
@@ -86,6 +89,40 @@ Durante la crisis se prioriza recuperar el servicio. `budget.forecast` es el cos
 El coordinador emite `estimatedCost: number | null`, independiente de `decision`. Las respuestas antiguas con `decision` sin `kind` aportan una estimación compatible, pero no abren aprobaciones económicas ni fabrican una aprobación humana. Las decisiones operativas explícitas llevan `kind: "operational"`.
 
 `proposal.cost` admite `null`. Un coordinador externo puede solicitar una decisión operativa con `proposal.approval = { kind: "operational", title, summary, rationale, conditions, effectApprove, effectReject }`. Un precio por sí solo nunca crea una decisión.
+
+### `GET /events`
+
+Cronología reciente sin arrastrar el estado entero. Mismo contenido que `state.events`, para
+consumidores que solo quieren saber qué acaba de pasar y no necesitan espacios, rutas ni
+vehículos en cada sondeo. Solo lectura y sin token, igual que `GET /state`.
+
+```json
+{
+  "events": [
+    { "id": "event-…", "time": 43260, "realAt": 1789860000000, "kind": "incidencia",
+      "text": "Recinto confirma cierre del Pabellón Principal", "area": "espacios" }
+  ],
+  "total": 37,
+  "simSeconds": 43320,
+  "planVersion": 2
+}
+```
+
+Parámetros de query, todos opcionales:
+
+| Parámetro | Por defecto | Qué hace |
+|---|---|---|
+| `limit` | 50 (máx. 200) | Devuelve las N más recientes |
+| `since` | — | Solo eventos con `realAt` **posterior** al valor (epoch ms). Para sondeo incremental |
+| `kind` | — | Filtra por tipo: `info`, `accion`, `incidencia`, `intervencion`, `fallo`, `acuerdo`… |
+| `area` | — | Filtra por área: `espacios`, `catering`, `transporte`, `asistentes` |
+
+`total` es el tamaño de la cronología completa antes de filtrar; recuerda que el backend solo
+conserva las **últimas 80**. Un `limit` o `since` inválido responde `400`.
+
+`realAt` es la hora real (epoch ms) en que el backend registró el evento, mientras que `time`
+son segundos del reloj del escenario. Para ordenar por lo que de verdad ocurrió antes, usa
+`realAt`; los eventos precargados de un fixture pueden no tenerlo.
 
 ### `POST /interventions`
 
@@ -134,14 +171,14 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ### `POST /simulation/e2e/reset`
 
-Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run; aunque Railway esté en shadow o tenga hooks de especialistas, el plan se aplica y llamadas, SMS y email usan el adaptador `sim`. Los resultados de especialistas actualizan estado y cierre sin lanzar ciclos extra: los dos únicos replans son los dos incidentes del storyboard. Un reset normal elimina la marca. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
+Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run. Por defecto todas las acciones de especialistas usan `sim`. Con `realTransportCall: true`, el estado autoriza al Reasoning Agent a invocar una sola vez su tool `emitir_llamada` para Transporte antes de `submit_plan`; las tareas persistidas de las cuatro áreas siguen en `sim` para no duplicar la llamada. Los resultados actualizan estado y cierre sin lanzar ciclos extra. Un reset normal elimina las marcas. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
 
 ```json
-{ "inputTokenHash": "<sha256-hex>" }
+{ "inputTokenHash": "<sha256-hex>", "realTransportCall": true }
 ```
 
 ```json
-{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim" }
+{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim | coordinator-transport-call-rest-sim" }
 ```
 
 ### `POST /simulation/clock`
@@ -257,9 +294,10 @@ Entrada autenticada y estricta para incidentes reales detectados por workflows d
 }
 ```
 
-- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `principal_pipe_burst` | `dock_blocked`.
+- Los seis campos son obligatorios. `channel`: `call` | `sms`; `incidentId`: `inbox_batch` | `principal_pipe_burst` | `dock_blocked`.
 - El cuerpo y `evidence` no admiten campos adicionales: el workflow no puede enviar operaciones, parches ni versiones de estado.
-- `principal_pipe_burst` cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
+- `inbox_batch` conserva en `summary` diez mensajes sintéticos recibidos en menos de cuatro segundos. No aplica por sí solo ningún daño ni incrementa `planVersion`: el Reasoning Agent debe identificar la única señal material, consultar el mundo y generar el plan. `/state.inboxTriage` muestra recibidos, relevantes, descartados, selección y lectura.
+- `principal_pipe_burst` conserva el camino directo de respaldo: cierra `principal`, invalida el plan vigente aumentando `planVersion` y deja sin confirmación a los grupos que estaban asignados allí. `dock_blocked` aplica el mismo efecto determinista que el giro homónimo.
 - Las solicitudes se serializan por orden de llegada. Cada efecto lee el run y la versión vigentes cuando alcanza la cola.
 - Repetir el mismo `eventId` y cuerpo devuelve la respuesta original con `duplicate: true`, sin aplicar ni coordinar de nuevo. Reutilizarlo con otro cuerpo devuelve `409`.
 - La línea añadida a `events[]` puede incluir los campos opcionales y retrocompatibles `channel`, `actor` y `provenance: { source: "happyrobot", eventId, sessionId }`.

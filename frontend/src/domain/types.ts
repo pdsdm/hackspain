@@ -133,6 +133,14 @@ export interface GuestGroup {
   needs?: string
 }
 
+export interface GuestAssignment {
+  groupId: string
+  spaceId: string
+  count: number
+  status: 'proposed' | 'confirmed'
+  planVersion: number
+}
+
 export type DecisionStatus = 'pendiente' | 'aprobada' | 'rechazada'
 
 export interface Decision {
@@ -219,6 +227,7 @@ export interface Clock {
 
 export interface CrisisState {
   simulated: boolean
+  inboxTriage?: { received: number; relevant: number; ignored: number; status: 'processing' | 'triaged'; selected?: string; reading?: string }
   clock: Clock
   planVersion: number
   coordinatorStatus: CoordinatorStatus
@@ -229,6 +238,7 @@ export interface CrisisState {
   deliveries: Delivery[]
   vehicles?: Vehicle[]
   guestGroups: GuestGroup[]
+  assignments?: GuestAssignment[]
   gates: Gate[]
   attendanceExpected: number
   decisions: Decision[]

@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 type InputMode = "happyrobot" | "api";
-type IncidentId = "principal_pipe_burst" | "dock_blocked";
+type IncidentId = "inbox_batch" | "principal_pipe_burst" | "dock_blocked";
 
 type TimelineEvent = {
   channel?: string;
@@ -138,16 +138,23 @@ async function waitFor<T>(
 }
 
 function event(tag: string, incidentId: IncidentId) {
-  const call = incidentId === "principal_pipe_burst";
+  const batch = incidentId === "inbox_batch";
+  const messages = [
+    "menú impreso correcto", "pregunta por guardarropa", "solicitud de foto", "tiempo estable", "factura recibida",
+    "color de acreditaciones", "reposición de merchandising", "punto de café", "música preparada",
+    "URGENTE: rotura de tubería; Pabellón Principal cerrado sin hora de reapertura",
+  ];
   return {
-    eventId: `demo-${tag}-${call ? "call" : "sms"}`,
-    channel: call ? "call" : "sms",
-    actor: call ? "SIMULACIÓN · Responsable de recinto" : "SIMULACIÓN · Logística MADRING",
+    eventId: `demo-${tag}-${batch ? "inbox" : incidentId === "principal_pipe_burst" ? "call" : "sms"}`,
+    channel: incidentId === "dock_blocked" ? "sms" : "call",
+    actor: batch ? "SIMULACIÓN · Centralita MADRING" : incidentId === "principal_pipe_burst" ? "SIMULACIÓN · Responsable de recinto" : "SIMULACIÓN · Logística MADRING",
     incidentId,
-    summary: call
-      ? "Una rotura de tubería obliga a cerrar el Pabellón Principal sin hora confirmada de reapertura"
-      : "Un camión de televisión bloquea el Muelle Este; CAT-01 y CAT-02 no pueden descargar",
-    evidence: { sessionId: `demo-${tag}-${call ? "call" : "sms"}` },
+    summary: batch
+      ? `Lote de 10 mensajes recibidos en 3,6 segundos: ${messages.map((message, index) => `[+${index * 400}ms] ${message}`).join(" | ")}`
+      : incidentId === "principal_pipe_burst"
+        ? "Una rotura de tubería obliga a cerrar el Pabellón Principal sin hora confirmada de reapertura"
+        : "Un camión de televisión bloquea el Muelle Este; CAT-01 y CAT-02 no pueden descargar",
+    evidence: { sessionId: `demo-${tag}-${batch ? "inbox" : incidentId === "principal_pipe_burst" ? "call" : "sms"}` },
   } as const;
 }
 
@@ -184,6 +191,8 @@ function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoE
   requireCheckpoint(actions.tasks.length === 0, `Final incoherente: quedan ${actions.tasks.length} tareas abiertas`);
   const openCalls = state.calls.filter((item) => item.status === "en_curso").length;
   requireCheckpoint(openCalls === 0, `Final incoherente: quedan ${openCalls} llamadas abiertas`);
+  const realCalls = state.calls.filter((item) => item.simulated === false);
+  requireCheckpoint(realCalls.length === 0, `Final incoherente: las tareas persistidas deben seguir en sim; observadas ${realCalls.length} llamadas reales`);
   const conditionalConfirmed = state.commitments.filter((item) => item.conditions?.length && item.status === "confirmado");
   requireCheckpoint(conditionalConfirmed.length === 0, `Compromisos condicionados marcados como confirmados: ${conditionalConfirmed.map((item) => item.id).join(", ")}`);
   const incomplete = ["espacios", "catering", "transporte", "asistentes"].flatMap((area) => {
@@ -251,11 +260,13 @@ async function sendHappyRobot(
 
 export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> {
   if (process.argv.includes("--help")) {
-    console.log("Uso: npm run demo:video -- --inputs=happyrobot|external|api [--rehearsals=N] [--report=ruta|-]");
+    console.log("Uso: npm run demo:video -- --inputs=happyrobot|external|api [--rehearsals=N] [--real-transport-call] [--report=ruta|-]");
     return;
   }
   const rawMode = option("inputs") ?? "happyrobot";
   const mode: InputMode = rawMode === "api" ? "api" : rawMode === "happyrobot" || rawMode === "external" ? "happyrobot" : (() => { throw new Error(`inputs desconocido: ${rawMode}`); })();
+  const realTransportCall = process.argv.includes("--real-transport-call");
+  if (realTransportCall && mode !== "happyrobot") throw new Error("--real-transport-call exige --inputs=happyrobot");
   const rehearsals = positiveInteger(option("rehearsals"), "rehearsals", 1);
   const rawReportPath = option("report");
   const reportPath = rawReportPath === "-" ? undefined : resolve(rawReportPath || defaultReportPath());
@@ -294,9 +305,10 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       const reset = await json<{ runId?: string; externalActions?: string }>(fetchFn, `${apiUrl}${mode === "happyrobot" ? "/simulation/e2e/reset" : "/simulation/reset"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(mode === "happyrobot" ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(mode === "happyrobot" ? {} : { fixture: "calm" }),
+        body: JSON.stringify(mode === "happyrobot" ? (realTransportCall ? { realTransportCall: true } : {}) : { fixture: "calm" }),
       });
-      if (mode === "happyrobot" && reset.externalActions !== "sim") throw new Error("El backend no confirmó el aislamiento sim del ensayo HappyRobot");
+      const expectedActions = realTransportCall ? "coordinator-transport-call-rest-sim" : "sim";
+      if (mode === "happyrobot" && reset.externalActions !== expectedActions) throw new Error(`El backend no confirmó el modo de acciones ${expectedActions}`);
       if (reset.runId) evidence.backendRunId = reset.runId;
       const calm = await waitFor("estado calm", timeoutMs, readState, (state) => state.spaces.find((space) => space.id === "principal")?.status === "confirmado", diagnostic);
       validateCalm(calm);
@@ -305,13 +317,13 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       console.log("[VIDEO] M0 validado: 600/600, Principal confirmado y cero inputs previos. Mantén visible el Principal.");
 
       const tag = `${Date.now().toString(36)}-${index}`;
-      const call = event(tag, "principal_pipe_burst");
+      const call = event(tag, "inbox_batch");
       const sms = event(tag, "dock_blocked");
       const send = mode === "api"
         ? (payload: DemoEvent) => sendDirect(fetchFn, apiUrl, token, payload)
         : (payload: DemoEvent) => sendHappyRobot(fetchFn, happyRobotConfig!, payload);
 
-      console.log(`[VIDEO] Input 1 (${mode}): llamada SIMULADA por rotura de tubería.`);
+      console.log(`[VIDEO] Input 1 (${mode}): 10 mensajes SIMULADOS en 3,6 s; solo la rotura debe cambiar el plan.`);
       const callResult = await send(call);
       evidence.inputs.push({ incidentId: call.incidentId, eventId: call.eventId, ...callResult });
       if (callResult.workflowRunId) console.log(`[VIDEO] HappyRobot run ${callResult.workflowRunId}`);
@@ -326,7 +338,7 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       let firstCoordinator: CoordinatorReport | undefined;
       if (mode === "happyrobot") {
         requireCheckpoint(Boolean(reset.runId), "M2 incoherente: reset sin runId");
-        firstCoordinator = await waitCoordinatorReport(reset.runId!, 2);
+        firstCoordinator = await waitCoordinatorReport(reset.runId!, firstCycle.planVersion - 1);
         requireCheckpoint(firstCoordinator.status === "accepted" && firstCoordinator.applied, `M2 incoherente: HappyRobot ${firstCoordinator.status}, applied=${firstCoordinator.applied}`);
         requireCheckpoint(firstCoordinator.submissions === 1 && firstCoordinator.validationErrors.length === 0, `M2 incoherente: ${firstCoordinator.submissions} submissions, errores=${firstCoordinator.validationErrors.join("; ")}`);
         evidence.coordinatorRuns.push(firstCoordinator);
@@ -352,7 +364,7 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       console.log("[VIDEO] M3 validado: SMS SIMULADO trazado, Muelle Este y ambas entregas bloqueados. Recorre el panel de agentes.");
 
       if (mode === "happyrobot") {
-        const secondCoordinator = await waitCoordinatorReport(reset.runId!, 3, firstCoordinator?.correlationId);
+        const secondCoordinator = await waitCoordinatorReport(reset.runId!, Number(firstCoordinator?.planVersion ?? 1) + 1, firstCoordinator?.correlationId);
         requireCheckpoint(secondCoordinator.status === "accepted" && secondCoordinator.applied, `M4 incoherente: HappyRobot ${secondCoordinator.status}, applied=${secondCoordinator.applied}`);
         requireCheckpoint(secondCoordinator.submissions === 1 && secondCoordinator.validationErrors.length === 0, `M4 incoherente: ${secondCoordinator.submissions} submissions, errores=${secondCoordinator.validationErrors.join("; ")}`);
         evidence.coordinatorRuns.push(secondCoordinator);

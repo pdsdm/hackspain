@@ -7,7 +7,7 @@ Un workflow determinista en `development` recibe por API los mensajes congelados
 ## Criterios de aceptación
 
 - [x] El instalador define un trigger API con los campos estrictos requeridos por T46.
-- [x] El POST bearer reenvía `principal_pipe_burst` y `dock_blocked` sin operaciones ni parches.
+- [x] El POST bearer reenvía `inbox_batch`, `principal_pipe_burst` de respaldo y `dock_blocked` sin operaciones ni parches.
 - [x] `channel`, `actor`, URL y session ID vienen del trigger; los actores indican `SIMULACIÓN`.
 - [x] El bearer vive en una variable oculta de HappyRobot, no en código ni documentación.
 - [x] El instalador no modifica workflows existentes y es idempotente por nombre.

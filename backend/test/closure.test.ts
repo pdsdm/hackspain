@@ -66,6 +66,24 @@ test("una sede propuesta o pendiente y una condición crítica dejan un desenlac
   }
 });
 
+test("las asignaciones propuestas divididas cuentan como sede visible sin fingir confirmación", () => {
+  const state = closedState();
+  state.spaces.push({ id: "loungeSur", kind: "lounge", zone: "sur", capacity: 150, status: "pendiente" });
+  state.spaces[0]!.status = "pendiente";
+  delete (state.guestGroups as Array<Record<string, unknown>>)[0]!.assignedSpaceId;
+  (state.guestGroups as Array<Record<string, unknown>>)[0]!.confirmedCount = 0;
+  state.assignments = [
+    { groupId: "g-propios", spaceId: "pabellonB", count: 300, status: "proposed", planVersion: 3 },
+    { groupId: "g-propios", spaceId: "loungeSur", count: 150, status: "proposed", planVersion: 3 },
+  ];
+  const report = evaluateClosure(state, 0);
+  assert.equal(report.assigned, 450);
+  assert.equal(report.confirmed, 0);
+  assert.equal(report.stalled, true);
+  assert.doesNotMatch(report.gap, /sin sede asignada/);
+  assert.match(report.gap, /450 invitados sin plaza confirmada/);
+});
+
 test("el resumen del atasco enumera como mucho tres condiciones y cuenta el resto", () => {
   const state = closedState();
   state.commitments[0]!.status = "aceptado_condiciones";

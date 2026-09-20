@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { Building2, Bus, Network, Users, Utensils, X } from 'lucide-react'
+import { Bot, Building2, Bus, Network, Users, Utensils, X } from 'lucide-react'
 import type { Area, CrisisState } from '../../domain/types'
 import { fmtClock } from '../../domain/time'
 import { Pill, type Tone } from '../ui/Pill'
+import { agentCorrection } from '../../domain/selectors'
 import { AGENT, COMMITMENT, COORD } from '../ui/status'
 
 const TONE: Record<Tone, string> = { ink: 'text-ink', amber: 'text-amber', red: 'text-red', green: 'text-green', muted: 'text-muted' }
@@ -39,6 +40,7 @@ function focusOf(s: CrisisState, id: AgentFocus) {
 export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentFocus; onClose: () => void }) {
   const focus = focusOf(s, id)
   const Icon = ICONS[id]
+  const correction = agentCorrection(s, focus.area)
   const commitments = (focus.area ? s.commitments.filter((c) => c.area === focus.area) : s.commitments).slice(0, 4)
   const events = [...s.events].reverse().filter((e) => (focus.area ? e.area === focus.area : !e.area || e.kind === 'decision' || e.kind === 'intervencion')).slice(0, 3)
 
@@ -51,7 +53,7 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
   return (
     <Glass label={`Detalle de ${focus.name}`} className="w-[300px] agent-detail">
       <header className="agent-detail-heading">
-        <div className="agent-detail-title"><Icon size={15} /><h2>{focus.name}</h2></div>
+        <div className="agent-detail-title"><Icon size={15} /><h2>Agente · {focus.name}</h2></div>
         <Pill tone={focus.status.tone}>{focus.status.label}</Pill>
         <button type="button" className="agent-detail-close" onClick={onClose} aria-label="Cerrar detalle del agente">
           <X size={14} />
@@ -62,6 +64,13 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
         {focus.reason && <p className="agent-role">{focus.reason}</p>}
         {focus.lastResult && (
           <p className="agent-result"><span>Último resultado</span>{focus.lastResult}</p>
+        )}
+        {correction && (
+          <section className="agent-correction" aria-label="El agente corrigió su plan anterior">
+            <h3><Bot size={12} aria-hidden="true" /> El agente corrigió</h3>
+            <p className="agent-correction-failed">{correction.failed}{correction.note ? ` · ${correction.note}` : ''}</p>
+            <p className="agent-correction-next">{correction.next}</p>
+          </section>
         )}
         {commitments.length > 0 && (
           <section>

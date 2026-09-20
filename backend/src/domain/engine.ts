@@ -492,7 +492,7 @@ export class Engine {
 }
 
 function isHappyRobotIncident(event: IncomingEvent): boolean {
-  return event.source === "happyrobot" && (event.kind === "principal_pipe_burst" || event.kind === "dock_blocked");
+  return event.source === "happyrobot" && (event.kind === "inbox_batch" || event.kind === "principal_pipe_burst" || event.kind === "dock_blocked");
 }
 
 function callResultMatchesPlan(

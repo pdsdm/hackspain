@@ -41,9 +41,9 @@ Nombre: `Demo incident request`. Declara **siete** parámetros:
 |---|---|---|
 | `eventId` | `demo-event-1` | Clave de idempotencia. Dos runs con el mismo valor producen una sola línea |
 | `channel` | `call` | Solo `call` o `sms` |
-| `actor` | `SIMULACIÓN · Responsable de recinto` | Quién informa. **Tiene que empezar por `SIMULACIÓN ·`** |
-| `incidentId` | `principal_pipe_burst` | Solo `principal_pipe_burst` o `dock_blocked` |
-| `summary` | `Una tubería rota obliga a cerrar el Pabellón Principal` | El texto que se ve en la cronología |
+| `actor` | `SIMULACIÓN · Centralita MADRING` | Quién informa. **Tiene que empezar por `SIMULACIÓN ·`** |
+| `incidentId` | `inbox_batch` | `inbox_batch`, respaldo `principal_pipe_burst` o `dock_blocked` |
+| `summary` | `Lote de 10 mensajes...` | El lote con marcas `+0 ms`…`+3600 ms` que recibe el coordinador |
 | `sessionId` | `demo-session-1` | Va dentro de `evidence` |
 | `backend_base_url` | `https://<túnel>.lhr.life` | Base del backend, **sin barra final** |
 
@@ -79,11 +79,11 @@ Cuerpo, tomando cada valor del trigger:
 
 | | Incidente 1 | Incidente 2 |
 |---|---|---|
-| `incidentId` | `principal_pipe_burst` | `dock_blocked` |
+| `incidentId` | `inbox_batch` | `dock_blocked` |
 | `channel` | `call` | `sms` |
-| `actor` | `SIMULACIÓN · Responsable de recinto` | `SIMULACIÓN · Jefe de muelle` |
-| `summary` | Una tubería rota obliga a cerrar el Pabellón Principal | Un camión de TV bloquea el Muelle Este |
-| Efecto | Cierra el Principal y sube `planVersion` | Bloquea el Muelle Este Sur |
+| `actor` | `SIMULACIÓN · Centralita MADRING` | `SIMULACIÓN · Jefe de muelle` |
+| `summary` | Diez mensajes en 3,6 s; nueve ruido y una rotura del Principal | Un camión de TV bloquea el Muelle Este |
+| Efecto | El agente selecciona la rotura, consulta el mundo y aplica el primer plan | Bloquea el Muelle Este Sur |
 
 ## 6. Comprobar que funciona
 

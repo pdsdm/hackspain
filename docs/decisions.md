@@ -194,9 +194,13 @@ sin plan, con el respaldo determinista solo para giros.
 - **Decisión:** `no_answer` reintenta la misma tarea una vez y no relanza al coordinador. El executor solo mantiene una llamada real en curso. Tras 3 relanzamientos seguidos por resultados sin input externo nuevo, el coordinador se pausa hasta que llegue uno. En Railway, `COORDINATOR_VERBOSE` vacío equivale a `0` para que los logs sean legibles.
 - **Descartado:** rotar el número de pruebas o subir el timeout de 180 s; no atacan la causa.
 
-### D22: las condiciones nuevas no replanifican y una dependencia sin respuesta cancela a sus dependientes (20/09/2026)
+### D22: triaje visible y una llamada real controlada en la toma (20/09/2026)
+
+- **Qué:** el primer input es un lote de 10 mensajes sintéticos recibidos en 3,6 s; el Reasoning Agent descarta 9, consulta el mundo y actúa solo por la rotura. El Reasoning Agent invoca una vez su tool `emitir_llamada` para Transporte antes de `submit_plan`; las tareas persistidas siguen en `sim` y M4 no vuelve a llamar.
+- **Por qué:** demuestra selección de señal y ejecución externa sin fingir conversaciones con proveedores reales ni repetir el incidente de llamadas de T55. La toma exige flags explícitos y evidencia de transcript.
+
+### D23: las condiciones nuevas no replanifican y una dependencia sin respuesta cancela a sus dependientes (20/09/2026)
 
 - **Qué:** con T55 desplegada, el ensayo API local seguía sin final: cada `accepted_with_conditions` con texto nuevo contaba como cambio material y relanzaba al coordinador (plan 3 → 6 en dos minutos, 19 llamadas). Además, la tarea de reintento `:retry` tenía otra `idempotencyKey`, así que las tareas con `dependsOn` sobre la original quedaban `pending` para siempre y el plan nunca llegaba a `atascado` ni a `resolved`.
 - **Decisión:** una aceptación solo relanza al coordinador si cambia un hecho de `spaces[]` (aforo, hora); las condiciones se anotan en el compromiso sin replanificar. Una dependencia se da por satisfecha con la tarea original o con su `:retry` completada. Si ambas fallan, las tareas dependientes se cancelan, la cronología lo anota como `fallo` y el plan puede cerrar como `atascado` con `closureSummary`.
 - **Descartado:** cerrar `resolved` con condiciones abiertas. La spec T52 y el contrato exigen un final honesto: `atascado` con el hueco explícito.
-

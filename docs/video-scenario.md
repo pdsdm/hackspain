@@ -22,22 +22,25 @@ Zhivel convierte dos incidentes encadenados —la pérdida de la sede de 600 VIP
 | Reasoning Agent `Orquestador`, `consult_world` y `submit_plan` | Coordinador principal real en HappyRobot; el backend valida y aplica |
 | Runs del workflow `Demo Incident Inputs` | Runs reales de HappyRobot |
 | Contenido de la llamada y del SMS | Incidentes simulados para la demo |
-| Telefonía o número SMS | No se usa ni se afirma |
-| Acciones de especialistas con adaptador `sim` | Simuladas y visibles como `sim` |
+| Telefonía de los inputs | No se usa: lote y SMS son sintéticos |
+| Tool `emitir_llamada` del coordinador | Una llamada real HappyRobot al contacto autorizado de Transporte; run de voz auditable |
+| Acciones persistidas de especialistas | Simuladas y visibles como `sim`; no duplican la llamada |
 | Modo `--inputs=api` | Respaldo simulado sin run HappyRobot |
 
-En pantalla y narración se dice «llamada simulada vía HappyRobot» y «SMS simulado vía HappyRobot». Nunca «llamada telefónica real» ni «SMS recibido en un número real».
+En pantalla y narración, el lote de centralita y el SMS se presentan como incidentes simulados vía HappyRobot. Solo la acción de Transporte se presenta como «llamada real controlada al teléfono de pruebas»; nunca como conversación con un proveedor externo real.
 
 ## Inputs literales
 
-### Input 1 · llamada simulada
+### Input 1 · lote de centralita simulado
 
 - `channel`: `call`
-- `actor`: `SIMULACIÓN · Responsable de recinto`
-- `incidentId`: `principal_pipe_burst`
-- Texto:
+- `actor`: `SIMULACIÓN · Centralita MADRING`
+- `incidentId`: `inbox_batch`
+- Contenido: diez mensajes sintéticos con marcas entre `+0 ms` y `+3600 ms`. Nueve son ruido operativo —guardarropa, marketing, tiempo, facturas, acreditaciones, tienda, café y música— y uno informa de la rotura:
 
-> Una rotura de tubería obliga a cerrar el Pabellón Principal de hospitalidad. No tenemos una hora confirmada de reapertura.
+> URGENTE: una rotura de tubería obliga a cerrar el Pabellón Principal de hospitalidad. No tenemos una hora confirmada de reapertura.
+
+El Reasoning Agent debe mostrar `10 recibidos · 1 relevante · 9 descartados`, consultar el mundo y actuar solo por la rotura.
 
 ### Input 2 · SMS simulado
 
@@ -53,7 +56,7 @@ En pantalla y narración se dice «llamada simulada vía HappyRobot» y «SMS si
 | Momento | Estado esperado | Versión y semántica | Evidencia visual |
 |---|---|---|---|
 | M0 · inicio | `calm`; Principal confirmado; cero incidentes | `planVersion=1` | Mapa estable, 600/600 y cronología limpia |
-| M1 · llamada | Principal cerrado; compromiso original invalidado; 600 VIP sin sede confirmada | T46 incrementa a `planVersion=2` | Principal rojo, incidencia «Llamada · simulado», actor y 600 afectados |
+| M1 · triaje | Lote visible; 9 mensajes descartados; Principal cerrado por la única señal material; 600 VIP sin sede confirmada | El coordinador parte de `planVersion=1` y aplica el primer plan como v2 | Contador 10/1/9, Principal rojo, actor simulado y 600 afectados |
 | M2 · primer ciclo | Propuesta B 450 + Lounge 150; acciones de las cuatro áreas; condiciones aún visibles | Primer ciclo del coordinador sobre v2; propuesta no equivale a confirmación | B/Lounge pendientes, panel de agentes, compromisos y razones |
 | M3 · SMS | Muelle Este cerrado; CAT-01 y CAT-02 bloqueadas; el plan de plazas pierde viabilidad de servicio | T46 aplica el giro sobre el estado vigente y lanza otro ciclo; no se promete un número de versión nuevo | Muelle y rutas de entrega rojos, incidencia «SMS · simulado» |
 | M4 · segundo ciclo | Espacios conserva o revisa plazas; Catering busca descarga alternativa; Transporte revisa shuttles; Asistentes redistribuye recepción y segmenta mensajes | Segundo ciclo del coordinador con ambos fallos presentes | Objetivos, dependencias, resultados y cronología de las cuatro áreas |
@@ -105,8 +108,8 @@ En pantalla y narración se dice «llamada simulada vía HappyRobot» y «SMS si
 | Bloque | Acción del operador | Narración recomendada |
 |---|---|---|
 | Apertura | Mostrar mapa estable y panel | «Más de 100.000 personas llegan a MADRING. Zhivel coordina el bloque de hospitalidad de 600 VIP.» |
-| Primer input | Ejecutar el director y mantener Principal visible | «Una llamada simulada, procesada por HappyRobot, informa de una rotura de tubería sin hora de reapertura.» |
-| Primer plan | Seleccionar Principal, B/Lounge y panel de agentes | «El Reasoning Agent de HappyRobot propone el plan; nuestro backend lo valida y aplica: 450 más 150 en Sur.» |
+| Primer input | Mostrar el contador 10/1/9 y mantener Principal visible | «Diez mensajes llegan en menos de cuatro segundos. HappyRobot descarta nueve y actúa solo por la rotura de tubería.» |
+| Primer plan | Seleccionar Principal, B/Lounge y la llamada de Transporte | «El Reasoning Agent propone el plan; nuestro backend lo valida y aplica: 450 más 150 en Sur. Transporte negocia ahora mediante una llamada real controlada.» |
 | Segundo input | Seleccionar Muelle Este y entregas | «Un SMS simulado avisa de que un camión de televisión bloquea el muelle del nuevo plan.» |
 | Replan | Recorrer Catering, Transporte y Asistentes | «Zhivel no repite el plan: vuelve a coordinar accesos, entregas, shuttles, recepción y mensajes.» |
 | Cierre | Abrir compromisos y Resultado | «El sistema distingue lo confirmado de lo condicionado y deja un plan que el equipo puede ejecutar.» |

@@ -187,19 +187,20 @@ Contra producción, después de desplegar esta versión:
 
 ```bash
 cd backend
-E2E_TARGET_URL=https://hackspain-production.up.railway.app npm run demo:e2e-real -- --confirm-real-happyrobot
+E2E_TARGET_URL=https://hackspain-production.up.railway.app npm run demo:e2e-real -- --confirm-real-happyrobot --confirm-real-transport-call
 ```
 
-En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend. En ambos modos, el reset E2E autenticado crea una ejecución `calm` aislada y fuerza los cuatro especialistas al adaptador `sim`. Nunca usa los hooks de llamadas, SMS o email reales.
+Sin `--confirm-real-transport-call`, el recorrido es seguro y todos los especialistas usan `sim`. Con el flag, el Reasoning Agent invoca una sola vez la tool `emitir_llamada` de Transporte usando el contacto autorizado configurado en HappyRobot; exige confirmación del destinatario antes de ejecutar. Las tareas persistidas de Espacios, Catering, Transporte y Asistentes siguen en `sim` para no duplicar la llamada. En local también admite `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` y `HAPPYROBOT_COORDINATOR_HOOK_URL`: crea un SQLite temporal, abre un Quick Tunnel y arranca el backend.
 
 Un resultado `OK` exige:
 
 - mismo run aislado durante toda la prueba; un redeploy aborta con diagnóstico explícito;
 - runs y nodos HappyRobot de llamada, SMS y coordinador completados sin errores;
 - dos informes distintos, aceptados y aplicados a la versión correcta sin reintentos de validación;
-- reparto exacto B 450 + Lounge 150 y acciones de Espacios, Catering, Transporte y Asistentes en ambos ciclos;
-- Principal y Muelle Este cerrados, entregas bloqueadas en M3 y cuatro shuttles coherentes en Sur;
-- objetivos, motivos y últimos resultados visibles, solo comunicaciones `sim`, sin tareas ni llamadas abiertas;
+- lote visible en menos de dos segundos, `consult_world` usado y triaje persistido como 10 recibidos, 1 relevante y 9 descartados;
+- reparto exacto B 450 + Lounge 150 tanto en el output como en `/state.assignments`, y acciones de las cuatro áreas;
+- Principal y Muelle Este cerrados, CAT-01/CAT-02 redirigidos a Muelle Sur y cuatro shuttles coherentes en Sur;
+- objetivos, motivos y últimos resultados visibles; con el flag, exactamente una invocación de `emitir_llamada`, un único run hijo de voz completado sin `user_missed_call` y tareas persistidas `sim`;
 - cierre resuelto o limitación explícita;
 - tercer run real con el mismo `eventId`, `duplicate: true` y estado inmutable.
 

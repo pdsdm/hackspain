@@ -19,8 +19,9 @@ RESTRICCIONES DURAS
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
 RECORRIDO CONGELADO DE DEMO
-- Si el evento es principal_pipe_burst y Pabellón B y Lounge Sur siguen utilizables, el primer plan es B 450 + Lounge 150 en Sur. Pon ambos en pendiente, reparte exactamente los 600 y no propongas Norte C mientras esta combinación sea viable. Crea DOS acciones de Espacios separadas, una para B y otra para Lounge, más Catering, Transporte y Asistentes: cinco acciones en total. Transporte confirma los cuatro shuttles en Sur y Asistentes distribuye seis personas y segmenta el aviso a los grupos afectados.
-- Si el evento es dock_blocked, conserva B + Lounge como plan de plazas, prioriza recepción y descarga por un muelle alternativo, y revisa explícitamente los cuatro shuttles. El segundo ciclo vuelve a incluir acciones distintas y visibles de espacios, catering, transporte y asistentes; no repitas objetivos sin incorporar el muelle bloqueado.
+- Si el evento es inbox_batch, el texto contiene diez mensajes recibidos en menos de cuatro segundos. Distingue señal de ruido: identifica la rotura del Pabellón Principal como la única señal que cambia la operación, descarta explícitamente los otros nueve mensajes y llama al menos una vez a consult_world antes de planificar. Si el estado incluye e2eRealTransportCall=true, llama exactamente una vez a emitir_llamada para Transporte antes de submit_plan; no llames a Espacios ni Catering y no confundas «workflow started» con una aceptación. En reading indica «10 recibidos · 1 relevante · 9 descartados» y aplica el mismo plan que principal_pipe_burst, incluida la operación que cierra Principal.
+- Si el evento es principal_pipe_burst y Pabellón B y Lounge Sur siguen utilizables, el primer plan es B 450 + Lounge 150 en Sur. Pon ambos en pendiente, reparte exactamente los 600 y no propongas Norte C mientras esta combinación sea viable. Crea DOS acciones de Espacios separadas, una para B y otra para Lounge, más Catering, Transporte y Asistentes: cinco acciones en total. Transporte usa channel "llamada" para confirmar los cuatro shuttles en Sur y Asistentes distribuye seis personas y segmenta el aviso a los grupos afectados.
+- Si el evento es dock_blocked, conserva B + Lounge como plan de plazas, redirige CAT-01 y CAT-02 explícitamente a Muelle Sur con redirect_delivery, prioriza recepción y descarga, y revisa los cuatro shuttles. No uses Muelle Norte: servicios e invitados no cruzan Norte/Sur sin ruta exterior acordada. El segundo ciclo vuelve a incluir acciones distintas y visibles de espacios, catering, transporte y asistentes; no repitas objetivos sin incorporar el muelle bloqueado.
 
 PRIORIDADES, EN ESTE ORDEN
 1. Respetar aforo, zona de acceso, seguridad y accesibilidad.
@@ -118,6 +119,7 @@ export const TOOL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 HARNESS
 Trabajas con herramientas, no con un único JSON suelto.
 - consult_world: pregunta al mundo (affected_by, alternatives_for, route). route acepta fromId con cualquier sitio, no solo ids del recinto.
+- emitir_llamada: en el E2E autorizado, inicia una única llamada real de Transporte; un run iniciado no confirma el resultado.
 - submit_plan: entrega el plan completo (mismo objeto JSON de arriba, con operations y done).
 Si submit_plan devuelve errores de regla, corrige y vuelve a enviarlo. No confirmes espacios por tu cuenta.`;
 

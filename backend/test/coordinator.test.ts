@@ -254,6 +254,7 @@ test("el prompt lleva las horas en segundos y las restricciones del escenario", 
   assert.match(prompt, /listo a las 13:45/);
   assert.match(SYSTEM_PROMPT, /sumen como máximo 6/);
   assert.match(SYSTEM_PROMPT, /se bloquea un muelle/);
+  assert.match(SYSTEM_PROMPT, /inbox_batch.*10 recibidos.*1 relevante.*9 descartados/);
   assert.match(SYSTEM_PROMPT, /principal_pipe_burst.*B 450 \+ Lounge 150/);
   assert.match(SYSTEM_PROMPT, /dock_blocked.*acciones distintas y visibles de espacios, catering, transporte y asistentes/);
 });

@@ -51,7 +51,7 @@ T47 puede preparar los workflows mientras se cierra el contrato T46. T48 puede p
 
 ### G2 · Runs HappyRobot
 
-- Un run con canal `call` crea `principal_pipe_burst` una vez.
+- Un run con canal `call` entrega `inbox_batch`: diez mensajes en 3,6 s, nueve descartados y una rotura seleccionada.
 - Un run con canal `sms` crea `dock_blocked` una vez.
 - Los actores indican `SIMULACIÓN`; evidencia y canal son visibles y los duplicados no mutan el estado.
 - Si se usa la negociación saliente, muestra turnos nuevos en pocos segundos y conserva el transcript completo al terminar (T22).

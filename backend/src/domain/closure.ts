@@ -50,19 +50,24 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
   const spaces = new Map(state.spaces.map((space) => [space.id, space]));
   const groups = records(state, "guestGroups");
   const total = groups.reduce((sum, group) => sum + Number(group.count ?? 0), 0);
+  const currentAssignments = records(state, "assignments").filter((item) => item.planVersion === state.planVersion);
   const assignedGroups = groups.map((group) => {
     const count = Math.max(0, Number(group.count ?? 0));
     const confirmedCount = Math.min(count, Math.max(0, Number(group.confirmedCount ?? 0)));
-    const hasAssignedSpace = typeof group.assignedSpaceId === "string";
-    const space = hasAssignedSpace ? spaces.get(String(group.assignedSpaceId)) : undefined;
-    const assignable = space !== undefined && HOSPITALITY_KIND.has(String(space.kind)) && ASSIGNABLE_SPACE.has(String(space.status));
-    const confirmedSpace = space !== undefined && HOSPITALITY_KIND.has(String(space.kind)) && CONFIRMED_SPACE.has(String(space.status));
+    const proposed = currentAssignments.filter((item) => item.groupId === group.id).map((item) => ({
+      space: spaces.get(String(item.spaceId)),
+      count: Math.max(0, Number(item.count ?? 0)),
+    }));
+    const legacySpace = typeof group.assignedSpaceId === "string" ? spaces.get(String(group.assignedSpaceId)) : undefined;
+    const placements = proposed.length > 0 ? proposed : legacySpace ? [{ space: legacySpace, count }] : [];
+    const assignedCount = Math.min(count, placements.filter((item) => item.space && HOSPITALITY_KIND.has(String(item.space.kind)) && ASSIGNABLE_SPACE.has(String(item.space.status))).reduce((sum, item) => sum + item.count, 0));
+    const confirmedCapacity = placements.filter((item) => item.space && HOSPITALITY_KIND.has(String(item.space.kind)) && CONFIRMED_SPACE.has(String(item.space.status))).reduce((sum, item) => sum + item.count, 0);
     return {
       group,
       count,
-      confirmedCount: !hasAssignedSpace ? confirmedCount : confirmedSpace ? confirmedCount : 0,
-      assignedCount: assignable ? count : !hasAssignedSpace ? confirmedCount : 0,
-      space,
+      confirmedCount: placements.length === 0 ? confirmedCount : Math.min(confirmedCount, confirmedCapacity),
+      assignedCount: placements.length === 0 ? confirmedCount : assignedCount,
+      placements,
     };
   });
   const assigned = assignedGroups.reduce((sum, item) => sum + item.assignedCount, 0);
@@ -70,8 +75,8 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
 
   const occupancy = new Map<string, number>();
   for (const item of assignedGroups) {
-    if (item.space && item.assignedCount > 0) {
-      occupancy.set(item.space.id, (occupancy.get(item.space.id) ?? 0) + item.assignedCount);
+    for (const placement of item.placements) {
+      if (placement.space && placement.count > 0) occupancy.set(placement.space.id, (occupancy.get(placement.space.id) ?? 0) + placement.count);
     }
   }
   const capacityGaps = [...occupancy.entries()]
@@ -80,7 +85,7 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
       return typeof capacity !== "number" || !Number.isFinite(capacity) || count > capacity;
     })
     .map(([id, count]) => `${id} ${count}/${Number(spaces.get(id)?.capacity ?? 0)}`);
-  const assignedZones = new Set(assignedGroups.filter((item) => item.assignedCount > 0 && item.space).map((item) => item.space!.zone));
+  const assignedZones = new Set(assignedGroups.flatMap((item) => item.placements.filter((placement) => placement.count > 0 && placement.space).map((placement) => placement.space!.zone)));
   const accessGaps = [...assignedZones].filter((zone) =>
     !state.spaces.some((space) => space.kind === "acceso" && space.zone === zone && CONFIRMED_SPACE.has(String(space.status))),
   );
