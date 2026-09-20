@@ -87,7 +87,10 @@ test("no cierra si queda una llamada en vuelo, una tarea abierta o un acuerdo si
 
   const waiting = closedState();
   waiting.commitments[0]!.status = "en_consulta";
-  assert.equal(evaluateClosure(waiting, 0).closed, false);
+  const waitingReport = evaluateClosure(waiting, 0);
+  assert.equal(waitingReport.closed, false);
+  assert.equal(waitingReport.stalled, true);
+  assert.match(waitingReport.gap, /compromiso sin consulta activa/);
 
   // El Principal está cerrado: un grupo asignado ahí no tiene sede.
   const homeless = closedState();

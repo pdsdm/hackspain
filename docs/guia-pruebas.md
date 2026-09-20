@@ -40,17 +40,20 @@ INITIAL_FIXTURE=calm
 COORDINATOR_MODE=rules
 ```
 
-Para usar Helmcode en vez del respaldo determinista:
+Para la toma con HappyRobot como coordinador principal:
 
 ```dotenv
-HELMCODE_API_KEY=
-OPENAI_BASE_URL=https://api.helmcode.com/v1
-COORDINATOR_MODEL=deepseek-v4-flash
-COORDINATOR_HARNESS=json
+HAPPYROBOT_API_KEY=
+HAPPYROBOT_WEBHOOK_TOKEN=
 COORDINATOR_MODE=llm
+COORDINATOR_HARNESS=happyrobot
+HAPPYROBOT_COORDINATOR_WORKFLOW_ID=
+HAPPYROBOT_COORDINATOR_HOOK_URL=
+HAPPYROBOT_COORDINATOR_APPLY=true
+PUBLIC_BASE_URL=
 ```
 
-`COORDINATOR_MODEL` solo configura la replanificación del backend. El modelo de la conversación de voz se configura en el prompt node de HappyRobot.
+El modelo del coordinador se configura dentro del workflow `Orquestador`; el backend valida y aplica cada `submit_plan`.
 
 En `frontend/.env`:
 
@@ -149,7 +152,7 @@ Prueba local segura, sin LLM ni llamadas reales:
 ./scripts/demo.sh reset calm
 ```
 
-Demo con Helmcode, HappyRobot y Quick Tunnel:
+Demo con coordinador e inputs HappyRobot y Quick Tunnel:
 
 ```bash
 DEMO_COORDINATOR_MODE=llm DEMO_CALL_MODE=real ./scripts/demo.sh up
@@ -170,8 +173,8 @@ El estado persiste en `backend/data/demo.db`. Los logs y PID quedan en `.demo/`,
 |---|---|
 | Backend | `restart-backend`; conserva SQLite. Si se interrumpió una acción `sim`, ejecutar `reset calm` antes del ensayo. |
 | Quick Tunnel | `down` y repetir `up`; la URL nueva se vuelve a inyectar al backend. Si la red no resuelve `trycloudflare.com`, `DEMO_TUNNEL=lhr`. |
-| Helmcode | `down` y arrancar con `DEMO_COORDINATOR_MODE=rules`; el panel y los giros siguen operativos. |
-| HappyRobot | `down` y arrancar con `DEMO_CALL_MODE=sim`, o usar el Web call de respaldo. La pantalla lo etiqueta como simulado. |
+| Coordinador HappyRobot | `down` y arrancar con `DEMO_COORDINATOR_MODE=rules`; el panel y los efectos deterministas siguen operativos como contingencia. |
+| Inputs HappyRobot | Usar `--inputs=api` como respaldo; la pantalla conserva la etiqueta de simulación. |
 | Estado de ensayo sucio | `reset calm`; crea otra ejecución sin borrar la evidencia anterior de SQLite. |
 
 `HAPPYROBOT_API_KEY`, `HAPPYROBOT_TEST_PHONE`, `HAPPYROBOT_WEBHOOK_TOKEN` y `HAPPYROBOT_HOOK_*` solo se rellenan en el `.env` raíz. No se copian a argumentos ni logs.
@@ -200,7 +203,7 @@ Un resultado `OK` exige:
 - cierre resuelto o limitación explícita;
 - tercer run real con el mismo `eventId`, `duplicate: true` y estado inmutable.
 
-Con `HELMCODE_API_KEY`, el runner congela los snapshots M1 y M3 y pide a Helmcode un plan shadow sobre exactamente el mismo prompt y estado que recibió HappyRobot. Registra por ciclo `inputToEffectMs`, `effectToCoordinatorMs`, latencia interna del coordinador, tiempo hasta asentarse y total. La evidencia resume media, mediana, delta y ratio HappyRobot/Helmcode. Son dos muestras del recorrido, útiles para la demo pero no un benchmark estadístico.
+El runner registra por ciclo `inputToEffectMs`, `effectToCoordinatorMs`, latencia interna de HappyRobot, tiempo hasta asentarse y total. La evidencia resume media y mediana de los dos ciclos sin llamar a proveedores alternativos.
 
 La evidencia sin secretos queda en `.demo/e2e-real-<id>.json`; los procesos locales se detienen al terminar.
 

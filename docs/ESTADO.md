@@ -1,11 +1,11 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más T55 en esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` (PR #99 T52) más T55 en esta rama. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 02:45 CEST |
-| **Base** | `origin/main` (0c5b7f9, PR #98) + T55 en `fix/pep-replan-loop` |
+| **Foto tomada** | 20 de septiembre de 2026, 02:52 CEST |
+| **Base** | `origin/main` (PR #99) + T55 en `fix/pep-replan-loop` |
 | **Trabajo en revisión** | T55: corrección del bucle de replanificación observado en producción |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Pep, durante T55 |
@@ -14,10 +14,11 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `fix/pep-replan-loop` | **OK** |
-| Tests backend | 353: **346 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en `fix/pep-replan-loop` | **OK** (antes de reintegrar `origin/main`; revalidar tras el merge) |
+| Tests backend | 353: **346 pasan, 0 fallan, 7 live omitidos** (antes del merge de T52) |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
+| Node verificado | 23.10.0; el repo exige ≥22.13 |
 | Producción (`hackspain-production.up.railway.app`) | `/health` OK, pero el estado está en bucle: `planVersion 43`, 168 llamadas, 78 reales |
 | Crédito Railway | **"30 days or $4.96 left"**: hay que subir de plan antes de las 11:00 |
 
@@ -35,12 +36,12 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 ### Base operativa
 
 - Estado SQLite, cola serial por `planVersion`, callbacks idempotentes y frontend en modo API.
-- Coordinador Helmcode/DeepSeek; T44 HappyRobot Reasoning Agent sigue en shadow y no cambia el proveedor principal.
+- Por D20, HappyRobot Reasoning Agent es el coordinador principal de la toma; el backend valida y aplica `submit_plan`. `rules` queda como contingencia técnica.
 - Cuatro especialistas visibles: Espacios, Catering, Transporte y Asistentes.
 - Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
 - Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
 
-### T22 en `feat/devin-transcripcion`
+### T22 (PR #89, mergeada)
 
 - `POST /workflow/happyrobot/transcript` acepta snapshots acumulativos autenticados, los ordena, fusiona sin duplicar y persiste en SQLite.
 - El callback final conserva las líneas recibidas en vivo y el panel mantiene accesible el transcript completo al terminar.
@@ -54,7 +55,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - El executor solo mantiene una llamada real en curso; el resto de tareas reales esperan `pending` hasta el siguiente tick.
 - Tras 3 relanzamientos seguidos provocados por resultados sin input externo nuevo, el coordinador se pausa y la cronología lo anota (`espera`). Cualquier input humano, giro o incidencia lo reactiva.
 - `COORDINATOR_VERBOSE` vacío equivale a `0` cuando existe `RAILWAY_ENVIRONMENT`.
-- Contrato actualizado en `docs/api-contract.md` (resultados de especialistas y timeout de 180 s).
+- Contrato actualizado en `docs/api-contract.md` (resultados de especialistas y timeout de 180 s). Decisión D21.
 
 ### Camino de vídeo T45–T52
 
@@ -65,21 +66,23 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
 - **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
 - **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
-- **T52, rama actual:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
+- **T44, decisión D20:** la toma usa el workflow `Orquestador` como coordinador principal; PR #99 endurece prompt, especialistas, cierre y gates E2E.
+- **T52, PR #99 mergeada:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
 
-V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. La puerta final falla honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`. No hubo grabación.
+V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. El ensayo anterior en `rules` falló la puerta final por falta de `reason`/`lastResult`; `main` sustituye ese camino por HappyRobot principal y especialistas E2E deterministas. Falta repetir el E2E real y grabar.
 
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
 0b. **Mergear T55, redesplegar y resetear producción.** `POST /simulation/reset` deja `planVersion 1` y reloj pausado (T42). Sin T55 el bucle vuelve con el primer `no_answer`.
-1. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
-2. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
-3. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
-4. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
-5. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
-6. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
-7. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
+1. **Superar el E2E completo con HappyRobot coordinador principal.** Deben pasar dos ciclos en un submit cada uno, cuatro especialistas, cierre honesto e idempotencia.
+2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
+3. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
+4. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
+5. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
+6. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
+7. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
+8. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
 
 ## Bloqueos
 
@@ -93,15 +96,13 @@ V4 en development y V6 en production de `Demo incident inputs` atravesaron Happy
 
 ## Ramas vivas sin mergear
 
-- `fix/pep-replan-loop` (T55): corrección del bucle de replanificación; `make check` OK; pendiente de PR y merge.
-- `feat/devin-transcripcion` (local): T22 implementada y verificada localmente; E2E telefónico bloqueado antes del audio.
+- `fix/pep-replan-loop` (T55): corrección del bucle de replanificación; PR #100; se está reintegrando `origin/main`.
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
 - `origin/docs/estado-1200`: fotografía antigua.
-- `feat/zhi-demo-recording-readiness` (local): slice de T52 descrito arriba; pendiente de revisión.
 
-Las ramas `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists`, `feat/ventura-demo-incidents-ui`, `feat/ventura-happyrobot-incident-inputs`, `feat/ventura-demo-director` y `docs/ventura-video-scenario` ya están mergeadas mediante PRs #73–#77 y #79.
+Las ramas `feat/t52-happyrobot-primary-demo`, `feat/devin-transcripcion`, `feat/zhi-demo-recording-readiness`, `feat/ventura-demo-staff-coordination`, `feat/ventura-demo-specialists`, `feat/ventura-demo-incidents-ui`, `feat/ventura-happyrobot-incident-inputs`, `feat/ventura-demo-director` y `docs/ventura-video-scenario` ya están mergeadas.
 
 ## Decisiones pendientes
 
@@ -137,4 +138,5 @@ npm --prefix backend run demo:video -- --inputs=api --rehearsals=3
 - La evidencia queda en `.demo/` y está ignorada por Git. El ensayo API local verificado llegó a M3, pero no superó la puerta final de especialistas.
 - Ningún ensayo de este documento demuestra por sí solo que exista una grabación.
 - T44 es el coordinador principal en producción desde el 19/09 a las 23:46 (`COORDINATOR_HARNESS=happyrobot`, `HAPPYROBOT_COORDINATOR_APPLY=true`). El equipo lo confirmó el 20/09 (D20). Todo lo observado en el bucle de producción es con este harness.
+- T44 forma parte del camino crítico por D20. No grabar hasta que el E2E demuestre dos planes HappyRobot aplicados sin reintentos ni errores de validación.
 - Después de desplegar T55: filtra los logs de Railway por `"bucle"` durante 10 minutos; debe aparecer solo tras inputs reales, no cada 20 s. En `/state.calls` nunca debe haber más de una llamada `simulated:false` en `en_curso`.

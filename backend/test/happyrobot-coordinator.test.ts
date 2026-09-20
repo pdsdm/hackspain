@@ -489,103 +489,62 @@ test("el shadow responde 503 sin configuración de HappyRobot", async () => {
   }
 });
 
-test("el shadow HappyRobot conserva el coordinador principal como fallback", async () => {
+test("el harness shadow no aplica ni lanza una segunda inferencia", async () => {
   const { database, deps, states, tasks, workflows } = openDeps();
   const originalFetch = globalThis.fetch;
-  const restoreEnv = replaceEnv({ COORDINATOR_VERBOSE: "0" });
   const hookUrl = "https://hooks.test/hooks/development/shadow";
-  const config = loadLlmConfig({
-    ...ENV_BASE,
-    HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
-    HELMCODE_API_KEY: "hc_shadow",
-  });
+  const config = loadLlmConfig({ ...ENV_BASE, HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl, HELMCODE_API_KEY: "hc_shadow" });
   const run = states.ensureActiveRun();
+  let calls = 0;
   globalThis.fetch = async (input, init) => {
-    const url = String(input);
-    if (url === hookUrl) {
-      const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      queueMicrotask(() => {
-        happyrobotSessions.submit({
-          correlation_id: payload.correlation_id,
-          run_id: payload.run_id,
-          plan_version: payload.plan_version,
-          plan: baseOutput({ planVersion: run.state.planVersion }),
-        });
+    calls += 1;
+    assert.equal(String(input), hookUrl);
+    const payload = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    queueMicrotask(() => {
+      happyrobotSessions.submit({
+        correlation_id: payload.correlation_id,
+        run_id: payload.run_id,
+        plan_version: payload.plan_version,
+        plan: baseOutput({ planVersion: run.state.planVersion }),
       });
-      return new Response("", { status: 200 });
-    }
-    if (url === "https://api.helmcode.com/v1/chat/completions") {
-      return jsonResponse(200, {
-        choices: [{
-          message: {
-            content: JSON.stringify(baseOutput({
-              planVersion: run.state.planVersion,
-              operations: [{ op: "log_event", kind: "accion", text: "Fallback principal aplicado", area: "espacios" }],
-            })),
-          },
-        }],
-      });
-    }
-    throw new Error(`petición inesperada ${url}`);
+    });
+    return new Response("", { status: 200 });
   };
   try {
     const result = await runCoordinatorLoop(
       { source: "chat", kind: "free_text", text: "fuga" },
       { world: deps.world, states, tasks, workflows, config },
     );
-    assert.equal(result, "ok");
-    const report = happyrobotSessions.getLastReport();
-    assert.equal(report?.status, "accepted");
-    assert.equal(report?.applied, false);
-    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
-    assert.ok(events.some((event) => event.text === "Fallback principal aplicado"));
+    assert.equal(result, "unavailable");
+    assert.equal(calls, 1);
+    assert.equal(happyrobotSessions.getLastReport()?.applied, false);
   } finally {
     globalThis.fetch = originalFetch;
-    restoreEnv();
     database.close();
   }
 });
 
-test("un fallo HappyRobot conserva el coordinador principal como fallback", async () => {
+test("un fallo HappyRobot no lanza una segunda inferencia oculta", async () => {
   const { database, deps, states, tasks, workflows } = openDeps();
   const originalFetch = globalThis.fetch;
-  const restoreEnv = replaceEnv({ COORDINATOR_VERBOSE: "0" });
   const hookUrl = "https://hooks.test/hooks/development/failure";
-  const config = loadLlmConfig({
-    ...ENV_BASE,
-    HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl,
-    HELMCODE_API_KEY: "hc_failure",
-  });
-  const run = states.ensureActiveRun();
+  const config = loadLlmConfig({ ...ENV_BASE, HAPPYROBOT_COORDINATOR_HOOK_URL: hookUrl, HELMCODE_API_KEY: "hc_failure" });
+  let calls = 0;
   globalThis.fetch = async (input) => {
-    const url = String(input);
-    if (url === hookUrl) return jsonResponse(503, { error: "unavailable" });
-    if (url === "https://api.helmcode.com/v1/chat/completions") {
-      return jsonResponse(200, {
-        choices: [{
-          message: {
-            content: JSON.stringify(baseOutput({
-              planVersion: run.state.planVersion,
-              operations: [{ op: "log_event", kind: "accion", text: "Fallback tras fallo aplicado", area: "espacios" }],
-            })),
-          },
-        }],
-      });
-    }
-    throw new Error(`petición inesperada ${url}`);
+    calls += 1;
+    assert.equal(String(input), hookUrl);
+    return jsonResponse(503, { error: "unavailable" });
   };
   try {
     const result = await runCoordinatorLoop(
       { source: "chat", kind: "free_text", text: "fuga" },
       { world: deps.world, states, tasks, workflows, config },
     );
-    assert.equal(result, "ok");
+    assert.equal(result, "unavailable");
+    assert.equal(calls, 1);
     assert.equal(happyrobotSessions.getLastReport()?.status, "unavailable");
-    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
-    assert.ok(events.some((event) => event.text === "Fallback tras fallo aplicado"));
   } finally {
     globalThis.fetch = originalFetch;
-    restoreEnv();
     database.close();
   }
 });
