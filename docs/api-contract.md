@@ -363,7 +363,7 @@ Reglas:
 
 ### HappyRobot como coordinador principal (T44)
 
-Cuatro endpoints del coordinador `COORDINATOR_HARNESS=happyrobot`. Los cuatro exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
+Cinco endpoints del coordinador `COORDINATOR_HARNESS=happyrobot`. Los cinco exigen el mismo bearer. `correlation_id`, `run_id` y `plan_version` los fija el backend en el trigger del workflow; el modelo no los genera. Solo existe una ejecución activa a la vez y las herramientas responden siempre `200` con un cuerpo estructurado para que el Reasoning Agent pueda corregir.
 
 #### `POST /workflow/coordinator/happyrobot/consult`
 
@@ -386,6 +386,22 @@ Cuatro endpoints del coordinador `COORDINATOR_HARNESS=happyrobot`. Los cuatro ex
 ```
 
 `retry: true` invita a corregir y reenviar. `retry: false` con `stale: true` cierra la ejecución. Con `accepted: true` el backend persiste el plan cuando `HAPPYROBOT_COORDINATOR_APPLY=true`. El endpoint shadow registra el plan sin aplicarlo y nunca lanza una segunda inferencia.
+
+#### `POST /workflow/coordinator/happyrobot/call`
+
+La tool `emitir_llamada`. Es la única vía para que salga una llamada real cuando `CALLS_ON_DEMAND=true`.
+
+```json
+{ "run_id": "3bd0…", "plan_version": 2, "area": "espacios", "objective": "Preguntar si Pabellón B admite 450 antes de las 13:00", "counterpart": "Recinto MADRING", "reason": "El Lounge Sur se ha caído" }
+```
+
+`area` y `objective` son obligatorios. `run_id` y `plan_version` son opcionales, pero si llegan y no coinciden con la ejecución activa la respuesta es `stale: true` y no se marca a nadie. El backend elige el destino (panel > `HAPPYROBOT_TEST_PHONE` > `+34616500586`), crea o reutiliza la tarea de esa área y devuelve su `taskId`:
+
+```json
+{ "ok": true, "stale": false, "error": null, "taskId": "7a31…", "callId": "call-7a31…", "status": "dispatched" }
+```
+
+`status`: `dispatched` (ya suena), `queued` (mesa detenida o agentes en pausa), `busy` (otra llamada en curso; sale sola al reanudar la cola), `failed`, `completed` o `unknown`. El cuerpo **no** trae la respuesta de la contraparte: esa llega después por `POST /workflow/happyrobot/results` con este mismo `taskId`. A diferencia de `consult` y `submit`, este endpoint no exige una sesión activa: el workflow puede llamarlo después de que `submit_plan` cierre la ejecución.
 
 #### `GET /coordinator/happyrobot/report`
 

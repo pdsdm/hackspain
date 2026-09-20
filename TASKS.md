@@ -67,6 +67,7 @@
 | T56 | Cierre de la demo: dependencias con `:retry`, sin replan por condiciones, cierre con condiciones informativas, logs sin `answer` | Pep | `fix/pep-deps-retry` | [D23](docs/decisions.md) | done |
 | T57 | Quitar toda la simulación: sin adaptador `sim`, sin modo vivo ni giros, sin `inbox_batch`, sin reset E2E, frontend siempre API | Pep | `feat/pep-sin-simulacion` | [D24](docs/decisions.md) | review |
 | T58 | El coordinador no aceptaba un «no»: memoria de llamadas en el snapshot, `no_disponible` aplicado, hook por área, plazos en tiempo real y teléfono editable en el panel | Pep | `feat/pep-no-y-telefono-ui` | [D25](docs/decisions.md), [D26](docs/decisions.md) | review |
+| T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

@@ -1,14 +1,14 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`c4883c3`) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T58). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`c4883c3`) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T58 y T59). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 06:11 CEST |
+| **Foto tomada** | 20 de septiembre de 2026, 07:40 CEST |
 | **Base** | `c4883c3` (`origin/main`; T57 ya mergeada en PR #109) + `feat/pep-no-y-telefono-ui` sin mergear |
-| **Trabajo en curso** | T58: el coordinador ya recibe los «no» y no repite la misma llamada; canal por área; plazos en tiempo real; teléfono editable en el panel. Decisiones D25 y D26 |
+| **Trabajo en curso** | T58 + T59 en la misma rama: el coordinador recibe los «no», y ahora es el único que lanza llamadas. Decisiones D25, D26 y D27 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, sesión de implementación de T58 |
+| **Generado por** | Devin, sesión de implementación de T58 y T59 |
 
 ## Salud
 
@@ -16,7 +16,7 @@
 |---|---|
 | **Tests en `origin/main`** | **337 pass, 10 fail, 7 skipped.** `main` está rojo. Verificado en worktree limpio de `c4883c3` |
 | Causa de esas 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») hace que cada ejecución arranque en pausa y que `/events`, `/interventions` y `/workflow/happyrobot/events` respondan 409 con la mesa detenida. Los tests HTTP no se actualizaron en ese commit |
-| Tests en `feat/pep-no-y-telefono-ui` | **358 pass, 0 fail, 7 skipped** (365 en total). Incluye el arreglo de esas 10 y 10 tests nuevos de T58 |
+| Tests en `feat/pep-no-y-telefono-ui` | **366 pass, 0 fail, 7 skipped** (373 en total). Incluye el arreglo de esas 10, los tests de T58 y 7 nuevos de T59 |
 | `make check` en `feat/pep-no-y-telefono-ui` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
 | Lint frontend | 0 avisos, 0 errores |
 | Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
@@ -59,6 +59,44 @@ Cambios:
 - Se arreglaron las 10 fallas que `c4883c3` dejó en `main`: los tests HTTP ahora inician la
   operación (`POST /simulation/clock {"paused":false}`) antes de enviar eventos.
 
+## Qué cambió: T59, un único dueño de las llamadas (D27)
+
+T58 no bastaba. Auditando los workflows reales de HappyRobot apareció una segunda vía de
+llamada que el backend no controlaba:
+
+- El Orquestador tiene una tool `emitir_llamada` que hacía **POST directo** al hook del agente
+  de voz (`hooks/my5asz8ibzd3`), con el teléfono copiado de un directorio escrito en el prompt
+  del nodo. El teléfono del panel no pintaba nada en ese camino.
+- Sus parámetros `taskId`, `callId` y `callbackUrl` eran opcionales, así que el resultado
+  volvía con un `taskId` que el backend no conocía y
+  `translateHappyRobotResult` lo cortaba con 404. **La memoria de llamadas de T58 nunca se
+  activaba en ese camino**, y `callResults` seguía vacío, así que el recorrido congelado de
+  demo se aplicaba siempre.
+- Además el plan encola sus acciones y el tick también las marcaba. Con un hook activo, el
+  mismo encargo salía **dos veces** al mismo número: una por el plan y otra por la tool.
+
+Cambios:
+
+- `POST /workflow/coordinator/happyrobot/call` atiende la tool. Valida `run_id`/`plan_version`
+  con la convención `stale` de `consult`/`submit`, crea o **reutiliza** la tarea de esa área
+  (para que su clave se complete y las acciones dependientes se desbloqueen), y devuelve
+  `taskId`, `callId` y un `status` de despacho. No exige sesión activa: el workflow puede
+  llamarlo después de que `submit_plan` cierre la ejecución.
+- `CALLS_ON_DEMAND=true` retiene las llamadas reales que crea el plan: quedan encoladas y
+  visibles, y solo salen cuando el coordinador las pide. SMS, email y las áreas sin canal real
+  siguen saliendo solas. Es **opt-in** a propósito: producción ya tiene
+  `COORDINATOR_HARNESS=happyrobot`, así que atarlo a esa variable habría dejado la demo sin
+  ninguna llamada antes de actualizar el workflow.
+- Lo que el coordinador ya pidió deja de estar retenido: si la línea estaba ocupada, el
+  `status` es `busy` y el tick la marca al liberarse, sin pedirla otra vez.
+- `TaskRepository.claim(taskId)` reclama una tarea concreta con los mismos requisitos que
+  `claimNext`, ahora compartidos en una sola condición SQL.
+- Prompt: `emitir_llamada` se describe como la única vía real, el backend elige el teléfono, y
+  se dice explícitamente que la tool no trae la respuesta de la contraparte.
+- `agent/happyrobot/CAMBIOS-WORKFLOW.md`: qué tocar en los tres workflows, con el orden de
+  publicación y los dos fallos encontrados (`HAPPYROBOT_WEBHOK_TOKEN` sin la `O` en el Bearer
+  del transcript del outbound; tool de registro inexistente citada en el prompt del inbound).
+
 ## Qué funciona (verificado en esta sesión)
 
 - `make check` completo en verde sobre `feat/pep-no-y-telefono-ui`.
@@ -72,37 +110,49 @@ Cambios:
 
 ## Qué falta, por riesgo para la demo
 
-1. **Mergear `feat/pep-no-y-telefono-ui`.** Mientras no se mergee, `main` sigue con 10 tests
+1. **Publicar la versión nueva del Orquestador** con `emitir_llamada` apuntando a
+   `POST /workflow/coordinator/happyrobot/call`. Guion en
+   [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
+   versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
+   resultado de cada llamada del coordinador se sigue perdiendo con 404.**
+2. **Mergear `feat/pep-no-y-telefono-ui`.** Mientras no se mergee, `main` sigue con 10 tests
    rojos y el coordinador desplegado sigue repitiendo llamadas.
-2. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
+3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
+   puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
+4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
    `my5asz8ibzd3`). Sin esa variable, tres de las cuatro áreas siguen sin canal. **No la he
    tocado: es un cambio de producción y necesita tu OK.**
-3. **Verificación con llamada real** de que un «no» real produce un plan distinto. No
+5. **Comprobar el nombre del token del transcript** en el outbound
+   (`HAPPYROBOT_WEBHOK_TOKEN`, sin la `O`). Si la variable real es `HAPPYROBOT_WEBHOOK_TOKEN`,
+   el Bearer va vacío, `/workflow/happyrobot/transcript` responde 401 y el panel no enseña la
+   conversación en directo. El fallo es silencioso.
+6. **Verificación con llamada real** de que un «no» real produce un plan distinto. No
    ejecutada: hace sonar el teléfono `+34616500586`. Pendiente de autorización humana.
-4. **Latencia:** Railway está en `sfo` y HappyRobot en `eu`. Cada `consult_world` cruza el
+7. **Latencia:** Railway está en `sfo` y HappyRobot en `eu`. Cada `consult_world` cruza el
    Atlántico. El sondeo del run es cada 5 s. Sin medir en esta sesión.
-5. Lo anterior a T58 sigue pendiente y sin volver a comprobar: rotar el bearer de HappyRobot,
+8. Lo anterior a T58 sigue pendiente y sin volver a comprobar: rotar el bearer de HappyRobot,
    aprobar textos de T45, grabar la toma.
 
 ## Bloqueos
 
 | Qué | Depende de | Externo |
 |---|---|---|
-| Merge de T58 a `main` (y con ello arreglar `main`) | revisión humana | No |
-| `HAPPYROBOT_HOOK_DEFAULT` en Railway | decisión humana; es cambio de producción | No |
+| Que el «no» llegue en producción | publicar la versión nueva del Orquestador en HappyRobot | Sí |
+| Merge de T58 + T59 a `main` (y con ello arreglar `main`) | revisión humana | No |
+| `CALLS_ON_DEMAND` y `HAPPYROBOT_HOOK_DEFAULT` en Railway | decisión humana; es cambio de producción, y el orden importa | No |
 | Prueba con llamada real | autorización humana; suena un teléfono de verdad | Sí |
 | Rotación de bearer, textos T45, grabación | sin comprobar en esta sesión | Parcial |
 
 ## Ramas vivas sin mergear
 
-- `feat/pep-no-y-telefono-ui`: T58 completa (backend, frontend, 10 tests nuevos, docs).
-  `make check` en verde. Arregla además las 10 fallas de `main`. Pendiente de PR.
+- `feat/pep-no-y-telefono-ui`: T58 y T59 completas (backend, frontend, 17 tests nuevos, docs).
+  `make check` en verde. Arregla además las 10 fallas de `main`. PR #110.
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
 - El resto de ramas remotas no se ha vuelto a auditar en esta sesión (`git branch -r`).
 
 ## Decisiones pendientes
 
-1. Aprobar y mergear T58 (D25, D26).
+1. Aprobar y mergear T58 y T59 (D25, D26, D27).
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica
@@ -115,8 +165,9 @@ Cambios:
 - **`origin/main` está rojo** (10 tests) por `c4883c3`. No es tu cambio. La rama de T58 lo
   arregla: los tests HTTP tienen que iniciar la operación antes de enviar eventos.
 - Con el reloj en pausa, el backend **rechaza** eventos e intervenciones con 409. Es
-  intencionado (`c4883c3`), no un bug. Pero los plazos de llamada y la cola sí corren en pausa
-  desde T58, y eso también es intencionado.
+  intencionado (`c4883c3`), no un bug. Y con la mesa detenida **no sale ninguna llamada ni
+  vence ningún plazo**: T58 hizo que el tick bombeara la cola en pausa y se revirtió después
+  por decisión humana. Para la toma: inicia la operación antes de nada.
 - El plazo de «no contesta» es tiempo real: `ActionExecutor.DISPATCH_TIMEOUT_MS`, y
   `fireDue()` se llama sin argumentos. Si le pasas segundos de escenario, no vence nunca.
 - No mezcles `HAPPYROBOT_ENDPOINT` con `HAPPYROBOT_HOOK_DEFAULT`. La primera es una variable

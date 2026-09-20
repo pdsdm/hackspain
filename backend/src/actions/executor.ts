@@ -77,6 +77,9 @@ export class ActionExecutor {
 
   private due: DueResult[] = [];
   private engine: Engine | undefined;
+  // Tareas que el coordinador ya pidió por `emitir_llamada`. Dejan de estar retenidas: si la
+  // línea estaba ocupada, el tick las marca en cuanto se libera, sin pedirlas otra vez.
+  private requested = new Set<string>();
 
   constructor(
     private readonly states: StateRepository,
@@ -92,6 +95,7 @@ export class ActionExecutor {
 
   clear(): void {
     this.due = [];
+    this.requested.clear();
   }
 
   fireDue(now: number = Date.now()): void {
@@ -106,10 +110,15 @@ export class ActionExecutor {
   pump(): void {
     const run = this.states.ensureActiveRun();
     if (run.state.clock.paused || run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
+    const held: string[] = [];
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
-      if (!task) return;
-      if (this.deferRealCall(task)) return;
+      if (!task) break;
+      if (this.isOnDemand(task)) {
+        held.push(task.id);
+        continue;
+      }
+      if (this.deferRealCall(task)) break;
       this.dispatch(task).catch((error) => {
         logActionError("dispatch failed", {
           taskId: task.id,
@@ -118,6 +127,44 @@ export class ActionExecutor {
         this.tasks.markDispatchOutcome(task.id, "unknown");
       });
     }
+    for (const taskId of held) this.tasks.release(taskId);
+  }
+
+  /**
+   * Marca una llamada concreta porque el coordinador la ha pedido (`emitir_llamada`). Es la
+   * única vía cuando las llamadas van a petición: así el número sale del panel y el resultado
+   * vuelve con un taskId que el backend reconoce.
+   */
+  async dispatchNow(taskId: string): Promise<"dispatched" | "queued" | "busy" | "unknown" | "failed" | "completed"> {
+    this.requested.add(taskId);
+    const run = this.states.ensureActiveRun();
+    if (run.state.clock.paused || run.state.agentsPaused || run.state.waitingForDecision) return "queued";
+    const task = this.tasks.claim(taskId);
+    if (!task) return "queued";
+    if (this.deferRealCall(task)) return "busy";
+    try {
+      await this.dispatch(task);
+    } catch (error) {
+      logActionError("dispatch failed", {
+        taskId: task.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      this.tasks.markDispatchOutcome(task.id, "unknown");
+      return "unknown";
+    }
+    const status = this.tasks.get(task.id)?.status;
+    return status === "dispatched" || status === "failed" || status === "completed" || status === "unknown"
+      ? status
+      : "unknown";
+  }
+
+  /**
+   * Una llamada real que espera a que el coordinador la pida. El plan la deja encolada y
+   * visible, pero el tick no la marca: con dos dueños, el mismo encargo salía dos veces al
+   * mismo número. SMS, email y las áreas sin canal real siguen saliendo solas.
+   */
+  private isOnDemand(task: DispatchTask): boolean {
+    return this.config.callsOnDemand && task.kind === "call" && !this.requested.has(task.id) && this.isReal(task);
   }
 
   private isReal(task: DispatchTask): boolean {
