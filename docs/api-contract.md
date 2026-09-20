@@ -124,6 +124,38 @@ conserva las **últimas 80**. Un `limit` o `since` inválido responde `400`.
 son segundos del reloj del escenario. Para ordenar por lo que de verdad ocurrió antes, usa
 `realAt`; los eventos precargados de un fixture pueden no tenerlo.
 
+### `GET /events/history`
+
+Histórico de eventos de **entrada**, incluidas ejecuciones anteriores. No es lo mismo que
+`GET /events`: aquélla devuelve la cronología que pinta el panel, que solo conserva las
+últimas 80 y se vacía en cada despliegue (T42). Ésta lee la tabla de auditoría, que
+sobrevive a los resets porque una ejecución se desactiva pero no se borra.
+
+```json
+{
+  "events": [
+    { "id": "…", "runId": "…", "source": "chat", "kind": "free_text",
+      "text": "Se cae la carpa de catering", "payload": {}, "actorId": null,
+      "simSeconds": 43260, "mode": "llm", "createdAt": "2026-09-20 02:31:07" }
+  ],
+  "count": 1,
+  "activeRunId": "…"
+}
+```
+
+| Parámetro | Por defecto | Qué hace |
+|---|---|---|
+| `limit` | 100 (máx. 500) | Devuelve los N más recientes, en orden cronológico |
+| `runId` | todas | Limita a una ejecución. `activeRunId` dice cuál es la vigente |
+| `source` | — | `chat`, `happyrobot`, `jury`, `human`, `clock` |
+| `kind` | — | Tipo de evento de entrada (`free_text`, `call_result`, `twist`…) |
+
+`mode` indica si ese evento hizo correr al coordinador: `llm`, `rules` o `none`.
+`createdAt` es la hora real de registro en UTC, la que pone SQLite. El orden es por
+inserción, no por `createdAt`, que solo tiene resolución de segundo y empata a menudo.
+
+Solo lectura y sin token, igual que `GET /state` y `GET /events`.
+
 ### `POST /interventions`
 
 ```json
