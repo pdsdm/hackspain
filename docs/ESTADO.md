@@ -1,11 +1,11 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más la corrección local del E2E T52 y del director de respaldo. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` más la corrección T52 lista para merge. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 04:00 CEST |
-| **Base** | `2a24a8c` (`origin/main`, PR #101) + `fix/t52-e2e-plan-invariants` |
+| **Foto tomada** | 20 de septiembre de 2026, 04:06 CEST |
+| **Base** | `651be61` (`origin/main`, PR #101 y #106) + `fix/t52-e2e-plan-invariants` |
 | **Trabajo en revisión** | T52: contexto del Reasoning Agent, invariantes de M4 y separación de inputs HappyRobot/API |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, revisión del fallo E2E T52 |
@@ -14,8 +14,8 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` en `fix/t52-e2e-plan-invariants` (con `origin/main` integrado) | **OK** |
-| Tests backend | 370: **363 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en la corrección T52 antes de integrar PR #106 | **OK** |
+| `make check` de `main` con PR #106 | **OK**; combinación sin repetir por urgencia de la grabación |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
 | Node verificado | 23.10.0; el repo exige ≥22.13 |
@@ -94,6 +94,7 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 ## Qué falta, por riesgo para la demo
 
 0. **Subir el plan de Railway.** El banner dice "$4.96 left". Si se agota, el backend y el frontend de Vercel (`zhivel.vercel.app`, apunta a Railway) se quedan sin servicio antes de la demo. Lo hace un humano con la tarjeta.
+0b. **Comprobar el despliegue de Railway con PR #101, #106 y la corrección T52** antes de la toma.
 1. **Superar el nuevo E2E con triaje y llamada controlada.** Debe mostrar 10/1/9, `consult_world`, B 450 + Lounge 150 en `/state`, una llamada real de Transporte con run hijo auditable y ninguna otra comunicación real.
 2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend, development y production sin publicarlo.
 3. **Validar la conversación de Transporte.** El destinatario autorizado debe contestar; el run hijo de voz debe completar sin `user_missed_call` y quedar en la evidencia del coordinador.
@@ -115,8 +116,9 @@ El E2E real de PR #99 pasó en producción: dos planes HappyRobot aceptados/apli
 
 ## Ramas vivas sin mergear
 
-- `fix/t52-e2e-plan-invariants`: corrige el contexto del Reasoning Agent, el director API y las invariantes de M4; pendiente de PR, deployment y E2E real.
-- `origin/feat/events-history`: `GET /events/history`; pendiente de revisar y mergear.
+- `fix/t52-e2e-plan-invariants`: corrige el contexto del Reasoning Agent, el director API y las invariantes de M4; PR #108 pendiente de merge y deployment.
+- `origin/feat/ventura-specs-cerebro`: specs T10/T11/T16 anteriores a T38; mergearla revertiría el texto actual. No integrar.
+- `origin/feat/pep-quitar-kpis`: todos sus commits ya están en `main` (PR #96 y #98).
 - `origin/feat/pep-take-call`: cambios de executor/engine sobre una base anterior; no integrar sin revisar contra T46–T51.
 - `origin/Prueba-de-plataforma-y-llamada-real`: implementación antigua con servidor Python y frontend propio; no incorporar sobre `main` a ciegas.
 - `origin/feat/pep-afluencia`: aparece como no mergeada, pero no aporta diff útil frente al `main` actual.
