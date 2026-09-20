@@ -18,7 +18,14 @@ RESTRICCIONES DURAS
 - En el primer plan ejecutable crea una acción de asistentes para distribuir recepción. Si cambia o se bloquea un muelle, crea otra para reasignar allí el personal necesario; si Catering no puede descargar sin recepción, su acción depende de esa acción de asistentes.
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
-RECORRIDO CONGELADO DE DEMO
+UN NO ES UN DATO, NO UN ESTORBO
+- RESULTADOS DE LLAMADAS es tu memoria de lo que ya te han contestado. Léela antes de decidir. Si está vacía, nadie ha contestado todavía.
+- Si una contraparte rechazó un recurso (outcome "rejected", o un espacio en estado "descartado"), no vuelvas a pedir lo mismo a la misma persona. Propón una alternativa distinta y di en reading qué descartas y por qué.
+- Repetir una acción ya contestada solo vale si el mundo cambió después de esa respuesta, y entonces el objetivo tiene que decir qué cambió.
+- Una negativa parcial no tumba el plan entero: conserva lo que sigue en pie y sustituye solo la pieza caída.
+- Si te quedas sin alternativas, dilo con números en reading y deja las plazas sin asignar. No insistas con la misma llamada.
+
+PRIMER PLAN (solo cuando RESULTADOS DE LLAMADAS está vacío; si ya hay respuestas, manda la memoria)
 - Si el evento es principal_pipe_burst y Pabellón B y Lounge Sur siguen utilizables, el primer plan es B 450 + Lounge 150 en Sur. Pon ambos en pendiente, reparte exactamente los 600 y no propongas Norte C mientras esta combinación sea viable. Crea DOS acciones de Espacios separadas, una para B y otra para Lounge, más Catering, Transporte y Asistentes: cinco acciones en total. Transporte usa channel "llamada" para confirmar los cuatro shuttles en Sur y Asistentes distribuye seis personas y segmenta el aviso a los grupos afectados.
 - Si el evento es dock_blocked, conserva B + Lounge como plan de plazas, redirige CAT-01 y CAT-02 explícitamente a Muelle Sur con redirect_delivery, prioriza recepción y descarga, y revisa los cuatro shuttles. No uses Muelle Norte: servicios e invitados no cruzan Norte/Sur sin ruta exterior acordada. El segundo ciclo vuelve a incluir acciones distintas y visibles de espacios, catering, transporte y asistentes; no repitas objetivos sin incorporar el muelle bloqueado.
 
@@ -221,6 +228,19 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     for (const action of input.pendingActions) {
       lines.push(`- ${action.taskId} · ${action.area} · ${action.objective} · ${action.counterpart}`);
     }
+  }
+
+  lines.push("", "RESULTADOS DE LLAMADAS (lo que ya te han contestado, lo más reciente primero)");
+  if (!input.callResults || input.callResults.length === 0) {
+    lines.push("- Todavía no hay ninguna respuesta.");
+  } else {
+    for (const call of input.callResults) {
+      const conditions = call.conditions.length > 0 ? ` · pendiente: ${call.conditions.join("; ")}` : "";
+      lines.push(
+        `- ${call.area} · ${call.counterpart} · ${call.channel} · ${call.outcome.toUpperCase()}: ${call.summary}${conditions}`,
+      );
+    }
+    lines.push("- No repitas una petición ya contestada con la misma contraparte: busca otra vía y explícalo en reading.");
   }
 
   if (input.world) {
