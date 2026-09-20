@@ -1,4 +1,28 @@
-import type { CrisisState, Space } from './types'
+import type { Area, CrisisState, Space } from './types'
+
+export type AgentCorrection = { failed: string; note?: string; next: string }
+
+/** Public traces of a rejected plan the coordinator later corrected. */
+export function agentCorrection(s: CrisisState, area?: Area): AgentCorrection | null {
+  const pool = area ? s.commitments.filter((c) => c.area === area) : s.commitments
+  const failed = [...pool.filter((c) => c.status === 'invalidado')].sort((a, b) => b.updatedAt - a.updatedAt || b.planVersion - a.planVersion)[0]
+  if (failed) {
+    const next = pool
+      .filter((c) => c.status !== 'invalidado' && (c.updatedAt >= failed.updatedAt || c.planVersion >= failed.planVersion))
+      .sort((a, b) => b.planVersion - a.planVersion || b.updatedAt - a.updatedAt)[0]
+    const agent = area ? s.agents.find((a) => a.id === area) : undefined
+    return {
+      failed: failed.title,
+      note: failed.note,
+      next: next?.title ?? agent?.objective ?? `Nueva hipótesis · plan v${s.planVersion}`,
+    }
+  }
+  const failEvent = [...s.events].reverse().find((e) => e.kind === 'fallo' && (!area || e.area === area))
+  if (!failEvent) return null
+  const fix = s.events.find((e) => (e.kind === 'accion' || e.kind === 'acuerdo') && e.time >= failEvent.time && (!area || e.area === area || !e.area))
+  if (!fix) return null
+  return { failed: failEvent.text, next: fix.text }
+}
 
 /** Un espacio asignable; la confirmación se cuenta aparte. */
 const ASSIGNABLE_SPACE = ['operativo', 'propuesto', 'pendiente', 'confirmado']

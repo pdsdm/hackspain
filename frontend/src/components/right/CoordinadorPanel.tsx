@@ -1,13 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Building2, Bus, Network, Users, Utensils } from 'lucide-react'
+import { Bot, Building2, Bus, Network, Users, Utensils } from 'lucide-react'
 import type { Area, CrisisState } from '../../domain/types'
 import type { AgentFocus } from '../map/AgentDetailCard'
 import { useStopMapEvents } from '../map/overlay'
 import { Pill, type Tone } from '../ui/Pill'
+import { agentCorrection } from '../../domain/selectors'
 import { AGENT, COORD } from '../ui/status'
 
 const ICONS = { espacios: Building2, catering: Utensils, transporte: Bus, asistentes: Users }
 const ORDER: Area[] = ['espacios', 'catering', 'transporte', 'asistentes']
+
+function AgentMark({ corrected }: { corrected: boolean }) {
+  return (
+    <span className="agent-learned" title={corrected ? 'El agente corrigió su plan anterior' : 'Agente de IA'}>
+      <Bot size={12} aria-hidden="true" />
+      Agente{corrected ? ' · corrigió' : ''}
+    </span>
+  )
+}
 
 function useStatusFlash(status: string, tone: Tone) {
   const prev = useRef<string | null>(null)
@@ -73,7 +83,7 @@ export function CoordinadorPanel({ s, selected, onSelect, className = '' }: {
       </header>
       <ul className="agents-grid">
         <Tile open={selected === 'coordinador'} onSelect={() => onSelect('coordinador')} tone={c.tone} status={s.coordinatorStatus} coordinator>
-          <div className="agent-tile-heading"><Network size={16} /><h3>Coordinador</h3></div>
+          <div className="agent-tile-heading"><Network size={16} /><h3>Coordinador</h3><AgentMark corrected={Boolean(agentCorrection(s))} /></div>
           <Pill tone={c.tone} pulse={s.coordinatorStatus === 'replanificando'}>{c.label}</Pill>
           <div className="agent-tile-detail" aria-label="Función del coordinador">
             <p>Coordina a los especialistas y adapta el plan de la operación.</p>
@@ -87,7 +97,7 @@ export function CoordinadorPanel({ s, selected, onSelect, className = '' }: {
           const Icon = ICONS[area]
           return (
             <Tile key={a.id} open={selected === a.id} onSelect={() => onSelect(a.id)} tone={st.tone} status={a.status}>
-              <div className="agent-tile-heading"><Icon size={16} /><h3>{a.name}</h3></div>
+              <div className="agent-tile-heading"><Icon size={16} /><h3>{a.name}</h3><AgentMark corrected={Boolean(agentCorrection(s, a.id))} /></div>
               <Pill tone={st.tone} pulse={a.status === 'llamada'}>{st.label}</Pill>
               <div className="agent-tile-detail" aria-label={`Actividad de ${a.name}`}>
                 <p>{a.objective}</p>
