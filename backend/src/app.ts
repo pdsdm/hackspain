@@ -77,6 +77,16 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
   };
 }
 
+/** Entero de query string acotado. Un valor inválido es error del llamante, no un default silencioso. */
+function readPositiveInt(raw: unknown, field: string, fallback: number, max: number): number {
+  if (raw === undefined) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > max) {
+    throw new ContractError(`${field} must be an integer between 0 and ${max}`, 400);
+  }
+  return value;
+}
+
 function sameToken(received: string, expected: string): boolean {
   const left = Buffer.from(received);
   const right = Buffer.from(expected);
@@ -270,6 +280,43 @@ export function createApp(
 
   app.get("/state", (_request, response) => {
     response.status(200).json(stateRepository.getPublicState());
+  });
+
+  /**
+   * Cronología reciente, sin arrastrar el estado entero.
+   *
+   * `/state` ya la lleva dentro, pero devuelve un documento grande con espacios, rutas y
+   * vehículos; un consumidor que solo quiere saber qué acaba de pasar no debería pagar eso
+   * en cada sondeo. Solo lectura y sin token, igual que `/state`.
+   */
+  app.get("/events", (request, response, next) => {
+    try {
+      const state = stateRepository.getPublicState();
+      const all = Array.isArray(state.events)
+        ? (state.events as Array<Record<string, unknown>>)
+        : [];
+      const limit = readPositiveInt(request.query.limit, "limit", 50, 200);
+      const since = request.query.since === undefined
+        ? undefined
+        : readPositiveInt(request.query.since, "since", 0, Number.MAX_SAFE_INTEGER);
+      const kind = typeof request.query.kind === "string" ? request.query.kind : undefined;
+      const area = typeof request.query.area === "string" ? request.query.area : undefined;
+      const filtered = all.filter((event) => {
+        if (kind && event.kind !== kind) return false;
+        if (area && event.area !== area) return false;
+        // `realAt` es la hora real de registro; sin él el evento es anterior al sellado.
+        if (since !== undefined && !(typeof event.realAt === "number" && event.realAt > since)) return false;
+        return true;
+      });
+      response.status(200).json({
+        events: filtered.slice(-limit),
+        total: all.length,
+        simSeconds: state.clock.simSeconds,
+        planVersion: state.planVersion,
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get("/actions", (_request, response) => {
