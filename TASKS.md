@@ -63,6 +63,7 @@
 | T52 | Integración, ensayo y grabación final | Zhi + Carlos + equipo | `feat/zhi-demo-recording-readiness` | [T52](docs/specs/T52-demo-recording.md) | doing |
 | T53 | Pulido UI: mapa a pantalla completa, vidrio más opaco, pines sin recorte y cronología en raíl | Pep | `feat/pep-ui-polish` | - | review |
 | T54 | Más actores con orígenes repartidos por Madrid y rutas que evitan el circuito | Pep | `feat/pep-mas-actores` | [D8](docs/decisions.md) | review |
+| T55 | Corregir el bucle de replanificación en producción: sin replan por `no_answer`, una llamada real en curso, logs legibles | Pep | `fix/pep-replan-loop` | [D20](docs/decisions.md) | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

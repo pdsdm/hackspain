@@ -213,9 +213,80 @@ test("an accepted call_result only calls the coordinator for a material state ch
     await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
     assert.equal(calls, 2);
     await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, planVersion: next.planVersion, status: "no_answer", result: { ...base.result, outcome: "no_answer" } } });
+    assert.equal(calls, 2);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...base, planVersion: next.planVersion, status: "completed", result: { ...base.result, outcome: "rejected" } } });
     assert.equal(calls, 3);
     const timeline = states.ensureActiveRun().state.events as Array<{ text?: string }>;
     assert.equal(timeline.some((event) => event.text === "happyrobot:call_result"), false);
+  } finally {
+    database.close();
+  }
+});
+
+test("a no_answer retries the same task once instead of replanning", async () => {
+  let calls = 0;
+  const { database, states, tasks, instance } = engine(undefined, async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 1, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  });
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "Confirmar Pabellón B", counterpart: "Recinto" },
+      idempotencyKey: "replan-1:a1",
+    });
+    const noAnswer = (taskId: string) => ({
+      taskId,
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "no_answer",
+      result: { outcome: "no_answer", summary: "sin respuesta", conditions: [], evidence: {}, data: {} },
+    });
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: noAnswer(task.id) });
+    assert.equal(calls, 0);
+    const open = tasks.listOpen(run.id);
+    const retry = open.find((item) => item.idempotencyKey === "replan-1:a1:retry");
+    assert.ok(retry);
+    assert.equal(retry.area, "espacios");
+    assert.deepEqual(retry.payload, task.payload);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: noAnswer(retry.id) });
+    assert.equal(calls, 0);
+    assert.equal(tasks.listOpen(run.id).filter((item) => item.idempotencyKey.startsWith("replan-1:a1")).length, 2);
+  } finally {
+    database.close();
+  }
+});
+
+test("consecutive result-driven replans stop after the limit until a new external input", async () => {
+  let calls = 0;
+  const { database, states, instance } = engine(undefined, async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 1, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  });
+  try {
+    const run = states.ensureActiveRun();
+    const rejected = {
+      taskId: "t1",
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "completed",
+      result: { outcome: "rejected", summary: "no", conditions: [], evidence: {}, data: {} },
+    };
+    for (let index = 0; index < 6; index += 1) {
+      await instance.handle({ source: "happyrobot", kind: "call_result", payload: rejected });
+    }
+    assert.equal(calls, Engine.MAX_RESULT_REPLANS);
+    const timeline = states.ensureActiveRun().state.events as Array<{ kind?: string; text?: string }>;
+    assert.equal(timeline.filter((event) => event.kind === "espera" && /Coordinador en pausa/.test(event.text ?? "")).length, 1);
+    await instance.handle({ source: "jury", kind: "lounge_unavailable", payload: { twist: "lounge_unavailable" } });
+    const afterTwist = calls;
+    assert.ok(afterTwist > Engine.MAX_RESULT_REPLANS);
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload: { ...rejected, planVersion: states.ensureActiveRun().state.planVersion } });
+    assert.ok(calls > afterTwist);
   } finally {
     database.close();
   }

@@ -182,3 +182,11 @@ sin plan, con el respaldo determinista solo para giros.
 - **Qué:** JEV clasifica texto hacia un playbook cerrado solo en modo aislado. El playbook no se activa en la demo: primero debe pasar un gate conservador y una segunda validación determinista del estado. Fallback al coordinador ante ambigüedad, timeout, error, estado cambiado o incidencia compuesta.
 - **Resultado:** 60 consultas sintéticas, 0 falsos positivos y 0 verdaderos positivos con el gate inicial; mediana 313/292 ms (desarrollo/holdout). El coordinador fue válido en 6/6 y tuvo mediana 28,3 s. La idea reduce latencia potencial, pero **no está lista para activar por cobertura cero**.
 - **Descartado por ahora:** bajar umbrales usando el mismo holdout, conectar JEV al motor y dejar que JEV cree operaciones o mutaciones. Se mantiene el holdout congelado.
+
+### D20: sin replanificación por `no_answer` y una sola llamada real en curso (20/09/2026)
+
+- **Qué:** producción entró en bucle: cada `no_answer` de la llamada real a Espacios relanzaba al coordinador, que creaba otra llamada al mismo teléfono de pruebas mientras la anterior aún sonaba; el teléfono daba ocupado y volvía el `no_answer`. `planVersion` llegó a 43 y hubo 78 llamadas reales en dos horas.
+- **Decisión:** `no_answer` reintenta la misma tarea una vez y no relanza al coordinador. El executor solo mantiene una llamada real en curso. Tras 3 relanzamientos seguidos por resultados sin input externo nuevo, el coordinador se pausa hasta que llegue uno. En Railway, `COORDINATOR_VERBOSE` vacío equivale a `0` para que los logs sean legibles.
+- **Coordinador de la demo:** el equipo decide que T44 (`COORDINATOR_HARNESS=happyrobot`, `HAPPYROBOT_COORDINATOR_APPLY=true`) es el coordinador principal en producción. Deja de estar en shadow.
+- **Descartado:** rotar el número de pruebas o subir el timeout de 180 s; no atacan la causa.
+

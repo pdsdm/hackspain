@@ -47,6 +47,8 @@ function records(state: { [key: string]: unknown }, field: string): Array<Record
 }
 
 export class Engine {
+  static readonly MAX_RESULT_REPLANS = 3;
+
   private queue: Promise<void> = Promise.resolve();
   private executor: ActionExecutor | undefined;
 
@@ -233,9 +235,15 @@ export class Engine {
         );
         if (applied) mode = await this.runCoordinator(event);
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
-        if (run.state.e2eSuppressResultReplan !== true && callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
-          const materialSummary = typeof event.payload?.materialSummary === "string" ? event.payload.materialSummary : undefined;
-          mode = await this.runCoordinator(materialSummary ? { ...event, text: materialSummary } : event);
+        if (event.payload?.status === "no_answer" && event.payload.materialChange !== true) {
+          this.retryNoAnswer(event.payload);
+        } else if (run.state.e2eSuppressResultReplan !== true && callResultMatchesPlan(event.payload, run.id, run.state.planVersion) && callResultChangesPlan(event.payload)) {
+          if (this.resultReplanStreak() >= Engine.MAX_RESULT_REPLANS) {
+            this.skipLoopingReplan();
+          } else {
+            const materialSummary = typeof event.payload?.materialSummary === "string" ? event.payload.materialSummary : undefined;
+            mode = await this.runCoordinator(materialSummary ? { ...event, text: materialSummary } : event, true);
+          }
         }
       } else {
         mode = await this.runCoordinator(event);
@@ -331,7 +339,61 @@ export class Engine {
     return true;
   }
 
-  private async runCoordinator(event: IncomingEvent): Promise<"llm" | "rules" | "none"> {
+  private resultReplanStreak(): number {
+    const value = this.states.ensureActiveRun().state.resultReplanStreak;
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  }
+
+  private setResultReplanStreak(value: number): void {
+    const run = this.states.ensureActiveRun();
+    if ((run.state.resultReplanStreak ?? 0) === value) return;
+    const state = structuredClone(run.state);
+    state.resultReplanStreak = value;
+    this.states.saveState(run.id, state);
+  }
+
+  private skipLoopingReplan(): void {
+    logCoordError("replanificación en bucle: se omite hasta un input externo nuevo");
+    const streak = this.resultReplanStreak();
+    this.setResultReplanStreak(streak + 1);
+    if (streak !== Engine.MAX_RESULT_REPLANS) return;
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    const events = records(state, "events");
+    events.push({
+      id: `coord-loop-${randomUUID()}`,
+      time: state.clock.simSeconds,
+      kind: "espera",
+      text: `Coordinador en pausa tras ${Engine.MAX_RESULT_REPLANS} replanificaciones seguidas sin input nuevo; el responsable decide.`,
+    });
+    state.events = events.slice(-80);
+    this.states.saveState(run.id, state);
+  }
+
+  private retryNoAnswer(payload: Record<string, unknown> | undefined): void {
+    const taskId = typeof payload?.taskId === "string" ? payload.taskId : undefined;
+    const task = taskId ? this.tasks.get(taskId) : undefined;
+    if (!task) return;
+    const run = this.states.ensureActiveRun();
+    if (task.runId !== run.id || task.planVersion !== run.state.planVersion) return;
+    if (task.idempotencyKey.endsWith(":retry")) {
+      logCoord("sin respuesta por segunda vez, no se reintenta", task.area);
+      return;
+    }
+    logCoord("sin respuesta, se reintenta la misma tarea", task.area);
+    this.tasks.enqueue({
+      runId: task.runId,
+      planVersion: task.planVersion,
+      area: task.area,
+      kind: task.kind,
+      payload: task.payload,
+      idempotencyKey: `${task.idempotencyKey}:retry`,
+    });
+    this.executor?.pump();
+  }
+
+  private async runCoordinator(event: IncomingEvent, fromResult = false): Promise<"llm" | "rules" | "none"> {
+    this.setResultReplanStreak(fromResult ? this.resultReplanStreak() + 1 : 0);
     if (this.options.mode === "rules" && !this.options.completeFn) {
       logCoord("modo rules, sin LLM");
       this.applyRulesReplan(event);
@@ -431,6 +493,7 @@ function callResultMatchesPlan(
 function callResultChangesPlan(payload: Record<string, unknown> | undefined): boolean {
   if (payload?.materialChange === true) return true;
   const status = payload?.status;
+  if (status === "no_answer") return false;
   if (status !== "completed") return true;
   const result = payload?.result;
   const outcome = typeof result === "object" && result !== null ? (result as Record<string, unknown>).outcome : undefined;
