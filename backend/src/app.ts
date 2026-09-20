@@ -342,6 +342,9 @@ export function createApp(
   app.post("/interventions", (request, response, next) => {
     try {
       const intervention = parseIntervention(request.body);
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de intervenir", 409);
+      }
       void engine
         .handle({
           source: "human",
@@ -379,6 +382,9 @@ export function createApp(
   app.post("/events", (request, response, next) => {
     try {
       const event = parseEvent(request.body);
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de enviar eventos", 409);
+      }
       const eventId = randomUUID();
       console.log("[events] POST /events", event.source, event.kind, event.text ?? "", eventId);
       void engine.handle({ ...event, id: eventId }).catch((error) => console.error("[events] handle", error));
@@ -390,6 +396,9 @@ export function createApp(
 
   app.post("/workflow/happyrobot/events", authorizeHappyRobotIncident, (request, response, next) => {
     try {
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de recibir eventos", 409);
+      }
       const envelope = parseHappyRobotIncident(request.body);
       const reservation = happyrobotEventRepository.reserve(envelope);
       if (reservation.response) {

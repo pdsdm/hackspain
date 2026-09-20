@@ -31,7 +31,7 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
         <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
           {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
         </button>
-        <button onClick={() => ctl.setSpeed(nextSpeed)} title={`Velocidad ×${s.clock.speed} · pulsa para ×${nextSpeed}`} aria-label={`Velocidad ×${s.clock.speed}, cambiar a ×${nextSpeed}`} className={`h-9 min-w-12 px-3 border display font-bold text-[12px] num ${s.clock.speed !== 1 && !s.clock.paused ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
+        <button onClick={() => ctl.setSpeed(nextSpeed)} disabled={s.clock.paused} title={s.clock.paused ? 'Inicia el reloj para cambiar la velocidad' : `Velocidad ×${s.clock.speed} · pulsa para ×${nextSpeed}`} aria-label={`Velocidad ×${s.clock.speed}, cambiar a ×${nextSpeed}`} className={`h-9 min-w-12 px-3 border display font-bold text-[12px] num disabled:cursor-not-allowed disabled:opacity-45 ${s.clock.speed !== 1 && !s.clock.paused ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
           ×{s.clock.speed}
         </button>
         <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">

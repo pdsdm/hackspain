@@ -22,7 +22,7 @@ export default function App() {
   const [openAgent, setOpenAgent] = useState<AgentFocus | null>(null)
   const decision = pendingDecision(s)
   const call = displayCall(s)
-  const disabled = ctl.pending || ctl.stale
+  const disabled = ctl.pending || ctl.stale || s.clock.paused
 
   if (!ctl.ready) return <main className="connection-screen">
     <img src="/brand/zhivel-logo-dark.png" alt="Zhivel" />

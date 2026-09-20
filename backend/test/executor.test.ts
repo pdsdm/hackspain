@@ -11,14 +11,22 @@ import { StateRepository } from "../src/state/state-repository.js";
 import { TaskRepository } from "../src/state/task-repository.js";
 import { WorkflowEventRepository } from "../src/state/workflow-event-repository.js";
 
-function harness() {
+function harness(running = true) {
   const database = openDatabase(":memory:");
   const states = new StateRepository(database.connection);
   const tasks = new TaskRepository(database.connection);
   const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
   const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  if (running) resume(states);
   return { database, states, tasks, executor };
+}
+
+function resume(states: StateRepository): void {
+  const run = states.ensureActiveRun();
+  const state = structuredClone(run.state);
+  state.clock.paused = false;
+  states.saveState(run.id, state);
 }
 
 test("sin canal real configurado, la tarea termina failed y el agente pasa a incidencia", () => {
@@ -57,6 +65,7 @@ test("un resultado fuera de contexto se descarta y no tumba el proceso", async (
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  resume(states);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
   try {
@@ -110,6 +119,26 @@ test("paused agents are not dispatched", () => {
   }
 });
 
+test("a paused clock does not dispatch calls", () => {
+  const { database, states, tasks, executor } = harness(false);
+  try {
+    const run = states.ensureActiveRun();
+    const task = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "x", counterpart: "y" },
+      idempotencyKey: "clock-paused",
+    });
+    executor.pump();
+    assert.equal(tasks.get(task.id)?.status, "pending");
+    assert.equal((states.ensureActiveRun().state.calls as unknown[]).length, 0);
+  } finally {
+    database.close();
+  }
+});
+
 test("cancelled tasks are never dispatched", () => {
   const { database, states, tasks, executor } = harness();
   try {
@@ -143,6 +172,7 @@ test("a dispatched task without callback times out as no_answer", async () => {
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  resume(states);
   const originalFetch = globalThis.fetch;
   let dispatched: { url: string; init: RequestInit } | undefined;
   globalThis.fetch = (async (input, init) => {
@@ -206,6 +236,7 @@ test("only one real call is in flight at a time; the next waits for the callback
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  resume(states);
   const originalFetch = globalThis.fetch;
   const urls: string[] = [];
   globalThis.fetch = (async (input) => {
@@ -312,6 +343,7 @@ test("a native HappyRobot callback closes the open call with its transcript", as
     happyrobotApiKey: "key",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  resume(states);
   const originalFetch = globalThis.fetch;
   let sent: Record<string, unknown> = {};
   globalThis.fetch = (async (_url: string, init: RequestInit) => {
