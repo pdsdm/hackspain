@@ -68,9 +68,8 @@ html, body, #root {
 .map-overlays > * { pointer-events: auto; }
 /* Timeline uses the dashboard glass surface, typography and semantic accents. */
 .chronology-panel { position: relative; overflow: hidden; border-radius: 0; flex: 0 1 auto; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.chronology-panel::before, .chronology-panel::after { content: ''; position: absolute; left: 0; right: 0; height: 44px; z-index: 2; pointer-events: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: linear-gradient(to bottom, rgba(244,244,242,.9), rgba(244,244,242,0)); -webkit-mask-image: linear-gradient(to bottom, #000, transparent); mask-image: linear-gradient(to bottom, #000, transparent); }
+.chronology-panel::before { content: ''; position: absolute; left: 0; right: 0; height: 44px; z-index: 2; pointer-events: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: linear-gradient(to bottom, rgba(244,244,242,.9), rgba(244,244,242,0)); -webkit-mask-image: linear-gradient(to bottom, #000, transparent); mask-image: linear-gradient(to bottom, #000, transparent); }
 .chronology-panel::before { top: 0; }
-.chronology-panel::after { bottom: var(--footer-rail); height: 20px; transform: scaleY(-1); }
 .chronology-panel .event-chat { background: rgba(255,255,255,.42); -webkit-backdrop-filter: blur(20px) saturate(1.2); backdrop-filter: blur(20px) saturate(1.2); border: 1px solid rgba(255,255,255,.92); box-shadow: 0 8px 28px rgba(26,29,36,.08); }
 .chronology-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid rgba(26,29,36,.08); flex: none; }
 .chronology-heading h2 { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
@@ -83,7 +82,7 @@ html, body, #root {
 .timeline-item--white { --event-accent: #7d828c; }.timeline-item--mint { --event-accent: var(--color-green); }.timeline-item--mint .timeline-card { background: rgba(240,248,242,.5); }.timeline-item--lilac { --event-accent: #7c6fb0; }.timeline-item--rose { --event-accent: var(--color-red); }.timeline-item--rose .timeline-card { background: rgba(253,243,242,.5); }.timeline-item--sand { --event-accent: var(--color-amber); }.timeline-item--sand .timeline-card { background: rgba(252,247,235,.5); }
 .timeline-item--intervencion { --event-accent: var(--color-ink); }.timeline-item--intervencion .timeline-card { background: rgba(236,236,233,.5); }
 .timeline-item.is-new { animation: rise .45s cubic-bezier(.2,.8,.3,1) both; }
-@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { transform: translateY(18px); } to { transform: none; } }
 .timeline-card-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; min-width: 0; }
 .timeline-avatar { width: 22px; height: 22px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--event-accent) 14%, #fff); border: 1px solid color-mix(in srgb, var(--event-accent) 35%, transparent); border-radius: 2px; color: var(--event-accent); }
 .timeline-author { font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
