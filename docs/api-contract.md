@@ -137,14 +137,14 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 
 ### `POST /simulation/e2e/reset`
 
-Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run. Por defecto todas las acciones de especialistas usan `sim`. Con `realTransportCall: true`, y solo si existen hook, API key y `HAPPYROBOT_TEST_PHONE`, la primera acción de Transporte usa HappyRobot real; cualquier acción posterior de Transporte y las demás áreas siguen en `sim`. Los resultados actualizan estado y cierre sin lanzar ciclos extra. Un reset normal elimina las marcas. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
+Reset autenticado para el ensayo real en producción. Crea un run `calm`, desactiva el Modo vivo, mantiene el reloj a velocidad `1×` y activa el coordinador HappyRobot en apply solo para ese run. Por defecto todas las acciones de especialistas usan `sim`. Con `realTransportCall: true`, el estado autoriza al Reasoning Agent a invocar una sola vez su tool `emitir_llamada` para Transporte antes de `submit_plan`; las tareas persistidas de las cuatro áreas siguen en `sim` para no duplicar la llamada. Los resultados actualizan estado y cierre sin lanzar ciclos extra. Un reset normal elimina las marcas. Puede recibir `inputTokenHash`, SHA-256 del bearer de un workflow publicado desactualizado; solo ese run aislado lo acepta en `/workflow/happyrobot/events` y nunca se guarda el token en claro.
 
 ```json
 { "inputTokenHash": "<sha256-hex>", "realTransportCall": true }
 ```
 
 ```json
-{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim | transport-real-rest-sim" }
+{ "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim | coordinator-transport-call-rest-sim" }
 ```
 
 ### `POST /simulation/clock`

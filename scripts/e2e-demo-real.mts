@@ -54,7 +54,7 @@ export interface ActionsResponse {
 interface RunAudit {
   runId: string;
   status: string;
-  nodes: Array<{ name: string; status: string; error?: string; duplicate?: boolean }>;
+  nodes: Array<{ name: string; status: string; error?: string; duplicate?: boolean; externalRunId?: string; outcome?: string }>;
 }
 
 interface CycleTiming {
@@ -166,6 +166,8 @@ async function auditHappyRobotRun(apiBase: string, apiKey: string, runId: string
   for (const node of listed.data ?? []) {
     let error = safeError(node.error);
     let duplicate: boolean | undefined;
+    let externalRunId: string | undefined;
+    let outcome: string | undefined;
     if (node.output_id) {
       const output = await json<Record<string, unknown>>(`${apiBase}/runs/${runId}/outputs/${node.output_id}`, {
         headers,
@@ -175,12 +177,17 @@ async function auditHappyRobotRun(apiBase: string, apiKey: string, runId: string
       const data = isRecord(root.data) ? root.data : undefined;
       error = error ?? safeError(data?.error) ?? safeError(root.error);
       if (typeof data?.duplicate === "boolean") duplicate = data.duplicate;
+      const nestedOutput = isRecord(data?.output) ? data.output : undefined;
+      externalRunId = [data?.run_id, root.run_id, nestedOutput?.run_id].find((value): value is string => typeof value === "string" && value.trim() !== "");
+      outcome = [data?.outcome, data?.status, root.outcome, nestedOutput?.outcome, nestedOutput?.status].find((value): value is string => typeof value === "string" && value.trim() !== "");
     }
     nodes.push({
       name: node.name ?? "sin nombre",
       status: node.status ?? "unknown",
       ...(error ? { error } : {}),
       ...(duplicate === undefined ? {} : { duplicate }),
+      ...(externalRunId ? { externalRunId } : {}),
+      ...(outcome ? { outcome } : {}),
     });
   }
   return { runId, status: run.status ?? "unknown", nodes };
@@ -501,7 +508,7 @@ async function main(): Promise<void> {
       headers: { ...authHeaders, "Content-Type": "application/json" },
       body: JSON.stringify({ ...(inputTokenHash ? { inputTokenHash } : {}), ...(realTransportCall ? { realTransportCall: true } : {}) }),
     });
-    const expectedActions = realTransportCall ? "transport-real-rest-sim" : "sim";
+    const expectedActions = realTransportCall ? "coordinator-transport-call-rest-sim" : "sim";
     if (reset.externalActions !== expectedActions) throw new Error(`El target no confirmó el modo de acciones ${expectedActions}`);
     if (!reset.runId) throw new Error("El reset E2E no devolvió runId");
     const e2eRunId = reset.runId;
@@ -558,6 +565,19 @@ async function main(): Promise<void> {
     const firstCoordinatorAudit = firstReport.happyrobotRunId
       ? await auditHappyRobotRun(inputApiBase, apiKey, firstReport.happyrobotRunId, timeoutMs)
       : undefined;
+    let transportCallAudit: RunAudit | undefined;
+    if (realTransportCall && firstCoordinatorAudit) {
+      const toolNodes = firstCoordinatorAudit.nodes.filter((node) => /emitir_llamada|Emitir llamada webhook/i.test(node.name));
+      check(toolNodes.some((node) => /emitir_llamada/i.test(node.name)), "M2: el coordinador no invocó la tool emitir_llamada");
+      check(toolNodes.some((node) => /Emitir llamada webhook/i.test(node.name)), "M2: la tool no alcanzó el webhook de voz");
+      const callRunIds = [...new Set(toolNodes.flatMap((node) => node.externalRunId ? [node.externalRunId] : []))];
+      check(callRunIds.length === 1, `M2: esperada una run de voz, encontradas ${callRunIds.length}`);
+      if (callRunIds[0]) {
+        transportCallAudit = await auditHappyRobotRun(inputApiBase, apiKey, callRunIds[0], timeoutMs);
+        checkAudit(transportCallAudit, "M2 llamada real de Transporte");
+        check(!transportCallAudit.nodes.some((node) => /missed|no_answer|failed/i.test(String(node.outcome ?? ""))), "M2: la llamada real terminó sin conversación");
+      }
+    }
     const firstSettled = await waitFor(
       "M2 primer ciclo terminado",
       timeoutMs,
@@ -579,6 +599,7 @@ async function main(): Promise<void> {
       inputRunId: callRunId,
       inputAudit: callAudit,
       coordinatorAudit: firstCoordinatorAudit,
+      transportCallAudit,
       timing: firstTiming,
       planVersion: firstState.planVersion,
       report: firstReport,
@@ -614,14 +635,7 @@ async function main(): Promise<void> {
     check(incidentCount(afterCallEffect, callEvent.eventId) === 1, "M1: el lote no aparece exactamente una vez");
     const callIncident = afterCallEffect.events.find((item) => item.channel === "call" && item.actor === "SIMULACIÓN · Centralita MADRING");
     check(Boolean(callIncident), "M1: falta procedencia del lote simulado");
-    const firstRealCalls = firstState.calls.filter((call) => call.simulated === false);
-    if (realTransportCall) {
-      check(firstRealCalls.length === 1 && firstRealCalls[0]?.agent === "transporte", `M2: esperada una llamada real de Transporte, observadas ${firstRealCalls.length}`);
-      check(firstRealCalls[0]?.status === "terminada", `M2: la llamada real terminó como ${String(firstRealCalls[0]?.status)}`);
-      check(Array.isArray(firstRealCalls[0]?.transcript) && firstRealCalls[0].transcript.length > 0, "M2: la llamada real no conserva transcript");
-    } else {
-      check(firstRealCalls.length === 0, "M2: se detectó una comunicación real sin autorización explícita");
-    }
+    check(firstState.calls.every((call) => call.simulated === true), "M2: las tareas persistidas deben seguir en sim; la llamada real pertenece al tool del coordinador");
 
     const reportBeforeSecond = await readReport();
     const smsEvent = event(tag, "dock_blocked");
@@ -671,7 +685,10 @@ async function main(): Promise<void> {
     };
     checkAudit(smsAudit, "M3 input HappyRobot");
     check(Boolean(secondCoordinatorAudit), "M4: run del coordinador no auditable");
-    if (secondCoordinatorAudit) checkAudit(secondCoordinatorAudit, "M4 coordinador HappyRobot");
+    if (secondCoordinatorAudit) {
+      checkAudit(secondCoordinatorAudit, "M4 coordinador HappyRobot");
+      if (realTransportCall) check(!secondCoordinatorAudit.nodes.some((node) => /emitir_llamada|Emitir llamada webhook/i.test(node.name)), "M4: el coordinador emitió una segunda llamada real");
+    }
     checkReport(secondReport, "M4", e2eRunId);
     const secondActions = outputRows(secondReport, "actions");
     check(secondActions.length >= 4, `M4: esperadas acciones de cuatro áreas, recibidas ${secondActions.length}`);
@@ -717,8 +734,7 @@ async function main(): Promise<void> {
     check(final.state.shuttles.length === 4, `Final: esperados 4 shuttles, recibidos ${final.state.shuttles.length}`);
     check(final.state.shuttles.every((shuttle) => places.has(String(shuttle.destinationId))), "Final: algún shuttle apunta a un destino inexistente");
     check(final.state.shuttles.every((shuttle) => places.get(String(shuttle.destinationId))?.zone === "sur"), "Final: algún shuttle salió de Sur");
-    const finalRealCalls = final.state.calls.filter((call) => call.simulated === false);
-    check(finalRealCalls.length === (realTransportCall ? 1 : 0), `Final: esperadas ${realTransportCall ? 1 : 0} llamadas reales, observadas ${finalRealCalls.length}`);
+    check(final.state.calls.every((call) => call.simulated === true), "Final: alguna tarea persistida salió del modo sim");
     check(!final.state.calls.some((call) => call.status === "en_curso"), "Final: quedan llamadas en curso");
     const provenanceEvents = final.state.events.filter((item) => isRecord(item.provenance));
     check(provenanceEvents.length === 2, `Final: esperados 2 inputs relevantes, observados ${provenanceEvents.length}`);

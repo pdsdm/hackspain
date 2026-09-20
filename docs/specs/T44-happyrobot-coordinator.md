@@ -13,7 +13,7 @@ Ejecutar los dos ciclos de la demo con la arquitectura nativa de HappyRobot: wor
 - [ ] Cada ciclo se acepta en un único `submit_plan`, sin `validationErrors`.
 - [ ] El primer plan usa B 450 + Lounge 150 y cinco acciones: B, Lounge, Catering, Transporte y Asistentes.
 - [ ] El segundo plan incorpora el muelle bloqueado y cambia Catering, Transporte y Asistentes.
-- [ ] Los cuatro especialistas muestran `objective`, `reason` y `lastResult`; solo la primera acción de Transporte puede ser una llamada real controlada y las demás siguen `sim`.
+- [ ] Los cuatro especialistas muestran `objective`, `reason` y `lastResult`; el coordinador puede invocar una vez `emitir_llamada` para Transporte y todas las tareas persistidas siguen `sim`.
 - [ ] Si HappyRobot falla, el backend no oculta una segunda inferencia: informa del fallo y usa solo el respaldo determinista disponible.
 - [ ] El E2E audita runs, nodos, latencia, idempotencia, cierre, una única llamada real autorizada y ausencia de cualquier otra comunicación real.
 - [ ] `make check` pasa sin llamar a proveedores externos.

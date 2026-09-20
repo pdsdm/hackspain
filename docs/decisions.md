@@ -196,5 +196,5 @@ sin plan, con el respaldo determinista solo para giros.
 
 ### D22: triaje visible y una llamada real controlada en la toma (20/09/2026)
 
-- **Qué:** el primer input es un lote de 10 mensajes sintéticos recibidos en 3,6 s; el Reasoning Agent descarta 9, consulta el mundo y actúa solo por la rotura. La primera acción de Transporte llama mediante HappyRobot al teléfono de pruebas autorizado; el resto sigue en `sim` y una segunda acción de Transporte no vuelve a llamar.
+- **Qué:** el primer input es un lote de 10 mensajes sintéticos recibidos en 3,6 s; el Reasoning Agent descarta 9, consulta el mundo y actúa solo por la rotura. El Reasoning Agent invoca una vez su tool `emitir_llamada` para Transporte antes de `submit_plan`; las tareas persistidas siguen en `sim` y M4 no vuelve a llamar.
 - **Por qué:** demuestra selección de señal y ejecución externa sin fingir conversaciones con proveedores reales ni repetir el incidente de llamadas de T55. La toma exige flags explícitos y evidencia de transcript.
