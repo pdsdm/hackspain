@@ -1,10 +1,10 @@
-import { Pause, Play, RotateCcw, Radio, PanelRight } from 'lucide-react'
+import { Pause, Play, RotateCcw, Radio } from 'lucide-react'
 import type { CrisisController } from '../../data/useCrisisState'
 import { fmtClock, fmtCountdown } from '../../domain/time'
 
 const CYCLE = [1, 2, 5, 10, 20]
 
-export function TopBar({ ctl, onIntervenir, onDrawer, drawerOpen }: { ctl: CrisisController; onIntervenir: () => void; onDrawer: () => void; drawerOpen: boolean }) {
+export function TopBar({ ctl }: { ctl: CrisisController }) {
   const { state: s } = ctl
   const speedIndex = CYCLE.indexOf(s.clock.speed)
   const nextSpeed = CYCLE[(speedIndex + 1) % CYCLE.length]
@@ -56,10 +56,6 @@ export function TopBar({ ctl, onIntervenir, onDrawer, drawerOpen }: { ctl: Crisi
         </>
       )}
 
-      <button disabled={ctl.pending || ctl.stale} onClick={onIntervenir} className="chamfer h-10 px-6 bg-ink text-bg display font-extrabold text-[13px] tracking-[0.06em] uppercase hover:bg-ink/90">Intervenir</button>
-      <button onClick={onDrawer} aria-pressed={drawerOpen} title="Panel de control" aria-label="Panel de control" className={`w-10 h-10 grid place-items-center border ${drawerOpen ? 'bg-ink border-ink text-bg' : 'border-line-2 text-ink hover:bg-ink/5'}`}>
-        <PanelRight size={16} />
-      </button>
     </header>
   )
 }
