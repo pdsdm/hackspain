@@ -99,6 +99,8 @@ test("costly event, real-channel callbacks and replan finish without financial a
     const address = server.address();
     assert(address && typeof address !== "string");
     const base = `http://127.0.0.1:${address.port}`;
+    // Sin iniciar la operación, /events responde 409: la ejecución arranca en pausa.
+    assert.equal((await post(base, "/simulation/clock", { paused: false })).status, 200);
     assert.equal((await post(base, "/events", {
       source: "chat", kind: "free_text", text: "El Pabellón Principal está cerrado; prepara el plan de recuperación.",
     })).status, 202);

@@ -639,6 +639,12 @@ test("el incidente HappyRobot atraviesa ingesta, coordinador, submit_plan y pers
       body: JSON.stringify({ fixture: "calm" }),
     });
     assert.equal(reset.status, 200);
+    // Un reset devuelve la mesa a detenida: hay que iniciar antes de recibir el incidente.
+    await originalFetch(`${base}/simulation/clock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused: false }),
+    });
     const response = await fetch(`${base}/workflow/happyrobot/events`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

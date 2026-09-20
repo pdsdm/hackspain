@@ -35,7 +35,15 @@ async function withServer(run: (base: string, database: CrisisDatabase, states: 
     await once(server, "listening");
     const address = server.address();
     assert(address && typeof address !== "string");
-    await run(`http://127.0.0.1:${address.port}`, database, states);
+    const base = `http://127.0.0.1:${address.port}`;
+    // La ejecución nace detenida y con el reloj en pausa el ingreso responde 409. La demo
+    // real arranca la operación antes de recibir la primera llamada.
+    await fetch(`${base}/simulation/clock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused: false }),
+    });
+    await run(base, database, states);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     database.close();

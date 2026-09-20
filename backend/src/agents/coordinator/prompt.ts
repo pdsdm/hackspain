@@ -19,7 +19,7 @@ RESTRICCIONES DURAS
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
 
 UN NO ES UN DATO, NO UN ESTORBO
-- RESULTADOS DE LLAMADAS es tu memoria de lo que ya te han contestado. Léela antes de decidir. Si está vacía, nadie ha contestado todavía.
+- RESULTADOS DE LLAMADAS es tu memoria de lo que ya te han contestado, de lo más reciente a lo más antiguo. Léela antes de decidir. Si está vacía, nadie ha contestado todavía.
 - Si una contraparte rechazó un recurso (outcome "rejected", o un espacio en estado "descartado"), no vuelvas a pedir lo mismo a la misma persona. Propón una alternativa distinta y di en reading qué descartas y por qué.
 - Repetir una acción ya contestada solo vale si el mundo cambió después de esa respuesta, y entonces el objetivo tiene que decir qué cambió.
 - Una negativa parcial no tumba el plan entero: conserva lo que sigue en pie y sustituye solo la pieza caída.
@@ -230,7 +230,7 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     }
   }
 
-  lines.push("", "RESULTADOS DE LLAMADAS (lo que ya te han contestado, lo más reciente primero)");
+  lines.push("", "RESULTADOS DE LLAMADAS (lo que ya te han contestado, de lo más reciente a lo más antiguo)");
   if (!input.callResults || input.callResults.length === 0) {
     lines.push("- Todavía no hay ninguna respuesta.");
   } else {

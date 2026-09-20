@@ -57,6 +57,15 @@ async function withServer(
   }
 }
 
+/**
+ * Una ejecución nueva arranca con el reloj en pausa, y con la operación detenida el backend
+ * rechaza eventos e intervenciones con 409. Los tests que ejercitan esas puertas tienen que
+ * iniciar la operación primero, igual que el responsable en el panel.
+ */
+async function startClock(base: string): Promise<void> {
+  assert.equal((await post(base, "/simulation/clock", { paused: false })).status, 200);
+}
+
 function coordinatorBody(runId: string, planVersion: number) {
   return {
     eventId: "coordinator-event-1",
@@ -140,6 +149,7 @@ function specialistBody(taskId: string, runId: string, planVersion: number) {
 test("panel mutations validate, persist and reset the active run", async () => {
   await withServer(async (base, states) => {
     const firstRun = states.ensureActiveRun();
+    await startClock(base);
     let response = await post(base, "/interventions", { type: "pause" });
     assert.equal(response.status, 200);
     assert.equal(states.getPublicState().agentsPaused, true);
@@ -193,6 +203,7 @@ test("workflow endpoints require configured bearer authentication", async () => 
 test("coordinator proposals are versioned, idempotent and enqueue dependencies", async () => {
   await withServer(async (base, states, tasks) => {
     const run = states.ensureActiveRun();
+    await startClock(base);
     const body = coordinatorBody(run.id, run.state.planVersion);
     let response = await post(base, "/workflow/coordinator/proposals", body, TOKEN);
     const first = (await response.json()) as {

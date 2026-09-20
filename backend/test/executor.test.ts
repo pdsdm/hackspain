@@ -91,8 +91,7 @@ test("un resultado fuera de contexto se descarta y no tumba el proceso", async (
     moved.planVersion += 1;
     states.saveState(current.id, moved);
     tasks.carryToPlan(task.id, moved.planVersion);
-    const now = Number(moved.clock.simSeconds);
-    assert.doesNotThrow(() => executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1));
+    assert.doesNotThrow(() => executor.fireDue(Date.now() + ActionExecutor.DISPATCH_TIMEOUT_MS + 1));
     assert.equal(tasks.get(task.id)?.status, "dispatched");
   } finally {
     globalThis.fetch = originalFetch;
@@ -191,10 +190,11 @@ test("a dispatched task without callback times out as no_answer", async () => {
     // El workflow contesta por la puerta traducida (T9), no por la estricta del contrato.
     assert.equal(payload.callbackUrl, "http://localhost:8000/workflow/happyrobot/results");
     assert.equal(payload.transcriptCallbackUrl, "http://localhost:8000/workflow/happyrobot/transcript");
-    const now = Number(run.state.clock.simSeconds);
-    executor.fireDue(now + 60);
+    // El plazo es tiempo real: un minuto no lo agota, tres sí, y da igual si el reloj del
+    // escenario corre o está en pausa.
+    executor.fireDue(Date.now() + 60_000);
     assert.equal(tasks.get(task.id)?.status, "dispatched");
-    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    executor.fireDue(Date.now() + ActionExecutor.DISPATCH_TIMEOUT_MS + 1);
     assert.equal(tasks.get(task.id)?.status, "failed");
     const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
     assert.equal(calls[0]?.status, "sin_respuesta");
@@ -255,8 +255,7 @@ test("only one real call is in flight at a time; the next waits for the callback
     await new Promise((resolve) => setTimeout(resolve, 10));
     assert.equal(tasks.get(waiting.id)?.status, "pending");
     assert.equal(urls.length, 1);
-    const now = Number(run.state.clock.simSeconds);
-    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    executor.fireDue(Date.now() + ActionExecutor.DISPATCH_TIMEOUT_MS + 1);
     assert.equal(tasks.get(active.id)?.status, "failed");
     executor.pump();
     await new Promise((resolve) => setTimeout(resolve, 10));
