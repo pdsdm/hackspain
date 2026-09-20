@@ -4,6 +4,7 @@ import { useAcceptingSeed } from "./sim-support.js";
 
 import { translateHappyRobotResult } from "../src/actions/adapters/happyrobot-inbound.js";
 import { dispatchHappyRobot } from "../src/actions/adapters/happyrobot.js";
+import { e2eReply } from "../src/actions/adapters/sim-world.js";
 import { ActionExecutor } from "../src/actions/executor.js";
 import { loadConfig } from "../src/config.js";
 import { WorkflowService } from "../src/domain/workflow-service.js";
@@ -71,6 +72,7 @@ test("an isolated E2E run forces sim even when real hooks are configured", async
     const run = states.ensureActiveRun();
     const state = structuredClone(run.state);
     state.forceSimActions = true;
+    state.e2eMode = "production-isolated";
     states.saveState(run.id, state);
     const task = tasks.enqueue({
       runId: run.id,
@@ -80,18 +82,46 @@ test("an isolated E2E run forces sim even when real hooks are configured", async
       payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
       idempotencyKey: "e2e-sim-call",
     });
-    useAcceptingSeed(states, task);
     executor.pump();
     await new Promise((resolve) => setImmediate(resolve));
     const calls = states.ensureActiveRun().state.calls as Array<Record<string, unknown>>;
     assert.equal(calls[0]?.simulated, true);
     assert.equal(externalCalls, 0);
-    executor.fireDue(Number(run.state.clock.simSeconds) + 60);
+    const now = Number(run.state.clock.simSeconds);
+    executor.fireDue(now + 2);
+    assert.equal(tasks.get(task.id)?.status, "dispatched");
+    executor.fireDue(now + 3);
     assert.equal(tasks.get(task.id)?.status, "completed");
   } finally {
     globalThis.fetch = originalFetch;
     database.close();
   }
+});
+
+test("E2E specialist replies are deterministic, positive and area-specific", () => {
+  const outcomes = Object.fromEntries(["espacios", "catering", "transporte", "asistentes"].map((area) => {
+    const reply = e2eReply({
+      id: `task-${area}`,
+      runId: "run",
+      planVersion: 1,
+      area,
+      kind: "call",
+      payload: { objective: `Objetivo ${area}`, counterpart: `Contraparte ${area}` },
+      idempotencyKey: `e2e-${area}`,
+      status: "dispatching",
+      attempts: 1,
+    });
+    assert.ok(["accepted", "accepted_with_conditions"].includes(reply.outcome));
+    assert.equal(reply.transcript.length, 2);
+    assert.match(reply.summary, /Simulado:/);
+    return [area, reply.outcome];
+  }));
+  assert.deepEqual(outcomes, {
+    espacios: "accepted_with_conditions",
+    catering: "accepted_with_conditions",
+    transporte: "accepted",
+    asistentes: "accepted",
+  });
 });
 
 test("un resultado fuera de contexto se descarta y no tumba el proceso", async () => {

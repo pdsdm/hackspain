@@ -26,6 +26,7 @@ type PublicState = {
 };
 
 type ActionsResponse = { tasks: unknown[] };
+type CoordinatorReport = { correlationId: string; happyrobotRunId: string | null; runId: string; planVersion: number; status: string; applied: boolean; latencyMs: number; submissions: number; validationErrors: string[] };
 type FetchFn = typeof fetch;
 type DemoEvent = ReturnType<typeof event>;
 
@@ -52,6 +53,7 @@ type RehearsalEvidence = {
   outcome: "running" | "passed" | "failed";
   backendRunId?: string;
   inputs: Array<{ incidentId: IncidentId; eventId: string; workflowRunId?: string }>;
+  coordinatorRuns: CoordinatorReport[];
   checkpoints: CheckpointEvidence[];
   diagnostic?: string;
 };
@@ -260,28 +262,41 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
   const apiUrl = (process.env.DEMO_API_URL?.trim() || "http://127.0.0.1:8000").replace(/\/+$/, "");
   const timeoutMs = Number(process.env.DEMO_VIDEO_TIMEOUT_MS?.trim() || 360_000);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 10_000) throw new Error("DEMO_VIDEO_TIMEOUT_MS debe ser un entero >= 10000");
-  const token = mode === "api" ? required(process.env.HAPPYROBOT_WEBHOOK_TOKEN, "HAPPYROBOT_WEBHOOK_TOKEN") : "";
+  const token = required(process.env.HAPPYROBOT_WEBHOOK_TOKEN, "HAPPYROBOT_WEBHOOK_TOKEN");
   const happyRobotConfig = mode === "happyrobot" ? {
     hookUrl: required(process.env.HAPPYROBOT_DEMO_INPUT_HOOK_URL, "HAPPYROBOT_DEMO_INPUT_HOOK_URL"),
     backendBaseUrl: required(publicBaseUrl(), "PUBLIC_BASE_URL o .demo/public-url"),
   } : undefined;
   const readState = () => json<PublicState>(fetchFn, `${apiUrl}/state`);
   const readActions = () => json<ActionsResponse>(fetchFn, `${apiUrl}/actions`);
+  const readCoordinatorReport = async (): Promise<CoordinatorReport | undefined> => {
+    const response = await fetchFn(`${apiUrl}/coordinator/happyrobot/report`, { headers: { Authorization: `Bearer ${token}` } });
+    if (response.status === 404) return undefined;
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${await response.text()}`);
+    return response.json() as Promise<CoordinatorReport>;
+  };
+  const waitCoordinatorReport = (runId: string, planVersion: number, previous?: string) => waitFor(
+    `informe HappyRobot plan v${planVersion}`,
+    timeoutMs,
+    readCoordinatorReport,
+    (value) => Boolean(value && value.runId === runId && value.planVersion === planVersion && value.correlationId !== previous),
+  ) as Promise<CoordinatorReport>;
   const report: EvidenceReport = { schemaVersion: 1, createdAt: new Date().toISOString(), mode, requestedRehearsals: rehearsals, outcome: "running", rehearsals: [] };
   persistReport(reportPath, report);
   if (reportPath) console.log(`[VIDEO] Evidencia: ${reportPath}`);
 
   for (let index = 1; index <= rehearsals; index += 1) {
-    const evidence: RehearsalEvidence = { rehearsal: index, startedAt: new Date().toISOString(), outcome: "running", inputs: [], checkpoints: [] };
+    const evidence: RehearsalEvidence = { rehearsal: index, startedAt: new Date().toISOString(), outcome: "running", inputs: [], coordinatorRuns: [], checkpoints: [] };
     report.rehearsals.push(evidence);
     persistReport(reportPath, report);
     try {
       console.log(`[VIDEO] Ensayo ${index}/${rehearsals} · Reiniciando a calm…`);
-      const reset = await json<{ runId?: string }>(fetchFn, `${apiUrl}/simulation/reset`, {
+      const reset = await json<{ runId?: string; externalActions?: string }>(fetchFn, `${apiUrl}${mode === "happyrobot" ? "/simulation/e2e/reset" : "/simulation/reset"}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fixture: "calm" }),
+        headers: { "Content-Type": "application/json", ...(mode === "happyrobot" ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(mode === "happyrobot" ? {} : { fixture: "calm" }),
       });
+      if (mode === "happyrobot" && reset.externalActions !== "sim") throw new Error("El backend no confirmó el aislamiento sim del ensayo HappyRobot");
       if (reset.runId) evidence.backendRunId = reset.runId;
       const calm = await waitFor("estado calm", timeoutMs, readState, (state) => state.spaces.find((space) => space.id === "principal")?.status === "confirmado", diagnostic);
       validateCalm(calm);
@@ -308,6 +323,14 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         diagnostic,
       );
       requireCheckpoint(firstCycle.planVersion >= 2, `M2 incoherente: planVersion=${firstCycle.planVersion}, esperado >=2`);
+      let firstCoordinator: CoordinatorReport | undefined;
+      if (mode === "happyrobot") {
+        requireCheckpoint(Boolean(reset.runId), "M2 incoherente: reset sin runId");
+        firstCoordinator = await waitCoordinatorReport(reset.runId!, 2);
+        requireCheckpoint(firstCoordinator.status === "accepted" && firstCoordinator.applied, `M2 incoherente: HappyRobot ${firstCoordinator.status}, applied=${firstCoordinator.applied}`);
+        requireCheckpoint(firstCoordinator.submissions === 1 && firstCoordinator.validationErrors.length === 0, `M2 incoherente: ${firstCoordinator.submissions} submissions, errores=${firstCoordinator.validationErrors.join("; ")}`);
+        evidence.coordinatorRuns.push(firstCoordinator);
+      }
       evidence.checkpoints.push(checkpoint("M2", firstCycle, (await readActions()).tasks.length));
       persistReport(reportPath, report);
       console.log(`[VIDEO] M2 validado: llamada SIMULADA trazada, Principal cerrado y primer ciclo observado en plan v${firstCycle.planVersion}.`);
@@ -327,6 +350,13 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       evidence.checkpoints.push(checkpoint("M3", blocked, (await readActions()).tasks.length));
       persistReport(reportPath, report);
       console.log("[VIDEO] M3 validado: SMS SIMULADO trazado, Muelle Este y ambas entregas bloqueados. Recorre el panel de agentes.");
+
+      if (mode === "happyrobot") {
+        const secondCoordinator = await waitCoordinatorReport(reset.runId!, 3, firstCoordinator?.correlationId);
+        requireCheckpoint(secondCoordinator.status === "accepted" && secondCoordinator.applied, `M4 incoherente: HappyRobot ${secondCoordinator.status}, applied=${secondCoordinator.applied}`);
+        requireCheckpoint(secondCoordinator.submissions === 1 && secondCoordinator.validationErrors.length === 0, `M4 incoherente: ${secondCoordinator.submissions} submissions, errores=${secondCoordinator.validationErrors.join("; ")}`);
+        evidence.coordinatorRuns.push(secondCoordinator);
+      }
 
       const settled = await waitFor(
         "final sin replanificación, tareas ni llamadas abiertas",

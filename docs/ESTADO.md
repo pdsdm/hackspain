@@ -1,12 +1,12 @@
 # Estado del proyecto
 
-> Foto verificada de `origin/main` más T22 en esta rama. Actualizar esta página después de cada merge relevante.
+> Foto verificada de `origin/main` más el hardening T44/T52 de esta rama. Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 00:28 CEST |
-| **Base** | `origin/main` actualizado + T22 en `feat/devin-transcripcion` |
-| **Trabajo en revisión** | Código y workflow development listos; E2E telefónico bloqueado por `user_missed_call` antes del audio |
+| **Foto tomada** | 20 de septiembre de 2026, 02:26 CEST |
+| **Base** | `28ed8ae` (`origin/main`) + `feat/t52-happyrobot-primary-demo` |
+| **Trabajo en revisión** | HappyRobot como coordinador principal, especialistas E2E deterministas y gates completos del recorrido grabado |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, durante T52 |
 
@@ -14,11 +14,11 @@
 
 | Comprobación | Resultado |
 |---|---|
-| `make check` tras rebase de `feat/devin-transcripcion` | **OK** |
-| Tests backend | 345: **338 pasan, 0 fallan, 7 live omitidos** |
+| `make check` en `feat/t52-happyrobot-primary-demo` | **OK** |
+| Tests backend | 352: **345 pasan, 0 fallan, 7 live omitidos** |
 | Lint y builds | Backend y frontend OK |
 | Fixtures | 10 JSON reproducibles OK |
-| Node verificado | 22.23.2; el repo exige ≥22.13 |
+| Node verificado | 23.10.0; el repo exige ≥22.13 |
 
 Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un test) y el aviso del chunk frontend mayor de 500 kB.
 
@@ -27,7 +27,7 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 ### Base operativa
 
 - Estado SQLite, cola serial por `planVersion`, callbacks idempotentes y frontend en modo API.
-- Coordinador Helmcode/DeepSeek; T44 HappyRobot Reasoning Agent sigue en shadow y no cambia el proveedor principal.
+- Por D20, HappyRobot Reasoning Agent es el coordinador principal de la toma; el backend valida y aplica `submit_plan`. `rules` queda como contingencia técnica.
 - Cuatro especialistas visibles: Espacios, Catering, Transporte y Asistentes.
 - Cierre honesto mediante `resolved`, `closureSummary` o `coordinatorStatus: atascado`.
 - Costes informativos; no bloquean la recuperación ni crean aprobaciones económicas.
@@ -49,19 +49,21 @@ Persisten dos avisos de lint previos (`openaiUsable` y optional chaining en un t
 - **T49, PR #75, cerrada:** overlay de incidencias activas y cronología con canal, actor y etiqueta de simulación, derivados de `CrisisState`. Revisión exacta: 1920×1080 sin solapes ni scroll horizontal; 390×844 muestra solo cronología y formulario.
 - **T47, PR #76:** instalador idempotente del workflow `Demo Incident Inputs`, bearer oculto y POST estricto a T46.
 - **T48, PR #77:** director reproducible con `--inputs=happyrobot|external|api`, reset, checkpoints y cues de grabación.
+- **T44, decisión D20:** la toma usa el workflow `Orquestador` como coordinador principal; la rama `feat/t52-happyrobot-primary-demo` endurece prompt, especialistas, cierre y gates E2E.
 - **T52, rama actual:** el director admite `--rehearsals=N`, usa `HAPPYROBOT_DEMO_INPUT_HOOK_URL`, valida M0/M2/M3/final con `/state` y `/actions`, mantiene `SIMULACIÓN ·` y guarda evidencia privada en `.demo/` también al fallar.
 
-V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. La puerta final falla honestamente porque en modo `rules` los cuatro especialistas no exponen `reason` ni `lastResult`. No hubo grabación.
+V4 en development y V6 en production de `Demo incident inputs` atravesaron HappyRobot → hook → T46 para los dos inputs. Producción validada con runs `c438a4a3-77cd-4a0a-a410-6964628c889c` y `bb4dc3d9-0c99-4bed-beed-0ffb88425cec`: Principal y Muelle Este cerraron, CAT-01/CAT-02 quedaron bloqueadas y ambos eventos conservaron procedencia. El ensayo anterior en `rules` falló la puerta final por falta de `reason`/`lastResult`; la rama actual sustituye ese camino por HappyRobot principal y especialistas E2E deterministas. Falta repetir el E2E real y grabar.
 
 ## Qué falta, por riesgo para la demo
 
-1. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
-2. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
-3. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
-4. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
-5. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
-6. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
-7. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
+1. **Superar el E2E completo con HappyRobot coordinador principal.** Deben pasar dos ciclos en un submit cada uno, cuatro especialistas, cierre honesto e idempotencia.
+2. **Rotar el bearer antes de la toma final.** El token inspeccionado debe sustituirse en backend y en las versiones live de HappyRobot sin publicarlo ni copiarlo a documentación.
+3. **Completar la evidencia de especialistas (T51/T52).** Los cuatro agentes carecen de `reason` y `lastResult` en el recorrido `rules`; Transporte sigue sin cerrar.
+4. **Superar tres ensayos HappyRobot (T52).** El hook de producción ya llega a M3; faltan tres recorridos que superen la puerta final.
+5. **Superar tres ensayos API (T52).** La automatización existe, pero la puerta final aún falla por la evidencia de especialistas.
+6. **Aprobar textos y storyboard (T45).** Carlos/equipo deben aprobar los dos mensajes literales y la narración congelada.
+7. **Grabar toma maestra y respaldo (T52).** No se ha grabado ninguna toma.
+8. **Revisión humana de T50.** El código y los tests están en `main`; la fila permanece `review`.
 
 ## Bloqueos
 
@@ -116,4 +118,4 @@ npm --prefix backend run demo:video -- --inputs=api --rehearsals=3
 
 - La evidencia queda en `.demo/` y está ignorada por Git. El ensayo API local verificado llegó a M3, pero no superó la puerta final de especialistas.
 - Ningún ensayo de este documento demuestra por sí solo que exista una grabación.
-- T44 continúa fuera del camino crítico. No activarlo como coordinador principal antes de un E2E separado.
+- T44 forma parte del camino crítico por D20. No grabar hasta que el E2E demuestre dos planes HappyRobot aplicados sin reintentos ni errores de validación.

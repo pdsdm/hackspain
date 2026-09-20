@@ -23,4 +23,4 @@ equivalente paso a paso en la UI está en
 
 ## Fuera de alcance
 
-Modificar workflows salientes o sustituir el coordinador por T44.
+Modificar workflows salientes o cambiar el contrato T46. El coordinador principal se decide por D20, fuera de T47.

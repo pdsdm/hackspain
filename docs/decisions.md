@@ -182,3 +182,8 @@ sin plan, con el respaldo determinista solo para giros.
 - **Qué:** JEV clasifica texto hacia un playbook cerrado solo en modo aislado. El playbook no se activa en la demo: primero debe pasar un gate conservador y una segunda validación determinista del estado. Fallback al coordinador ante ambigüedad, timeout, error, estado cambiado o incidencia compuesta.
 - **Resultado:** 60 consultas sintéticas, 0 falsos positivos y 0 verdaderos positivos con el gate inicial; mediana 313/292 ms (desarrollo/holdout). El coordinador fue válido en 6/6 y tuvo mediana 28,3 s. La idea reduce latencia potencial, pero **no está lista para activar por cobertura cero**.
 - **Descartado por ahora:** bajar umbrales usando el mismo holdout, conectar JEV al motor y dejar que JEV cree operaciones o mutaciones. Se mantiene el holdout congelado.
+
+### D20: HappyRobot Reasoning Agent es el coordinador principal de la demo (sustituye D15 para la toma final)
+
+- **Qué:** `COORDINATOR_HARNESS=happyrobot` con apply activo genera los dos planes mediante `consult_world` y `submit_plan`; el backend valida y aplica. HappyRobot también transporta los dos inputs simulados. Las acciones de especialistas siguen en `sim` etiquetado.
+- **Por qué:** decisión humana del 20/09 tras E2E real en Railway. Conservamos `rules` como contingencia técnica; no presentamos telefonía simulada como real ni usamos Helmcode en el camino de la toma.

@@ -5,7 +5,7 @@ import { extractJsonObject, loadLlmConfig, takeSseDataEvents } from "../src/agen
 import { SYSTEM_PROMPT, buildUserPrompt } from "../src/agents/coordinator/prompt.js";
 import { hm, crisisInput } from "../src/agents/coordinator/scenario.js";
 import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
-import { parseOutput, validateOutput } from "../src/agents/coordinator/validate.js";
+import { operationReady, parseOutput, validateOutput } from "../src/agents/coordinator/validate.js";
 
 // Plan de referencia del escenario: Pabellón B (450) + Lounge Sur (150) para las 600 personas,
 // lo que obliga a repartir el grupo de los shuttles entre los dos espacios.
@@ -255,7 +255,13 @@ test("el prompt lleva las horas en segundos y las restricciones del escenario", 
   assert.match(SYSTEM_PROMPT, /sumen como máximo 6/);
   assert.match(SYSTEM_PROMPT, /se bloquea un muelle/);
   assert.match(SYSTEM_PROMPT, /principal_pipe_burst.*B 450 \+ Lounge 150/);
-  assert.match(SYSTEM_PROMPT, /dock_blocked.*acciones visibles de espacios, catering, transporte y asistentes/);
+  assert.match(SYSTEM_PROMPT, /dock_blocked.*acciones distintas y visibles de espacios, catering, transporte y asistentes/);
+});
+
+test("el prompt evita set_agent y el validador descarta operaciones incompletas", () => {
+  assert.match(SYSTEM_PROMPT, /No uses set_agent/);
+  assert.equal(operationReady({ op: "set_agent" }), false);
+  assert.equal(operationReady({ op: "set_agent", area: "espacios", objective: "Confirmar B", reason: "Faltan plazas", status: "activo" }), true);
 });
 
 test("Helmcode usa Deepseek por el endpoint compatible con OpenAI", () => {

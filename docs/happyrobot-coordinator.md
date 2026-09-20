@@ -1,8 +1,8 @@
-# Piloto T44: HappyRobot Reasoning Agent como coordinador
+# T44: HappyRobot Reasoning Agent como coordinador principal
 
 Para levantarlo paso a paso: [`runbook-happyrobot-coordinator.md`](runbook-happyrobot-coordinator.md).
 
-Experimento paralelo. El coordinador por defecto (Helmcode + `deepseek-v4-flash`) no cambia. Este camino solo se activa con `COORDINATOR_HARNESS=happyrobot`.
+Por D20, este es el coordinador principal de la toma. Se activa con `COORDINATOR_HARNESS=happyrobot`; HappyRobot propone mediante herramientas y el backend valida y aplica.
 
 ## Arquitectura
 
@@ -30,7 +30,7 @@ Archivos: `backend/src/agents/coordinator/happyrobot.ts` (adaptador y sesiones),
 | `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | UUID o slug del workflow Orquestador. |
 | `HAPPYROBOT_COORDINATOR_HOOK_URL` | Opcional. Hook directo, p. ej. `https://workflows.platform.eu.happyrobot.ai/hooks/development/<slug>`. Si está, el trigger va ahí en vez de `/workflows/{id}/runs`; el hook no devuelve `run_id`, así que no se sondea el estado del run. En EU el endpoint del API devolvía `Workflow not found`. |
 | `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development`. |
-| `HAPPYROBOT_COORDINATOR_APPLY` | Vacío o `false`: HappyRobot queda en shadow y el proveedor textual aplica el plan principal. `true` solo cuando se decida aplicar directamente el plan HappyRobot. |
+| `HAPPYROBOT_COORDINATOR_APPLY` | `true` en la toma para aplicar el plan HappyRobot. Vacío o `false` queda reservado al endpoint de diagnóstico shadow y no lanza otra inferencia. |
 | `HAPPYROBOT_COORDINATOR_TIMEOUT_MS` | Opcional. Por defecto 180000. |
 | `HAPPYROBOT_COORDINATOR_API_BASE` | Opcional. Por defecto `https://platform.eu.happyrobot.ai/api/v2`. |
 | `PUBLIC_BASE_URL` | URL pública del backend (túnel). Los webhooks la usan. |
@@ -68,9 +68,10 @@ Imprime proveedor, modelo, run ID de HappyRobot, latencia, consultas, envíos, e
 
 Equivalente por HTTP: `POST $API_URL/coordinator/happyrobot/shadow` con bearer `HAPPYROBOT_WEBHOOK_TOKEN` y `{ "text": "…" }`.
 
-## Pendiente para el agente pequeño (E2E)
+## Gate E2E antes de grabar
 
-1. Una ejecución shadow con fixture `crisis`. Comprobar `status: accepted`, `happyrobotRunId`, `latencyMs` y `output`.
-2. Si `submissions > 1`, revisar `validationErrors` para ajustar el prompt del agente en HappyRobot.
-3. Solo después, benchmark repetido y comparación con `npm run coordinator -- --fixture=crisis`.
-4. No activar `HAPPYROBOT_COORDINATOR_APPLY=true` sin decisión del equipo.
+1. Dos ciclos aplicados por HappyRobot sobre el mismo run: planVersion 2 y 3 de entrada, 3 y 4 tras persistir.
+2. Un único `submit_plan` por ciclo, sin `validationErrors`, con las cuatro áreas visibles.
+3. Especialistas `sim` deterministas, cero comunicaciones reales, cero tareas o llamadas abiertas.
+4. Final `resolved` o `atascado` con `closureSummary` e idempotencia demostrada por un tercer run duplicado.
+5. Tres ensayos completos sin resets ni deployments concurrentes.

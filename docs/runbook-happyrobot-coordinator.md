@@ -77,8 +77,8 @@ COORDINATOR_MODEL=deepseek-v4-flash
 
 Notas:
 
-- `COORDINATOR_HARNESS=happyrobot` es el interruptor. Sin él, el coordinador es Helmcode y nada de esto se usa.
-- `HAPPYROBOT_COORDINATOR_APPLY=true` aplica el plan en el panel. Con `false` o vacío es *shadow*: HappyRobot razona, el backend valida y registra el informe, y después Helmcode vuelve a planificar y aplica su plan (PR #85). En el panel no se ve nada de HappyRobot.
+- `COORDINATOR_HARNESS=happyrobot` es obligatorio en la toma por D20. Sin él se usa el proveedor alternativo configurado, fuera del camino principal.
+- `HAPPYROBOT_COORDINATOR_APPLY=true` aplica el plan en el panel y es obligatorio para la toma por D20. Con `false` o vacío es *shadow*: HappyRobot razona y el backend registra el informe sin aplicar ni lanzar otra inferencia.
 - `HAPPYROBOT_COORDINATOR_HOOK_URL` es obligatorio en la cuenta EU: el endpoint `/workflows/{id}/runs` del API devuelve `Workflow not found`.
 - `HELMCODE_API_KEY` no la usa el coordinador. La usan las **contrapartes simuladas** (la voz del responsable en las llamadas simuladas) y el Modo vivo. Sin ella, las llamadas simuladas responden con frases fijas.
 - No dejes claves duplicadas: `COORDINATOR_HARNESS` y `COORDINATOR_MODE` una sola vez. Node se queda con la última.
@@ -153,7 +153,7 @@ No hace falta túnel: Railway ya tiene URL pública.
 |---|---|
 | `COORDINATOR_MODE` | `llm` |
 | `COORDINATOR_HARNESS` | `happyrobot` |
-| `HAPPYROBOT_COORDINATOR_APPLY` | `true` para ver los planes de HappyRobot en el panel. Con `false` es shadow: HappyRobot razona, se descarta y Helmcode vuelve a planificar (el doble de latencia). |
+| `HAPPYROBOT_COORDINATOR_APPLY` | `true` para la toma. Con `false` es shadow de diagnóstico y el plan no se aplica. |
 | `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` | `1i6zafb6wodb` |
 | `HAPPYROBOT_COORDINATOR_HOOK_URL` | `https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb` |
 | `HAPPYROBOT_COORDINATOR_ENVIRONMENT` | `development` |
@@ -176,7 +176,7 @@ Vite incrusta estas variables en el build: tras cambiarlas hay que redesplegar e
 
 En HappyRobot no cambia nada: los webhooks leen `backend_base_url` del trigger.
 
-## Volver al coordinador normal (Helmcode)
+## Volver al coordinador alternativo
 
 ```
 COORDINATOR_HARNESS=json

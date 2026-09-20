@@ -104,7 +104,7 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
   const closed = total > 0 && assigned === total && confirmed === total && capacityGaps.length === 0 &&
     accessGaps.length === 0 && agreed.length > 0 && waiting.length === 0 && pendingConditions === 0 &&
     quiet && !pendingDecision;
-  const stalled = !closed && quiet && !pendingDecision && waiting.length === 0;
+  const stalled = !closed && quiet && !pendingDecision;
   const gaps: string[] = [];
   if (assigned < total) {
     const homeless = assignedGroups
@@ -115,6 +115,9 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
   if (confirmed < total) gaps.push(`${total - confirmed} invitados sin plaza confirmada`);
   if (pendingConditions > 0) {
     gaps.push(`${pendingConditions} ${pendingConditions === 1 ? "condición abierta" : "condiciones abiertas"}: ${conditions.join("; ")}`);
+  }
+  if (waiting.length > 0 && quiet) {
+    gaps.push(`${waiting.length} ${waiting.length === 1 ? "compromiso sin consulta activa" : "compromisos sin consulta activa"}: ${waiting.map((item) => item.title).join("; ")}`);
   }
   if (capacityGaps.length > 0) gaps.push(`aforo insuficiente: ${capacityGaps.join(", ")}`);
   if (accessGaps.length > 0) gaps.push(`${accessGaps.map((zone) => `acceso ${String(zone)[0]!.toUpperCase()}${String(zone).slice(1)} no operativo`).join(", ")}`);
