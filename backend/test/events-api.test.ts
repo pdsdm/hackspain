@@ -21,8 +21,22 @@ async function withServer(run: (base: string) => Promise<void>) {
   }
 }
 
-test("POST /events accepts a chat event and rejects a bad body", async () => {
+test("POST /events rejects input while paused and accepts it once started", async () => {
   await withServer(async (base) => {
+    const paused = await fetch(`${base}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "chat", kind: "free_text", text: "Acceso Sur cerrado" }),
+    });
+    assert.equal(paused.status, 409);
+
+    const started = await fetch(`${base}/simulation/clock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paused: false }),
+    });
+    assert.equal(started.status, 200);
+
     const ok = await fetch(`${base}/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

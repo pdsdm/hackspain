@@ -18,7 +18,18 @@ function harness() {
   const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
   const config = { ...loadConfig(), coordinatorMode: "rules" as const, hooks: {}, happyrobotApiKey: undefined };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  const run = states.ensureActiveRun();
+  const state = structuredClone(run.state);
+  state.clock.paused = false;
+  states.saveState(run.id, state);
   return { database, states, tasks, executor };
+}
+
+function start(states: StateRepository): void {
+  const run = states.ensureActiveRun();
+  const state = structuredClone(run.state);
+  state.clock.paused = false;
+  states.saveState(run.id, state);
 }
 
 test("sin canal real configurado, la tarea termina failed y el agente pasa a incidencia", () => {
@@ -57,6 +68,7 @@ test("un resultado fuera de contexto se descarta y no tumba el proceso", async (
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  start(states);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response("{}", { status: 200 })) as typeof fetch;
   try {
@@ -143,6 +155,7 @@ test("a dispatched task without callback times out as no_answer", async () => {
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  start(states);
   const originalFetch = globalThis.fetch;
   let dispatched: { url: string; init: RequestInit } | undefined;
   globalThis.fetch = (async (input, init) => {
@@ -206,6 +219,7 @@ test("only one real call is in flight at a time; the next waits for the callback
     happyrobotTestPhone: "+34600000000",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  start(states);
   const originalFetch = globalThis.fetch;
   const urls: string[] = [];
   globalThis.fetch = (async (input) => {
@@ -312,6 +326,7 @@ test("a native HappyRobot callback closes the open call with its transcript", as
     happyrobotApiKey: "key",
   };
   const executor = new ActionExecutor(states, tasks, workflows, config);
+  start(states);
   const originalFetch = globalThis.fetch;
   let sent: Record<string, unknown> = {};
   globalThis.fetch = (async (_url: string, init: RequestInit) => {

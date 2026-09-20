@@ -179,7 +179,7 @@ Crea otra ejecución. Sin cuerpo, o con cuerpo vacío, usa `INITIAL_FIXTURE` (po
 { "fixture": "calm" }
 ```
 
-`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`. La ejecución arranca siempre con `clock.paused: false`, aunque el fixture sea una instantánea pausada.
+`fixture` opcional: `calm` | `normal` | `crisis` | `proposal` | `recovered` | `lounge_unavailable` | `pabellon_b_400`. La ejecución arranca siempre con `clock.paused: true`. Mientras esté pausada no avanzan actores ni se despachan llamadas; `POST /events`, las intervenciones y los eventos entrantes de HappyRobot devuelven `409` hasta reanudar con `POST /simulation/clock {"paused":false}`.
 
 ```json
 { "ok": true, "runId": "3bd0…", "planVersion": 1 }

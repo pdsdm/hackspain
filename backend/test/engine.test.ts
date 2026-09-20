@@ -149,12 +149,12 @@ test("a rejected event does not poison the queue for the next one", async () => 
   }
 });
 
-test("every run starts with a live clock, even from a paused fixture", () => {
+test("every run starts paused, even from a live fixture", () => {
   const { database, states } = engine();
   try {
     for (const fixture of ["crisis", "proposal", "lounge_unavailable"] as const) {
       const run = states.reset(fixture);
-      assert.equal(run.state.clock.paused, false, fixture);
+      assert.equal(run.state.clock.paused, true, fixture);
     }
   } finally {
     database.close();

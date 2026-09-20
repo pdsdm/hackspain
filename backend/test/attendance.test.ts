@@ -103,6 +103,7 @@ test("el reloj hace llegar a taxis, VIP y repartidores, y no mueve a un vehícul
     const run = states.ensureActiveRun();
     const state = structuredClone(run.state);
     state.clock.speed = 3600;
+    state.clock.paused = false;
     const vehicles = state.vehicles as Array<Record<string, unknown>>;
     vehicles.find((item) => item.id === "TX-02")!.status = "retenido";
     states.saveState(run.id, state);

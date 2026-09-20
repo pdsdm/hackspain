@@ -67,7 +67,10 @@ export function useCrisisState(): CrisisController {
   }, [receive])
 
   const intervene = async (i: Intervention) => {
-    if (requestInFlight.current || stale) return false
+    if (requestInFlight.current || stale || state.clock.paused) {
+      if (state.clock.paused) setFeedback('La operación está pausada. Iníciala antes de intervenir.')
+      return false
+    }
     setFeedback(null)
     requestInFlight.current = true; setPending(true)
     try {
@@ -100,6 +103,10 @@ export function useCrisisState(): CrisisController {
         .finally(() => { requestInFlight.current = false; setPending(false) })
     },
     sendEvent: async (text) => {
+      if (state.clock.paused) {
+        setFeedback('La operación está pausada. Iníciala antes de enviar un evento.')
+        return false
+      }
       if (requestInFlight.current) {
         setFeedback('Espera: hay un envío en curso (el coordinador va en serie).')
         return false
