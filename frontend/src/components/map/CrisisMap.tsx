@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { MapContainer, Pane, TileLayer, Polygon, Polyline, Marker, Tooltip } from 'react-leaflet'
 import type { CrisisState, LatLng, SpaceKind } from '../../domain/types'
 import { ZONE_NORTE, ZONE_SUR } from '../../domain/initialState'
@@ -7,6 +7,7 @@ import { spaceLook } from '../ui/status'
 import { KIND_COLOR, TRACK_COLOR, barrierLabelIcon, gateIcon, placeIcon, rankOf, vehicleIcon, zIndexOf, zoneLabelIcon } from './icons'
 import { pointAlong } from './geo'
 import { FitVenue, LabelPlanner, ZoomGate, type LabelCandidate } from './LabelPlanner'
+import { HoverReset } from './HoverReset'
 import { MapLayersControl, type Layers } from './MapLayersControl'
 import { useOsrmRoutes } from './routing'
 import { vehicleViews, vehicleRowsHtml, type VehicleView } from './vehicles'
@@ -62,6 +63,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
   const [layers, setLayers] = useState<Layers>({ transporte: true, proveedores: true, accesos: true, contexto: false })
   const [hover, setHover] = useState<string | null>(null)
   const [labelIds, setLabelIds] = useState<Set<string>>(new Set())
+  const resetHover = useCallback(() => setHover(null), [])
   const vehicles = useMemo(() => vehicleViews(s), [s])
   const routes = useOsrmRoutes(vehicles.map((v) => ({ id: v.id, waypoints: v.waypoints, fallback: v.fallback })))
 
@@ -105,6 +107,7 @@ export function CrisisMap({ s, onSelect, selected, children }: { s: CrisisState;
     <div className="relative h-full w-full overflow-hidden bg-panel">
       <MapContainer center={[40.4732, -3.6195]} zoom={15} minZoom={12} zoomSnap={0.25} zoomDelta={0.5} zoomControl={false} attributionControl={false} className="h-full w-full">
         <FitVenue insets={INSETS} />
+        <HoverReset onReset={resetHover} />
         <LabelPlanner candidates={candidates} onPlan={setLabelIds} />
         <TileLayer url={TILES} attribution={ATTR} maxZoom={19} className="dark-tiles" />
 

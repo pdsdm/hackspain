@@ -284,6 +284,15 @@ export class ControlService {
     return { live: enabled, seed: nextSeed, mode: liveMode };
   }
 
+  setClock(speed?: number, paused?: boolean): { speed: number; paused: boolean } {
+    const run = this.states.ensureActiveRun();
+    const state = structuredClone(run.state);
+    if (speed !== undefined) state.clock.speed = speed;
+    if (paused !== undefined) state.clock.paused = paused;
+    this.states.saveState(run.id, state);
+    return { speed: Number(state.clock.speed ?? this.clockSpeed), paused: Boolean(state.clock.paused) };
+  }
+
   applyIncident(id: string): void {
     const incident = findIncident(id);
     if (!incident) throw new ContractError(`Unknown incident: ${id}`, 400);
