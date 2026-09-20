@@ -16,6 +16,7 @@ import {
   type HappyRobotCoordinatorConfig,
   type HappyRobotSessionRegistry,
 } from "./agents/coordinator/happyrobot.js";
+import { requestCall } from "./agents/coordinator/call-request.js";
 import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
 import { DEFAULT_TEST_PHONE, type AppConfig } from "./config.js";
 import {
@@ -76,6 +77,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     typesafeApiKey: undefined,
     jevModel: "jev-1.13.0",
     hooks: {},
+    callsOnDemand: false,
     publicBaseUrl: "http://localhost:8000",
   };
 }
@@ -515,6 +517,15 @@ export function createApp(
     } catch (error) {
       next(error);
     }
+  });
+
+  // La tool `emitir_llamada` del coordinador. Es la única vía para que salga una llamada real
+  // cuando las llamadas van a petición: el backend elige el teléfono del área y crea la tarea,
+  // así que el resultado vuelve con un taskId que reconoce.
+  app.post("/workflow/coordinator/happyrobot/call", authorizeWorkflow, (request, response, next) => {
+    requestCall(request.body, { states: stateRepository, tasks: taskRepository, executor })
+      .then((result) => response.status(200).json(result))
+      .catch(next);
   });
 
   app.get("/coordinator/happyrobot/report", authorizeWorkflow, (_request, response) => {

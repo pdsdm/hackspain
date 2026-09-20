@@ -35,6 +35,7 @@ export interface AppConfig {
   typesafeApiKey: string | undefined;
   jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
+  callsOnDemand: boolean;
   publicBaseUrl: string;
   deploymentId?: string;
 }
@@ -168,6 +169,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     typesafeApiKey: env.TYPESAFE_API_KEY?.trim() || undefined,
     jevModel: env.JEV_MODEL?.trim() || "jev-1.13.0",
     hooks,
+    // Un único dueño de las llamadas: el coordinador, con su tool emitir_llamada. Antes había
+    // dos, porque el plan encolaba la acción y el tick la marcaba igual, así que el mismo
+    // encargo salía dos veces al mismo número. Es opt-in porque hay que activarlo junto con el
+    // nodo emitir_llamada del workflow: con esto puesto y el nodo apuntando al hook antiguo, no
+    // saldría ninguna llamada.
+    callsOnDemand: ["1", "true"].includes(env.CALLS_ON_DEMAND?.trim().toLowerCase() ?? ""),
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
   };

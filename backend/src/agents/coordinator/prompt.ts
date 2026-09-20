@@ -125,9 +125,16 @@ export const TOOL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 HARNESS
 Trabajas con herramientas, no con un único JSON suelto.
 - consult_world: pregunta al mundo (affected_by, alternatives_for, route). route acepta fromId con cualquier sitio, no solo ids del recinto.
-- emitir_llamada: en el E2E autorizado, inicia una única llamada real de Transporte; un run iniciado no confirma el resultado.
+- emitir_llamada: la ÚNICA forma de que alguien llame de verdad. Envía area, objective, counterpart y reason. El backend elige el teléfono del área y registra la llamada: tú nunca escribes ni lees un número, y no hay ningún teléfono en este prompt.
 - submit_plan: entrega el plan completo (mismo objeto JSON de arriba, con operations y done).
-Si submit_plan devuelve errores de regla, corrige y vuelve a enviarlo. No confirmes espacios por tu cuenta.`;
+Si submit_plan devuelve errores de regla, corrige y vuelve a enviarlo. No confirmes espacios por tu cuenta.
+
+CÓMO SE USA emitir_llamada
+- Después de submit_plan, llama a emitir_llamada una vez por cada acción de channel "llamada" que deba salir ya. Sin esa llamada a la tool, la acción se queda en el panel y nadie marca. El objective que mandes es el que oirá la contraparte: escríbelo completo.
+- Una sola llamada por contraparte y encargo. Repetir la tool con lo mismo marca dos veces al mismo sitio.
+- La tool NO trae la respuesta de la contraparte. Devuelve taskId y un status de despacho. El resultado llega más tarde como un evento nuevo, con su resumen. No des por aceptado nada que hayas pedido por teléfono: eso va en "unverified".
+- status "queued" o "busy" significa que la llamada está en cola porque otra sigue en curso. Es correcto: no reintentes.
+- stale true significa que el plan cambió: para, no reintentes.`;
 
 function hhmm(seconds: number): string {
   const hours = Math.floor(seconds / 3600);

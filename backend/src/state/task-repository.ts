@@ -49,6 +49,26 @@ interface ResultContextRow {
   state_json: string;
 }
 
+// Las condiciones que hacen reclamable una tarea. Viven en un sitio para que reclamar la
+// siguiente y reclamar una concreta no puedan divergir.
+const CLAIMABLE = `
+  task.status = 'pending'
+  AND run.active = 1
+  AND COALESCE(json_extract(run.state_json, '$.agentsPaused'), 0) = 0
+  AND COALESCE(json_extract(run.state_json, '$.rejectedPlanVersion'), -1) != task.plan_version
+  AND task.plan_version = json_extract(run.state_json, '$.planVersion')
+  AND NOT EXISTS (
+    SELECT 1
+    FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
+    WHERE NOT EXISTS (
+      SELECT 1 FROM dispatch_tasks AS required
+      WHERE required.run_id = task.run_id
+        AND required.idempotency_key IN (dependency.value, dependency.value || ':retry')
+        AND required.status = 'completed'
+    )
+  )
+`;
+
 function encodeJson(value: unknown): string {
   const encoded = JSON.stringify(value);
   if (encoded === undefined) {
@@ -131,6 +151,15 @@ export class TaskRepository {
   }
 
   claimNext(): DispatchTask | undefined {
+    return this.claimWhere(`${CLAIMABLE} ORDER BY task.created_at, task.id LIMIT 1`);
+  }
+
+  /** Reclama una tarea concreta, con los mismos requisitos que la siguiente de la cola. */
+  claim(taskId: string): DispatchTask | undefined {
+    return this.claimWhere(`task.id = ? AND ${CLAIMABLE}`, taskId);
+  }
+
+  private claimWhere(condition: string, ...params: string[]): DispatchTask | undefined {
     this.database.exec("BEGIN IMMEDIATE");
     try {
       const row = this.database
@@ -138,25 +167,9 @@ export class TaskRepository {
           SELECT task.*
           FROM dispatch_tasks AS task
           JOIN demo_runs AS run ON run.id = task.run_id
-          WHERE task.status = 'pending'
-            AND run.active = 1
-            AND COALESCE(json_extract(run.state_json, '$.agentsPaused'), 0) = 0
-            AND COALESCE(json_extract(run.state_json, '$.rejectedPlanVersion'), -1) != task.plan_version
-            AND task.plan_version = json_extract(run.state_json, '$.planVersion')
-            AND NOT EXISTS (
-              SELECT 1
-              FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
-              WHERE NOT EXISTS (
-                SELECT 1 FROM dispatch_tasks AS required
-                WHERE required.run_id = task.run_id
-                  AND required.idempotency_key IN (dependency.value, dependency.value || ':retry')
-                  AND required.status = 'completed'
-              )
-            )
-          ORDER BY task.created_at, task.id
-          LIMIT 1
+          WHERE ${condition}
         `)
-        .get() as TaskRow | undefined;
+        .get(...params) as TaskRow | undefined;
 
       if (!row) {
         this.database.exec("COMMIT");
@@ -177,6 +190,22 @@ export class TaskRepository {
       this.database.exec("ROLLBACK");
       throw error;
     }
+  }
+
+  /**
+   * Reescribe el encargo de una tarea que todavía no ha salido. El coordinador puede afinar el
+   * objetivo entre que el plan crea la acción y él pide la llamada.
+   */
+  updatePayload(taskId: string, payload: unknown): boolean {
+    const result = this.database
+      .prepare(`
+        UPDATE dispatch_tasks
+        SET payload_json = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'pending'
+      `)
+      .run(encodeJson(payload), taskId);
+    if (result.changes === 1) notifyRemote(this.database);
+    return result.changes === 1;
   }
 
   release(taskId: string): boolean {
