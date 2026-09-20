@@ -494,7 +494,7 @@ Campos de `result.data` que el backend aplica al estado:
 - `guestGroups[]` (área `asistentes`, T14): `{ "id": "g-shuttles", "informedCount": 170, "acceptedCount": 120, "needs": "12 accesibilidad · pendiente" }`. Solo con `status: "completed"`. `informedCount` cuenta mensajes **entregados**, no enviados; `acceptedCount` los que han aceptado el cambio. Nunca bajan ni superan `count`. `needs` sustituye el texto del grupo si viene.
 - `deliveries[]` (área `catering`, T12): `{ "id": "CAT-02", "status": "confirmada", "dockId": "muelleEste", "arriveAt": 47700, "services": 240, "note": "pendiente: recepción abre el muelle" }`. Solo con `status: "completed"`. `status` admite `confirmada`, `programada` o `bloqueada`; nunca `entregada` ni `invalidada`. `dockId` solo se aplica si el muelle existe y no está `cerrado`/`descartado`; una `confirmada` sobre un muelle cerrado queda en `programada`. Una entrega ya `entregada` no cambia.
 - Un resultado `completed` con outcome `accepted` o `accepted_with_conditions` solo relanza al coordinador si cambió materialmente un hecho seguro de `spaces[]`; las condiciones nuevas se fusionan en el compromiso sin relanzarlo. `rejected` y `failed` sí lo relanzan si todavía pertenecen al run y versión vigentes. `no_answer` no relanza: el backend reencola la misma tarea una sola vez (`idempotencyKey` con sufijo `:retry`); si tampoco contesta, el agente queda en `incidencia` y no se crea otra tarea. Una tarea con `dependsOn` se despacha cuando la original o su `:retry` termina `completed`; si ambas fallan, la dependiente pasa a `cancelled` y la cronología añade una línea `fallo`. Tras 3 relanzamientos seguidos provocados por resultados, sin ningún input externo nuevo (humano, giro, incidencia), el coordinador no vuelve a correr por resultados hasta que llegue uno; la cronología lo anota con un evento `espera`. Duplicados, resultados obsoletos y datos inválidos no generan otra reconsideración.
-- El adaptador `sim` devuelve `guestGroups` para las tareas `asistentes` (95 % entregado y aceptado) para que el KPI «Informados» se mueva sin HappyRobot, y `deliveries[]` para las tareas `catering` (`confirmada` si el muelle está abierto, `bloqueada` si está cerrado; la entrega nombrada en el objetivo, o todas las no entregadas).
+- `guestGroups` y `deliveries[]` solo cambian con un resultado real de HappyRobot. No hay adaptador que los rellene: T57 eliminó el camino simulado (D24), así que el KPI «Informados» no se mueve sin una respuesta de verdad.
 
 ### `POST /workflow/happyrobot/transcript` (T22)
 
@@ -514,9 +514,13 @@ Callback parcial autenticado para una llamada real todavía activa. Usa el mismo
 
 El workflow manda un snapshot **acumulativo desde el inicio de la llamada** después de cada intervención, o cada pocos segundos. `transcript` acepta los formatos de T9 (`role`/`speaker`/`who`, `content`/`text`/`message`); `at` son segundos desde el inicio. `session_id` y `happyrobot_run_id` son correlación opcional, nunca secretos ni IDs inventados. El backend ordena, fusiona y persiste en SQLite; repetir el mismo snapshot no añade líneas.
 
+**Responde `204` y sin cuerpo, a propósito.** HappyRobot devuelve al agente de voz la salida de sus nodos, y el agente leía nuestro JSON como si lo hubiera dicho la contraparte. En una llamada real apareció esta línea en mitad de la conversación, atribuida al humano:
+
 ```json
-{ "ok": true, "duplicate": false, "added": 2, "total": 2 }
+{"steps":[{"node":"POST transcript parcial","output":{"added":4,"duplicate":false,"ok":true,"total":4}}]}
 ```
+
+El agente perdió el hilo, repitió el saludo y la llamada murió. La cuenta de líneas fusionadas va ahora al log (`[workflow] transcript`), no a la respuesta. El nodo del workflow tampoco debe devolver su salida al agente: el `204` reduce el daño, no lo elimina.
 
 Ejemplo reproducible, sin exponer el token en el historial del shell:
 
@@ -593,7 +597,11 @@ Cuando hay `HAPPYROBOT_HOOK_*` para el área, el ejecutor hace `POST` a esa URL 
 
 `kind` y `channel` llevan la misma señal explícita (`call` | `sms` | `email`) para que un hook por área elija el canal de la tarea sin inferirlo del área. Esto no acredita por sí solo que el proveedor haya enviado, entregado o recibido un mensaje.
 
-El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Durante una llamada de voz configurada para T22, también publica snapshots acumulativos en `transcriptCallbackUrl`; ambos usan `HAPPYROBOT_WEBHOOK_TOKEN`. Sin hook, el adaptador `sim` finge el resultado unos segundos de reloj después. Si el hook acepta el POST pero no hay callback final en 180 s de reloj, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y la tarea se reintenta una vez sin relanzar al coordinador. Solo hay una llamada real en curso a la vez: mientras una tarea con adaptador `happyrobot` espera su callback, las demás tareas reales quedan `pending` y se despachan en el siguiente tick del reloj.
+**Solo se despacha `kind: "call"`.** El hook de área apunta a un workflow de voz que ignora el `kind` y siempre marca, así que una tarea de `sms` o `email` hacía sonar un teléfono; ocurrió en producción, con transcripción de voz guardada bajo `channel: "email"`. Una tarea que no sea `call` termina `failed` con `Sin canal real para <kind> en <área>; hoy solo hay llamada`.
+
+**No se marca dos veces el mismo encargo.** Antes de despachar, el backend compara el objetivo normalizado con las llamadas reales de los últimos `CALL_COOLDOWN_MS` (120000 por defecto) a la misma área y contraparte. Si coincide, o si un texto contiene al otro, la tarea termina `failed` con un resultado cuyo `eventId` empieza por `no-repeat-` y cuyo resumen empieza por `No se repite la llamada`. Ese resultado no relanza al coordinador, igual que `no-channel-`: replanificar generaría otra llamada repetida. Una pregunta distinta a la misma contraparte sí sale, y una tarea `:retry` está exenta.
+
+El workflow responde por el `callbackUrl`, no por el cuerpo de este POST. Durante una llamada de voz configurada para T22, también publica snapshots acumulativos en `transcriptCallbackUrl`; ambos usan `HAPPYROBOT_WEBHOOK_TOKEN`. Sin hook no hay canal: la tarea termina `failed` al instante con `Sin canal real configurado`, y nadie finge un resultado (D24). Si el hook acepta el POST pero no hay callback final en 180 s de tiempo real, el backend registra un resultado `no_answer` (`eventId: timeout-<taskId>`), la llamada pasa a `sin_respuesta` y la tarea se reintenta una vez sin relanzar al coordinador. Solo hay una llamada real en curso a la vez: mientras una tarea con adaptador `happyrobot` espera su callback, las demás tareas reales quedan `pending` y se despachan en el siguiente tick del reloj.
 
 Los campos anidados van además repetidos en plano (`"contact.phone"`, `"situation.simSeconds"`), porque un workflow que declara sus parámetros con punto puede extraerlos como clave literal en vez de recorrer el objeto. Duplicarlos evita un primer run vacío y no molesta a quien lea la forma anidada.
 

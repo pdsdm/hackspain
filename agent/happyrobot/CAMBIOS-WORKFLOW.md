@@ -4,18 +4,36 @@ Las tres versiones publicadas están bloqueadas (`is_version_locked: true`), as�
 
 | Workflow | Versión revisada | Cambio |
 | --- | --- | --- |
+| Voice agent outbound | `w357ezfkhbqe` | **Lo más urgente.** `reportar_transcript` no debe devolver su salida al agente. Y revisar el nombre de la variable del token. |
 | Orquestador | `3vb1dgcwmyqr` | **Obligatorio.** Reapuntar `emitir_llamada` al backend. |
-| Voice agent outbound | `w357ezfkhbqe` | Revisar el nombre de la variable del token del transcript. |
 | Voice agent inbound | `7axzyarqckaf` | Quitar del prompt la referencia a una tool que no existe. |
+
+## 0. Lo primero: la tool de transcripción está rompiendo las llamadas
+
+En una llamada real de producción, la transcripción quedó así:
+
+```
+2 agente | ...¿Hablo con responsable de espacios?
+3 humano | Sí, sí, dígame.
+4 humano | {"steps":[{"node":"POST transcript parcial","output":{"added":4,"duplicate":false,"ok":true,"total":4}}]}
+5 agente | Buenos días, le llamo del centro de      <- reinicia el saludo
+```
+
+La línea 4 es la respuesta HTTP de nuestro backend. HappyRobot devuelve al agente la salida del nodo, el agente la lee como si la hubiera dicho la contraparte, pierde el hilo y vuelve a empezar. La llamada murió ahí, y el resumen final fue «solo se emitió el saludo inicial y terminó inmediatamente».
+
+**Qué cambiar:** en el nodo `POST transcript parcial`, que su salida **no** vuelva al agente. Según cómo lo llame la plataforma: tool silenciosa, «no devolver resultado al modelo», o descartar la respuesta. Es una llamada de solo ida; al agente no le sirve de nada.
+
+El backend ya ayuda por su lado: desde T60 ese endpoint responde `204` sin cuerpo, así que aunque el nodo devuelva algo, será vacío. Pero el arreglo de fondo es este.
 
 ## Orden
 
 El orden importa. La regla dura es que `CALLS_ON_DEMAND=true` va **al final**: con la variable puesta y el nodo antiguo, no sale ninguna llamada.
 
-1. Mergear T59 y esperar el despliegue de Railway. Así el endpoint existe antes de que el nodo apunte a él.
-2. Validar el endpoint con un `curl` de área inválida (abajo). No marca a nadie.
-3. Publicar la versión nueva del Orquestador.
-4. Poner `CALLS_ON_DEMAND=true`.
+1. Publicar la versión nueva del **outbound** con la tool de transcripción silenciada (punto 0). Es independiente del resto y arregla las llamadas hoy mismo.
+2. Mergear T60 (T59 ya está en `main`) y esperar el despliegue de Railway. Así el endpoint existe antes de que el nodo apunte a él.
+3. Validar el endpoint con un `curl` de área inválida (abajo). No marca a nadie.
+4. Publicar la versión nueva del Orquestador.
+5. Poner `CALLS_ON_DEMAND=true`.
 
 ### Validación sin llamar a nadie
 

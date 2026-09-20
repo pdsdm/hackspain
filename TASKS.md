@@ -30,7 +30,7 @@
 | T18 | Entorno de demo y recuperación | Zhi | `fix/zhi-demo-readiness` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
-| T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | - | review |
+| T21 | Revisión y entrega final | Pep | `feat/pep-entrega` (PR #112, mergeada) | - | done |
 | T22 | P2: transcripción en directo | Devin | `feat/devin-transcripcion` | [T22](docs/specs/T22-transcripcion.md) | review |
 | T23 | Rediseño UI del panel: tema claro con estética Zhivel | Pep | `feat/pepe-ui-zhivel`, `fix/pepe-dashboard-layout` (mergeadas) | - | done |
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` (PR #15, mergeada) | [T24](docs/specs/T24-motor-eventos.md) | done |
@@ -67,7 +67,8 @@
 | T56 | Cierre de la demo: dependencias con `:retry`, sin replan por condiciones, cierre con condiciones informativas, logs sin `answer` | Pep | `fix/pep-deps-retry` | [D23](docs/decisions.md) | done |
 | T57 | Quitar toda la simulación: sin adaptador `sim`, sin modo vivo ni giros, sin `inbox_batch`, sin reset E2E, frontend siempre API | Pep | `feat/pep-sin-simulacion` | [D24](docs/decisions.md) | review |
 | T58 | El coordinador no aceptaba un «no»: memoria de llamadas en el snapshot, `no_disponible` aplicado, hook por área, plazos en tiempo real y teléfono editable en el panel | Pep | `feat/pep-no-y-telefono-ui` | [D25](docs/decisions.md), [D26](docs/decisions.md) | review |
-| T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | review |
+| T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | done |
+| T60 | Tres fallas vistas en una llamada real: la transcripción se inyectaba en la conversación, cada replan repetía la llamada y un email marcaba un teléfono | Pep | `fix/pep-llamada-que-se-sabotea` | [D28](docs/decisions.md) | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

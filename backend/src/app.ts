@@ -78,6 +78,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     jevModel: "jev-1.13.0",
     hooks: {},
     callsOnDemand: false,
+    callCooldownMs: 120_000,
     publicBaseUrl: "http://localhost:8000",
   };
 }
@@ -593,12 +594,16 @@ export function createApp(
         ...(update.sessionId ? { sessionId: update.sessionId } : {}),
         ...(update.happyrobotRunId ? { happyrobotRunId: update.happyrobotRunId } : {}),
       });
-      response.status(200).json({
-        ok: true,
-        duplicate: merged.added === 0,
+      logWorkflow("transcript", {
+        taskId: update.taskId,
+        callId: update.callId,
         added: merged.added,
         total: merged.total,
       });
+      // Sin cuerpo a propósito. HappyRobot devuelve al agente de voz la salida de sus nodos, y
+      // el agente leía nuestro JSON como si lo hubiera dicho la contraparte: se perdía y
+      // repetía el saludo hasta que la llamada moría. La cuenta de líneas va al log.
+      response.status(204).end();
     } catch (error) {
       next(error);
     }
