@@ -8,7 +8,31 @@ Las tres versiones publicadas están bloqueadas (`is_version_locked: true`), as�
 | Voice agent outbound | `w357ezfkhbqe` | Revisar el nombre de la variable del token del transcript. |
 | Voice agent inbound | `7axzyarqckaf` | Quitar del prompt la referencia a una tool que no existe. |
 
-El orden importa. Publica primero la versión nueva del Orquestador y solo después pon `CALLS_ON_DEMAND=true` en Railway. Con la variable puesta y el nodo antiguo, no sale ninguna llamada.
+## Orden
+
+El orden importa. La regla dura es que `CALLS_ON_DEMAND=true` va **al final**: con la variable puesta y el nodo antiguo, no sale ninguna llamada.
+
+1. Mergear T59 y esperar el despliegue de Railway. Así el endpoint existe antes de que el nodo apunte a él.
+2. Validar el endpoint con un `curl` de área inválida (abajo). No marca a nadie.
+3. Publicar la versión nueva del Orquestador.
+4. Poner `CALLS_ON_DEMAND=true`.
+
+### Validación sin llamar a nadie
+
+```bash
+curl -s -X POST https://hackspain-production.up.railway.app/workflow/coordinator/happyrobot/call \
+  -H "Authorization: Bearer $HAPPYROBOT_WEBHOOK_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"area":"prueba","objective":"validar el endpoint"}'
+```
+
+Respuesta esperada, que confirma ruta y token sin crear ninguna tarea:
+
+```json
+{"ok":false,"stale":false,"error":"area \"prueba\" no existe; usa una de: espacios, catering, transporte, asistentes","taskId":null,"callId":null,"status":null}
+```
+
+`401` significa token distinto al de Railway. `404` significa que T59 todavía no está desplegada.
 
 ---
 
