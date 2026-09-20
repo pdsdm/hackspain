@@ -146,10 +146,12 @@ export class TaskRepository {
             AND NOT EXISTS (
               SELECT 1
               FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
-              LEFT JOIN dispatch_tasks AS required
-                ON required.run_id = task.run_id
-                AND required.idempotency_key = dependency.value
-              WHERE required.id IS NULL OR required.status != 'completed'
+              WHERE NOT EXISTS (
+                SELECT 1 FROM dispatch_tasks AS required
+                WHERE required.run_id = task.run_id
+                  AND required.idempotency_key IN (dependency.value, dependency.value || ':retry')
+                  AND required.status = 'completed'
+              )
             )
           ORDER BY task.created_at, task.id
           LIMIT 1
@@ -208,12 +210,14 @@ export class TaskRepository {
       SELECT task.id FROM dispatch_tasks AS task
       WHERE task.id = ? AND NOT EXISTS (
         SELECT 1 FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
-        LEFT JOIN dispatch_tasks AS required ON required.run_id = task.run_id
-          AND required.idempotency_key = dependency.value
-          AND required.plan_version = task.plan_version
-        WHERE required.id IS NULL OR required.status != 'completed' OR NOT EXISTS (
-          SELECT 1 FROM task_results AS result
-          WHERE result.task_id = required.id AND result.applied = 1
+        WHERE NOT EXISTS (
+          SELECT 1 FROM dispatch_tasks AS required
+          JOIN task_results AS result ON result.task_id = required.id
+          WHERE required.run_id = task.run_id
+            AND required.idempotency_key IN (dependency.value, dependency.value || ':retry')
+            AND required.plan_version = task.plan_version
+            AND required.status = 'completed'
+            AND result.applied = 1
             AND json_extract(result.payload_json, '$.status') = 'completed'
             AND json_extract(result.payload_json, '$.result.outcome') = 'accepted'
             AND json_array_length(result.payload_json, '$.result.conditions') = 0
@@ -221,6 +225,24 @@ export class TaskRepository {
       )
     `).get(taskId);
     return row !== undefined;
+  }
+
+  cancelBlocked(runId: string): DispatchTask[] {
+    const rows = this.database.prepare(`
+      SELECT task.* FROM dispatch_tasks AS task
+      WHERE task.run_id = ? AND task.status = 'pending' AND EXISTS (
+        SELECT 1 FROM json_each(task.payload_json, '$.dependsOnKeys') AS dependency
+        WHERE NOT EXISTS (
+          SELECT 1 FROM dispatch_tasks AS required
+          WHERE required.run_id = task.run_id
+            AND required.idempotency_key IN (dependency.value, dependency.value || ':retry')
+            AND required.status IN ('pending', 'dispatching', 'dispatched', 'unknown', 'completed')
+        )
+      )
+      ORDER BY task.created_at, task.id
+    `).all(runId) as unknown as TaskRow[];
+    const cancelled = rows.filter((row) => this.cancel(row.id, "dependency failed"));
+    return cancelled.map((row) => ({ ...this.toTask(row), status: "cancelled" }));
   }
 
   recordResult(
