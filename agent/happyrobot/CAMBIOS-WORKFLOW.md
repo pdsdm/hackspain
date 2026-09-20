@@ -55,7 +55,7 @@ Content-Type: application/json
 Authorization: Bearer {{HAPPYROBOT_COORDINATOR_TOKEN}}
 ```
 
-**Parámetros de la tool** — solo estos seis. Quita `contact_phone`, `callId`, `taskId`, `callbackUrl` y `transcriptCallbackUrl`: ahora los pone el backend.
+**Parámetros de la tool** — solo estos cuatro, los que decide el modelo. Borra los demás (`contact_phone`, `contact_role`, `callId`, `taskId`, `callbackUrl`, `transcriptCallbackUrl`, `situation_*`, `runId`, `planVersion`): los pone el backend.
 
 | Parámetro | Requerido | Qué es |
 | --- | --- | --- |
@@ -63,8 +63,8 @@ Authorization: Bearer {{HAPPYROBOT_COORDINATOR_TOKEN}}
 | `objective` | sí | el encargo literal que oirá la contraparte |
 | `counterpart` | no | con quién se habla |
 | `reason` | no | por qué ahora; se muestra al responsable humano |
-| `run_id` | no | el del trigger, sin tocar |
-| `plan_version` | no | la del trigger, sin tocar |
+
+`run_id` y `plan_version` **no** son parámetros de la tool. Van en el cuerpo leídos del trigger, igual que en `consult_world` y `submit_plan`: así el modelo no los puede escribir mal.
 
 **Cuerpo**
 
