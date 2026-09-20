@@ -90,6 +90,40 @@ El coordinador emite `estimatedCost: number | null`, independiente de `decision`
 
 `proposal.cost` admite `null`. Un coordinador externo puede solicitar una decisión operativa con `proposal.approval = { kind: "operational", title, summary, rationale, conditions, effectApprove, effectReject }`. Un precio por sí solo nunca crea una decisión.
 
+### `GET /events`
+
+Cronología reciente sin arrastrar el estado entero. Mismo contenido que `state.events`, para
+consumidores que solo quieren saber qué acaba de pasar y no necesitan espacios, rutas ni
+vehículos en cada sondeo. Solo lectura y sin token, igual que `GET /state`.
+
+```json
+{
+  "events": [
+    { "id": "event-…", "time": 43260, "realAt": 1789860000000, "kind": "incidencia",
+      "text": "Recinto confirma cierre del Pabellón Principal", "area": "espacios" }
+  ],
+  "total": 37,
+  "simSeconds": 43320,
+  "planVersion": 2
+}
+```
+
+Parámetros de query, todos opcionales:
+
+| Parámetro | Por defecto | Qué hace |
+|---|---|---|
+| `limit` | 50 (máx. 200) | Devuelve las N más recientes |
+| `since` | — | Solo eventos con `realAt` **posterior** al valor (epoch ms). Para sondeo incremental |
+| `kind` | — | Filtra por tipo: `info`, `accion`, `incidencia`, `intervencion`, `fallo`, `acuerdo`… |
+| `area` | — | Filtra por área: `espacios`, `catering`, `transporte`, `asistentes` |
+
+`total` es el tamaño de la cronología completa antes de filtrar; recuerda que el backend solo
+conserva las **últimas 80**. Un `limit` o `since` inválido responde `400`.
+
+`realAt` es la hora real (epoch ms) en que el backend registró el evento, mientras que `time`
+son segundos del reloj del escenario. Para ordenar por lo que de verdad ocurrió antes, usa
+`realAt`; los eventos precargados de un fixture pueden no tenerlo.
+
 ### `POST /interventions`
 
 ```json
