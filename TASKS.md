@@ -65,11 +65,11 @@
 | T54 | Más actores con orígenes repartidos por Madrid y rutas que evitan el circuito | Pep | `feat/pep-mas-actores` | [D8](docs/decisions.md) | review |
 | T55 | Corregir el bucle de replanificación en producción: sin replan por `no_answer`, una llamada real en curso, logs legibles | Pep | `fix/pep-replan-loop` | [D21](docs/decisions.md) | done |
 | T56 | Cierre de la demo: dependencias con `:retry`, sin replan por condiciones, cierre con condiciones informativas, logs sin `answer` | Pep | `fix/pep-deps-retry` | [D23](docs/decisions.md) | done |
-| T57 | Quitar toda la simulación: sin adaptador `sim`, sin modo vivo ni giros, sin `inbox_batch`, sin reset E2E, frontend siempre API | Pep | `feat/pep-sin-simulacion` | [D24](docs/decisions.md) | review |
-| T58 | El coordinador no aceptaba un «no»: memoria de llamadas en el snapshot, `no_disponible` aplicado, hook por área, plazos en tiempo real y teléfono editable en el panel | Pep | `feat/pep-no-y-telefono-ui` | [D25](docs/decisions.md), [D26](docs/decisions.md) | review |
+| T57 | Quitar toda la simulación: sin adaptador `sim`, sin modo vivo ni giros, sin `inbox_batch`, sin reset E2E, frontend siempre API | Pep | `feat/pep-sin-simulacion` (PR #109, mergeada) | [D24](docs/decisions.md) | done |
+| T58 | El coordinador no aceptaba un «no»: memoria de llamadas en el snapshot, `no_disponible` aplicado, hook por área, plazos en tiempo real y teléfono editable en el panel | Pep | `feat/pep-no-y-telefono-ui` (PR #110, mergeada) | [D25](docs/decisions.md), [D26](docs/decisions.md) | done |
 | T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | done |
-| T60 | Tres fallas vistas en una llamada real: la transcripción se inyectaba en la conversación, cada replan repetía la llamada y un email marcaba un teléfono | Pep | `fix/pep-llamada-que-se-sabotea` | [D28](docs/decisions.md) | review |
-| T61 | El trigger del coordinador HappyRobot fallaba con 404 en producción: `HAPPYROBOT_COORDINATOR_ENVIRONMENT` y `HAPPYROBOT_COORDINATOR_HOOK_URL` podían divergir en silencio | Pep | `fix/pep-happyrobot-trigger-env` | [D29](docs/decisions.md) | review |
+| T60 | Tres fallas vistas en una llamada real: la transcripción se inyectaba en la conversación, cada replan repetía la llamada y un email marcaba un teléfono | Pep | `fix/pep-llamada-que-se-sabotea` (PR #113, mergeada) | [D28](docs/decisions.md) | done |
+| T61 | El trigger del coordinador HappyRobot fallaba con 404 en producción: `HAPPYROBOT_COORDINATOR_ENVIRONMENT` y `HAPPYROBOT_COORDINATOR_HOOK_URL` podían divergir en silencio | Pep | `fix/pep-happyrobot-trigger-env` (PR #114, mergeada) | [D29](docs/decisions.md) | done |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
