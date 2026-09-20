@@ -261,6 +261,38 @@ test("a no_answer retries the same task once instead of replanning", async () =>
   }
 });
 
+test("a second no_answer cancels the tasks that depended on the unanswered one", async () => {
+  const { database, states, tasks, instance } = engine();
+  try {
+    const run = states.ensureActiveRun();
+    const input = { runId: run.id, planVersion: run.state.planVersion, kind: "call" };
+    const required = tasks.enqueue({ ...input, area: "asistentes", payload: { objective: "Repartir recepción", counterpart: "Recepción" }, idempotencyKey: "plan-1:a5" });
+    const dependent = tasks.enqueue({ ...input, area: "catering", payload: { objective: "Acordar descarga", counterpart: "Catering", dependsOnKeys: ["plan-1:a5"] }, idempotencyKey: "plan-1:a3" });
+    const fail = async (taskId: string) => {
+      tasks.markDispatchOutcome(taskId, "dispatched");
+      tasks.recordResult(taskId, `r-${taskId}`, { status: "no_answer" }, (state) => state, "failed");
+      await instance.handle({
+        source: "happyrobot",
+        kind: "call_result",
+        payload: { taskId, runId: run.id, planVersion: run.state.planVersion, status: "no_answer", result: { outcome: "no_answer", summary: "sin respuesta", conditions: [], evidence: {}, data: {} } },
+      });
+    };
+    assert.equal(tasks.claimNext()?.id, required.id);
+    await fail(required.id);
+    assert.equal(tasks.get(dependent.id)?.status, "pending");
+    const retry = tasks.listOpen(run.id).find((item) => item.idempotencyKey === "plan-1:a5:retry");
+    assert.ok(retry);
+    assert.equal(tasks.claimNext()?.id, retry.id);
+    await fail(retry.id);
+    assert.equal(tasks.get(dependent.id)?.status, "cancelled");
+    assert.equal(tasks.listOpen(run.id).length, 0);
+    const events = states.ensureActiveRun().state.events as Array<Record<string, unknown>>;
+    assert.ok(events.some((event) => event.kind === "fallo" && String(event.text).includes("Acordar descarga")));
+  } finally {
+    database.close();
+  }
+});
+
 test("consecutive result-driven replans stop after the limit until a new external input", async () => {
   let calls = 0;
   const { database, states, instance } = engine(undefined, async () => {

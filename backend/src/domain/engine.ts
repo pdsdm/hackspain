@@ -245,6 +245,7 @@ export class Engine {
             mode = await this.runCoordinator(materialSummary ? { ...event, text: materialSummary } : event, true);
           }
         }
+        this.dropBlockedTasks();
       } else {
         mode = await this.runCoordinator(event);
       }
@@ -368,6 +369,18 @@ export class Engine {
     });
     state.events = events.slice(-80);
     this.states.saveState(run.id, state);
+  }
+
+  private dropBlockedTasks(): void {
+    const run = this.states.ensureActiveRun();
+    const cancelled = this.tasks.cancelBlocked(run.id);
+    if (cancelled.length === 0) return;
+    for (const task of cancelled) {
+      logCoord("tarea cancelada: su dependencia no contestó", task.area, task.kind);
+      const objective = isRecord(task.payload) && typeof task.payload.objective === "string" ? task.payload.objective : task.kind;
+      this.appendTimeline("fallo", `${task.area}: se cancela «${objective}» porque la tarea de la que dependía no obtuvo respuesta.`);
+    }
+    this.executor?.pump();
   }
 
   private retryNoAnswer(payload: Record<string, unknown> | undefined): void {

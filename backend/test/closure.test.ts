@@ -66,6 +66,16 @@ test("una sede propuesta o pendiente y una condición crítica dejan un desenlac
   }
 });
 
+test("el resumen del atasco enumera como mucho tres condiciones y cuenta el resto", () => {
+  const state = closedState();
+  state.commitments[0]!.status = "aceptado_condiciones";
+  state.commitments[0]!.conditions = ["Uno", "Dos", "Tres", "Cuatro", "Cinco"];
+  const report = evaluateClosure(state, 0);
+  assert.equal(report.closed, false);
+  assert.match(report.gap, /5 condiciones abiertas: Uno; Dos; Tres y 2 más/);
+  assert.doesNotMatch(report.gap, /Cuatro/);
+});
+
 test("no cierra con aforo insuficiente o sin acceso operativo a la zona", () => {
   const capacity = closedState();
   capacity.spaces[0]!.capacity = 400;

@@ -114,7 +114,9 @@ export function evaluateClosure(state: CrisisStateDocument, openTasks: number): 
   }
   if (confirmed < total) gaps.push(`${total - confirmed} invitados sin plaza confirmada`);
   if (pendingConditions > 0) {
-    gaps.push(`${pendingConditions} ${pendingConditions === 1 ? "condición abierta" : "condiciones abiertas"}: ${conditions.join("; ")}`);
+    const shown = conditions.slice(0, 3).join("; ");
+    const more = conditions.length > 3 ? ` y ${conditions.length - 3} más` : "";
+    gaps.push(`${pendingConditions} ${pendingConditions === 1 ? "condición abierta" : "condiciones abiertas"}: ${shown}${more}`);
   }
   if (waiting.length > 0 && quiet) {
     gaps.push(`${waiting.length} ${waiting.length === 1 ? "compromiso sin consulta activa" : "compromisos sin consulta activa"}: ${waiting.map((item) => item.title).join("; ")}`);

@@ -379,6 +379,31 @@ test("a material accepted result reaches the coordinator after the new facts are
   }, TOKEN, completeFn);
 });
 
+test("an accepted result that only adds conditions does not relaunch the coordinator", async () => {
+  let calls = 0;
+  const completeFn: CompleteFn = async () => {
+    calls += 1;
+    return "{}";
+  };
+  await withServer(async (base, states) => {
+    const run = states.ensureActiveRun();
+    const body = coordinatorBody(run.id, run.state.planVersion);
+    body.actions = body.actions.slice(0, 1);
+    const proposalResponse = await post(base, "/workflow/coordinator/proposals", body, TOKEN);
+    const proposal = (await proposalResponse.json()) as { planVersion: number; tasks: Array<{ taskId: string }> };
+    const result = specialistBody(proposal.tasks[0]!.taskId, run.id, proposal.planVersion);
+    result.result.conditions = ["Aforo máximo 450, sin ampliación", "Apertura a las 13:00"];
+    result.result.data = {};
+    const response = await post(base, "/workflow/results", result, TOKEN);
+    assert.deepEqual(await response.json(), { ok: true, applied: true, duplicate: false });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(calls, 0);
+    const commitment = states.ensureActiveRun().state.commitments.find((item) => item.id === "c-pabB");
+    assert.deepEqual(commitment?.conditions, ["Confirmar reserva", "Aforo máximo 450, sin ampliación", "Apertura a las 13:00"]);
+    assert.equal(commitment?.status, "aceptado_condiciones");
+  }, TOKEN, completeFn);
+});
+
 test("an accepted result does not mark the coordinator stable while another cycle is running", () => {
   const database = openDatabase(":memory:");
   try {

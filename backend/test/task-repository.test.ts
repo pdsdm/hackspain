@@ -191,3 +191,51 @@ test("a current result mutates state once through its explicit adapter", () => {
     database.close();
   }
 });
+
+test("a completed :retry satisfies the dependency of the original key", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const run = new StateRepository(database.connection).ensureActiveRun();
+    const tasks = new TaskRepository(database.connection);
+    const input = { runId: run.id, planVersion: run.state.planVersion, area: "asistentes", kind: "call" };
+    const required = tasks.enqueue({ ...input, payload: {}, idempotencyKey: "plan:a5" });
+    const dependent = tasks.enqueue({ ...input, area: "catering", payload: { dependsOnKeys: ["plan:a5"] }, idempotencyKey: "plan:a3" });
+    assert.equal(tasks.claimNext()?.id, required.id);
+    tasks.markDispatchOutcome(required.id, "dispatched");
+    tasks.recordResult(required.id, "r1", { status: "no_answer", result: { outcome: "no_answer", conditions: [] } }, (state) => state, "failed");
+    assert.equal(tasks.claimNext(), undefined);
+
+    const retry = tasks.enqueue({ ...input, payload: {}, idempotencyKey: "plan:a5:retry" });
+    assert.equal(tasks.claimNext()?.id, retry.id);
+    tasks.markDispatchOutcome(retry.id, "dispatched");
+    assert.deepEqual(tasks.cancelBlocked(run.id), []);
+    tasks.recordResult(retry.id, "r2", { status: "completed", result: { outcome: "accepted", conditions: [] } }, (state) => state);
+    assert.equal(tasks.claimNext()?.id, dependent.id);
+    assert.equal(tasks.dependenciesSatisfied(dependent.id), true);
+  } finally { database.close(); }
+});
+
+test("a dependent task is cancelled when its dependency and the retry both fail", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const run = new StateRepository(database.connection).ensureActiveRun();
+    const tasks = new TaskRepository(database.connection);
+    const input = { runId: run.id, planVersion: run.state.planVersion, area: "asistentes", kind: "call" };
+    const required = tasks.enqueue({ ...input, payload: {}, idempotencyKey: "plan:a5" });
+    const retry = tasks.enqueue({ ...input, payload: {}, idempotencyKey: "plan:a5:retry" });
+    const dependent = tasks.enqueue({ ...input, area: "catering", payload: { dependsOnKeys: ["plan:a5"] }, idempotencyKey: "plan:a3" });
+    for (let index = 0; index < 2; index += 1) {
+      const claimed = tasks.claimNext();
+      assert.ok(claimed && [required.id, retry.id].includes(claimed.id));
+      tasks.markDispatchOutcome(claimed.id, "dispatched");
+      tasks.recordResult(claimed.id, `r-${claimed.id}`, { status: "no_answer", result: { outcome: "no_answer", conditions: [] } }, (state) => state, "failed");
+    }
+    const free = tasks.enqueue({ ...input, area: "transporte", payload: {}, idempotencyKey: "plan:a4" });
+    const cancelled = tasks.cancelBlocked(run.id);
+    assert.deepEqual(cancelled.map((task) => task.id), [dependent.id]);
+    assert.equal(cancelled[0]?.status, "cancelled");
+    assert.equal(tasks.get(dependent.id)?.status, "cancelled");
+    assert.equal(tasks.get(free.id)?.status, "pending");
+    assert.deepEqual(tasks.listOpen(run.id).map((task) => task.id), [free.id]);
+  } finally { database.close(); }
+});
