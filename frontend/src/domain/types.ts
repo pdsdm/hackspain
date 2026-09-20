@@ -180,6 +180,8 @@ export interface TimelineEvent {
   channel?: 'call' | 'sms' | 'webcall' | 'api'
   actor?: string
   simulated?: boolean
+  /** Hora real (epoch ms) en que el backend registró el evento. */
+  realAt?: number
 }
 
 export interface Budget {

@@ -50,6 +50,9 @@ function noAnswerEnvelope(input: {
   };
 }
 
+/** Techo de la llamada en pantalla. El resultado simulado llega antes (12-24 s). */
+const SIM_CALL_SECONDS = 30;
+
 export class ActionExecutor {
   // Segundos de reloj que esperamos el callback de HappyRobot antes de dar la tarea por no contestada.
   static readonly DISPATCH_TIMEOUT_SECONDS = 180;
@@ -111,7 +114,7 @@ export class ActionExecutor {
       counterpart: String(payload.counterpart ?? "Interlocutor"),
       channel: task.kind === "sms" ? "sms" : task.kind === "email" ? "email" : "llamada",
       startedAt: state.clock.simSeconds,
-      endsAfter: 90,
+      endsAfter: SIM_CALL_SECONDS,
       status: "en_curso",
       simulated: !real,
       transcript: [],
@@ -158,7 +161,7 @@ export class ActionExecutor {
     this.tasks.markDispatchOutcome(task.id, "dispatched");
     const seed = Number(state.clock.liveSeed ?? state.clock.attendanceSeed ?? this.config.simSeed ?? 1);
     const reply = await counterpartReply(task, state, seed, this.engine?.llmDeps() ?? {});
-    const delay = 20 + Math.floor(Math.random() * 21);
+    const delay = 12 + Math.floor(Math.random() * 13);
     const envelope = scheduleSimResult({
       reply,
       task,

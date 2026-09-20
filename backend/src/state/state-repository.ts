@@ -129,7 +129,27 @@ export class StateRepository {
     return this.createRun(this.loadFixture(fixture ?? this.initialFixture));
   }
 
+  /**
+   * Sella cada línea nueva de cronología con la hora real en que se persiste.
+   *
+   * `time` son segundos del reloj del escenario (43200 = 12:00), que es lo que necesitan la
+   * cuenta atrás y el guion. Pero el panel enseña la cronología como un registro de lo que
+   * está pasando ahora, y ahí la hora del escenario despista. Se sella aquí, en el único
+   * sitio por el que pasan todas las escrituras, en vez de en los doce que crean eventos.
+   */
+  private stampTimeline(state: CrisisStateDocument): void {
+    if (!Array.isArray(state.events)) return;
+    const now = Date.now();
+    for (const event of state.events) {
+      if (event && typeof event === "object" && !Array.isArray(event)) {
+        const record = event as Record<string, unknown>;
+        if (typeof record.realAt !== "number") record.realAt = now;
+      }
+    }
+  }
+
   saveState(runId: string, state: CrisisStateDocument): void {
+    this.stampTimeline(state);
     const parsed = parseCrisisState(state);
     const result = this.database
       .prepare(`
@@ -185,6 +205,7 @@ export class StateRepository {
     state: CrisisStateDocument,
     allocations: GuestAllocation[],
   ): void {
+    this.stampTimeline(state);
     const parsed = parseCrisisState(state);
     this.database.exec("BEGIN IMMEDIATE");
     try {
