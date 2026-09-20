@@ -26,6 +26,7 @@ export const api = {
   intervene: (intervention: Intervention) => req<{ ok: boolean }>('/interventions', { method: 'POST', body: JSON.stringify(intervention) }),
   twist: (twist: TwistId) => req<{ ok: boolean }>('/simulation/twists', { method: 'POST', body: JSON.stringify({ twist }) }),
   live: (enabled: boolean, seed?: number) => req<{ ok: boolean; live: boolean; seed: number }>('/simulation/live', { method: 'POST', body: JSON.stringify(seed ? { enabled, seed } : { enabled }) }),
+  clock: (body: { speed?: number; paused?: boolean }) => req<{ ok: boolean; speed: number; paused: boolean }>('/simulation/clock', { method: 'POST', body: JSON.stringify(body) }),
   reset: () => req<{ ok: boolean; runId: string; planVersion: number }>('/simulation/reset', { method: 'POST' }),
   requestCall: (input: { area: Area; counterpart: string; objective: string; commitmentId?: string }) =>
     req<{ ok: boolean; eventId: string }>('/events', { method: 'POST', body: JSON.stringify({

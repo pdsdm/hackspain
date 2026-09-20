@@ -144,6 +144,20 @@ Reset autenticado para el ensayo real en producción. Crea un run `calm`, desact
 { "ok": true, "runId": "3bd0…", "planVersion": 1, "externalActions": "sim" }
 ```
 
+### `POST /simulation/clock`
+
+Cambia la velocidad del reloj de simulación o lo pausa/reanuda. Lo usa la cabecera del frontend en modo API (botones ×1 ×2 ×5 ×10 ×20 y pausa).
+
+```json
+{ "speed": 5, "paused": false }
+```
+
+Los dos campos son opcionales, pero hace falta al menos uno. `speed` entre 1 y 60. Responde con el estado resultante:
+
+```json
+{ "ok": true, "speed": 5, "paused": false }
+```
+
 ### `POST /simulation/live` (T32)
 
 Enciende o apaga el «Modo vivo»: microincidencias y giros del jurado con semilla, sin pulsar los botones. Por defecto apagado; también con `SIM_INCIDENTS=on` (semilla `SIM_SEED`, por defecto `1`) al arrancar.
