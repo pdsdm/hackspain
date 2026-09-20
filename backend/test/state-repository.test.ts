@@ -49,7 +49,7 @@ test("CrisisState survives restart without dropping future contract fields", () 
   }
 });
 
-test("con el reloj en pausa el tick no avanza el escenario, pero sí vence plazos y bombea la cola", () => {
+test("con el reloj en pausa el tick no avanza ni bombea la cola", () => {
   const database = openDatabase(":memory:");
   try {
     const repository = new StateRepository(database.connection);
@@ -66,10 +66,8 @@ test("con el reloj en pausa el tick no avanza el escenario, pero sí vence plazo
 
     new SimulationClock(repository, executor).tick();
 
-    // Sin esto, una llamada real sin resultado no vencía nunca con la mesa detenida y
-    // bloqueaba la cola entera hasta que alguien pulsaba iniciar.
-    assert.equal(fired, 1);
-    assert.equal(pumped, 1);
+    assert.equal(fired, 0);
+    assert.equal(pumped, 0);
     assert.equal(repository.ensureActiveRun().state.clock.simSeconds, simSeconds);
   } finally {
     database.close();

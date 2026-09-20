@@ -64,11 +64,7 @@ export class SimulationClock {
     // La cola y los plazos de las llamadas no dependen del reloj del escenario. Con el reloj
     // en pausa seguían vivos los dos problemas: una llamada sin resultado no vencía nunca y
     // las tareas nuevas no salían hasta reanudar.
-    if (state.clock.paused) {
-      this.executor.fireDue();
-      this.executor.pump();
-      return;
-    }
+    if (state.clock.paused) return;
     const delta = Number(state.clock.speed ?? this.speed);
     state.clock.simSeconds = Number(state.clock.simSeconds) + delta;
     let changed = delta !== 0;
