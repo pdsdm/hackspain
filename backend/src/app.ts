@@ -289,6 +289,31 @@ export function createApp(
    * vehículos; un consumidor que solo quiere saber qué acaba de pasar no debería pagar eso
    * en cada sondeo. Solo lectura y sin token, igual que `/state`.
    */
+  /**
+   * Histórico de eventos de entrada, también de ejecuciones anteriores.
+   *
+   * `GET /events` devuelve la cronología del panel, que solo guarda las últimas 80 y se
+   * vacía en cada despliegue (T42). Esto lee la tabla de auditoría, que sobrevive a los
+   * resets porque una ejecución se desactiva pero no se borra.
+   */
+  app.get("/events/history", (request, response, next) => {
+    try {
+      const limit = readPositiveInt(request.query.limit, "limit", 100, 500);
+      const runId = typeof request.query.runId === "string" ? request.query.runId : undefined;
+      const source = typeof request.query.source === "string" ? request.query.source : undefined;
+      const kind = typeof request.query.kind === "string" ? request.query.kind : undefined;
+      const events = eventRepository.list({
+        ...(runId ? { runId } : {}),
+        ...(source ? { source } : {}),
+        ...(kind ? { kind } : {}),
+        limit,
+      });
+      response.status(200).json({ events, count: events.length, activeRunId: stateRepository.ensureActiveRun().id });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get("/events", (request, response, next) => {
     try {
       const state = stateRepository.getPublicState();
