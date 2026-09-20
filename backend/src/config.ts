@@ -36,6 +36,7 @@ export interface AppConfig {
   jevModel: string;
   hooks: Partial<Record<AreaHook, string>>;
   callsOnDemand: boolean;
+  callCooldownMs: number;
   publicBaseUrl: string;
   deploymentId?: string;
 }
@@ -120,6 +121,15 @@ function readPhone(value: string | undefined): string | undefined {
   return phone;
 }
 
+function readCallCooldown(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return 120_000;
+  const cooldown = Number(value);
+  if (!Number.isInteger(cooldown) || cooldown < 0 || cooldown > 900_000) {
+    throw new Error(`CALL_COOLDOWN_MS must be an integer between 0 and 900000, received "${value}"`);
+  }
+  return cooldown;
+}
+
 function readJevTimeout(value: string | undefined): number {
   if (value === undefined || value.trim() === "") return 3_000;
   const timeout = Number(value);
@@ -175,6 +185,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     // nodo emitir_llamada del workflow: con esto puesto y el nodo apuntando al hook antiguo, no
     // saldría ninguna llamada.
     callsOnDemand: ["1", "true"].includes(env.CALLS_ON_DEMAND?.trim().toLowerCase() ?? ""),
+    // Ventana en la que no se vuelve a marcar a la misma contraparte de la misma área. Cada
+    // replanificación encola otra vez la acción equivalente, y la anterior ya despachada no lo
+    // impedía: la contraparte recibía dos llamadas por el mismo encargo en menos de un minuto.
+    callCooldownMs: readCallCooldown(env.CALL_COOLDOWN_MS),
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
   };

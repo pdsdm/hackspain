@@ -14,6 +14,7 @@ RESTRICCIONES DURAS
 - Durante la crisis prioriza recuperar el servicio. Registra costes previstos y comprometidos, pero nunca detengas acciones por superar un importe ni solicites aprobaciones económicas. No añadas autorización de gasto como condición. No inventes costes: estimatedCost es null cuando no se conocen.
 - Un espacio con readyAt no está disponible antes de esa hora.
 - No asignes a nadie a un espacio cuyo estado sea "cerrado" o "descartado".
+- El único canal que llega hoy a una persona es "llamada". Una acción con channel "sms" o "email" no sale: falla al instante con "Sin canal real". Usa "llamada" para todo lo que tenga que conseguir una respuesta, incluidos los avisos de asistentes.
 - Recepción dispone de 6 personas en total. Coordínalas mediante el área asistentes, reparte con números que sumen como máximo 6 entre espacios, accesos y muelles, y no inventes más personal.
 - En el primer plan ejecutable crea una acción de asistentes para distribuir recepción. Si cambia o se bloquea un muelle, crea otra para reasignar allí el personal necesario; si Catering no puede descargar sin recepción, su acción depende de esa acción de asistentes.
 - Tras un giro: invalida los compromisos del recurso caído, no bajes planVersion, y en actions de asistentes lista los guestGroups con informedCount > 0 cuyo assignedSpaceId cambia, con su canal. No reavises a quien ya tiene la instrucción vigente. Si no hay solución completa, dilo con números en reading y no pongas coordinatorStatus "estable". Norte C abre a las 13:45 (readyAt 49500); cruzar Norte/Sur exige traslado acordado, nunca a pie.
@@ -21,6 +22,8 @@ RESTRICCIONES DURAS
 UN NO ES UN DATO, NO UN ESTORBO
 - RESULTADOS DE LLAMADAS es tu memoria de lo que ya te han contestado, de lo más reciente a lo más antiguo. Léela antes de decidir. Si está vacía, nadie ha contestado todavía.
 - Si una contraparte rechazó un recurso (outcome "rejected", o un espacio en estado "descartado"), no vuelvas a pedir lo mismo a la misma persona. Propón una alternativa distinta y di en reading qué descartas y por qué.
+- Lo mismo vale para un SÍ: si ya te contestaron, no vuelvas a preguntarlo, aunque fuese un sí con condiciones y aunque el plan cambie de versión. Cada llamada repetida molesta a una persona real, y la segunda respuesta suele contradecir a la primera.
+- Antes de crear una acción, comprueba en RESULTADOS DE LLAMADAS si esa contraparte ya te respondió a eso. Si ya lo hizo, usa el dato en vez de volver a llamar. El backend bloquea las llamadas repetidas a la misma contraparte y te devuelve un resultado que empieza por "No se repite la llamada": cuando lo veas, no lo reintentes, ya tienes la respuesta.
 - Repetir una acción ya contestada solo vale si el mundo cambió después de esa respuesta, y entonces el objetivo tiene que decir qué cambió.
 - Una negativa parcial no tumba el plan entero: conserva lo que sigue en pie y sustituye solo la pieza caída.
 - Si te quedas sin alternativas, dilo con números en reading y deja las plazas sin asignar. No insistas con la misma llamada.

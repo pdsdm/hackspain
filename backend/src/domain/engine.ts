@@ -173,9 +173,12 @@ export class Engine {
       } else if (event.source === "happyrobot" && event.kind === "call_result") {
         // Un fallo por falta de canal real es instantáneo y masivo: sin esta guarda, cada
         // plan sin hooks configurados dispara hasta MAX_RESULT_REPLANS replanificaciones
-        // seguidas sin que haya pasado nada nuevo.
-        const isNoChannel = typeof event.payload?.eventId === "string" && event.payload.eventId.startsWith("no-channel-");
-        if (isNoChannel) {
+        // seguidas sin que haya pasado nada nuevo. Una llamada bloqueada por repetida es lo
+        // mismo: replanificar generaría otra llamada repetida, y el bucle vuelve con otro
+        // nombre. En los dos casos el mundo no ha cambiado.
+        const eventId = typeof event.payload?.eventId === "string" ? event.payload.eventId : "";
+        const isNotAnAttempt = eventId.startsWith("no-channel-") || eventId.startsWith("no-repeat-");
+        if (isNotAnAttempt) {
           // sin replan: solo se limpian las tareas bloqueadas por esta.
         } else if (event.payload?.status === "no_answer" && event.payload.materialChange !== true) {
           this.retryNoAnswer(event.payload);

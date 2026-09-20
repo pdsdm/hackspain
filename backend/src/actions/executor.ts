@@ -56,12 +56,61 @@ function noChannelEnvelope(input: { task: DispatchTask; runId: string }): Specia
     status: "failed",
     result: {
       outcome: "failed",
-      summary: `Sin canal real configurado para ${input.task.area}`,
+      summary: input.task.kind === "call"
+        ? `Sin canal real configurado para ${input.task.area}`
+        : `Sin canal real para ${input.task.kind} en ${input.task.area}; hoy solo hay llamada`,
       conditions: [],
       evidence: {},
       data: {},
     },
   };
+}
+
+/**
+ * La misma contraparte, otra vez, demasiado pronto. El resumen lo lee el coordinador en
+ * RESULTADOS DE LLAMADAS, así que dice qué hacer: usar la respuesta que ya tiene.
+ */
+function repeatEnvelope(input: {
+  task: DispatchTask;
+  runId: string;
+  counterpart: string;
+  secondsAgo: number;
+}): SpecialistResultEnvelope {
+  return {
+    eventId: `no-repeat-${input.task.id}`,
+    taskId: input.task.id,
+    runId: input.runId,
+    planVersion: input.task.planVersion,
+    status: "failed",
+    result: {
+      outcome: "failed",
+      summary: `No se repite la llamada: ya se llamó a ${input.counterpart} (${input.task.area}) hace ${input.secondsAgo} s. Usa la respuesta anterior en vez de volver a preguntar.`,
+      conditions: [],
+      evidence: {},
+      data: {},
+    },
+  };
+}
+
+/** Sin tildes, sin signos y sin mayúsculas: el modelo reescribe el texto en cada plan. */
+function plainText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function counterpartKey(area: string, counterpart: string): string {
+  return `${area}|${plainText(counterpart)}`;
+}
+
+/** Una llamada real que ya ha salido, para no repetirla. Solo vive en memoria. */
+interface RecentCall {
+  key: string;
+  objective: string;
+  at: number;
 }
 
 /** Teléfonos por área que el responsable edita en el panel (T58). */
@@ -80,6 +129,8 @@ export class ActionExecutor {
   // Tareas que el coordinador ya pidió por `emitir_llamada`. Dejan de estar retenidas: si la
   // línea estaba ocupada, el tick las marca en cuanto se libera, sin pedirlas otra vez.
   private requested = new Set<string>();
+  // Llamadas reales que ya han salido, para no repetir el mismo encargo a la misma persona.
+  private recent: RecentCall[] = [];
 
   constructor(
     private readonly states: StateRepository,
@@ -96,6 +147,7 @@ export class ActionExecutor {
   clear(): void {
     this.due = [];
     this.requested.clear();
+    this.recent = [];
   }
 
   fireDue(now: number = Date.now()): void {
@@ -167,9 +219,40 @@ export class ActionExecutor {
     return this.config.callsOnDemand && task.kind === "call" && !this.requested.has(task.id) && this.isReal(task);
   }
 
+  /**
+   * El hook configurado es un workflow de voz: ignora el `kind` y siempre marca. Sin esta
+   * condición, una acción de email hacía sonar un teléfono, y así ocurrió en producción.
+   */
   private isReal(task: DispatchTask): boolean {
     const hook = this.config.hooks[task.area as AreaHook];
-    return Boolean(hook && this.config.happyrobotApiKey);
+    return Boolean(hook && this.config.happyrobotApiKey && task.kind === "call");
+  }
+
+  /**
+   * Segundos desde el mismo encargo a la misma contraparte, si todavía está dentro de la
+   * ventana. `undefined` significa que se puede marcar.
+   *
+   * Cada replanificación vuelve a encolar la acción equivalente, y una llamada ya despachada no
+   * lo impedía: la contraparte recibía dos veces el mismo encargo con un minuto de diferencia y
+   * contestaba cosas distintas.
+   *
+   * La comparación es deliberadamente estricta: texto normalizado igual, o uno contenido en el
+   * otro. Bloquear de más deja un área muda y hunde la demo; dejar pasar una repetición solo
+   * molesta. Una pregunta distinta a la misma persona («ahora por Norte C») pasa siempre. Quien
+   * evita la repetición reescrita es la regla del prompt, no esta guarda.
+   */
+  private repeatedTooSoon(task: DispatchTask, counterpart: string, objective: string): number | undefined {
+    if (this.config.callCooldownMs <= 0) return undefined;
+    // El reintento existe justo para volver a marcar a quien no contestó.
+    if (task.idempotencyKey.endsWith(":retry")) return undefined;
+    const text = plainText(objective);
+    if (text === "") return undefined;
+    const now = Date.now();
+    this.recent = this.recent.filter((item) => now - item.at < this.config.callCooldownMs);
+    const key = counterpartKey(task.area, counterpart);
+    const hit = this.recent.find((item) =>
+      item.key === key && (item.objective.includes(text) || text.includes(item.objective)));
+    return hit === undefined ? undefined : Math.round((now - hit.at) / 1000);
   }
 
   private deferRealCall(task: DispatchTask): boolean {
@@ -201,13 +284,30 @@ export class ActionExecutor {
     }
 
     const payload = isRecord(task.payload) ? task.payload : {};
+    const counterpart = String(payload.counterpart ?? "Interlocutor");
+    const objective = String(payload.objective ?? "");
+    const repeat = this.repeatedTooSoon(task, counterpart, objective);
+    if (repeat !== undefined) {
+      logAction("dispatch", {
+        taskId: task.id,
+        runId: run.id,
+        area: task.area,
+        counterpart,
+        adapter: "none",
+        skipped: "repetida",
+        secondsAgo: repeat,
+      });
+      this.deliver(repeatEnvelope({ task, runId: run.id, counterpart, secondsAgo: repeat }));
+      return;
+    }
+
     const callId = `call-${task.id}`;
     const state = structuredClone(run.state);
     const calls = records(state, "calls");
     calls.push({
       id: callId,
       agent: task.area,
-      counterpart: String(payload.counterpart ?? "Interlocutor"),
+      counterpart,
       channel: task.kind === "sms" ? "sms" : task.kind === "email" ? "email" : "llamada",
       startedAt: state.clock.simSeconds,
       status: "en_curso",
@@ -242,6 +342,13 @@ export class ActionExecutor {
     this.tasks.markDispatchOutcome(task.id, outcome);
     logAction("dispatch outcome", { taskId: task.id, adapter: "happyrobot", outcome });
     if (outcome === "dispatched") {
+      // Solo cuando el hook acepta: si devolvió error, no ha sonado nada y bloquear el
+      // reintento durante dos minutos dejaría al área muda sin motivo.
+      this.recent.push({
+        key: counterpartKey(task.area, counterpart),
+        objective: plainText(objective),
+        at: Date.now(),
+      });
       this.due.push({
         at: Date.now() + ActionExecutor.DISPATCH_TIMEOUT_MS,
         envelope: noAnswerEnvelope({ task, runId: run.id, callId }),

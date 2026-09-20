@@ -533,11 +533,13 @@ test("partial HappyRobot transcripts are authenticated, chronological and idempo
     };
     assert.equal((await post(base, "/workflow/happyrobot/transcript", first)).status, 401);
     let response = await post(base, "/workflow/happyrobot/transcript", first, TOKEN);
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { ok: true, duplicate: false, added: 2, total: 2 });
+    // 204 y sin cuerpo: HappyRobot devuelve la salida del nodo al agente de voz, y cualquier
+    // JSON aquí acaba dentro de la conversación como si lo dijera la contraparte.
+    assert.equal(response.status, 204);
+    assert.equal(await response.text(), "");
 
     response = await post(base, "/workflow/happyrobot/transcript", first, TOKEN);
-    assert.deepEqual(await response.json(), { ok: true, duplicate: true, added: 0, total: 2 });
+    assert.equal(response.status, 204);
 
     response = await post(base, "/workflow/happyrobot/transcript", {
       ...first,
@@ -546,7 +548,7 @@ test("partial HappyRobot transcripts are authenticated, chronological and idempo
         { id: "message-3", role: "assistant", content: "Perfecto, queda reservado.", at: 7 },
       ],
     }, TOKEN);
-    assert.deepEqual(await response.json(), { ok: true, duplicate: false, added: 1, total: 3 });
+    assert.equal(response.status, 204);
 
     const liveCall = (states.getPublicState().calls as Array<Record<string, unknown>>)[0];
     assert.deepEqual(liveCall?.transcript, [

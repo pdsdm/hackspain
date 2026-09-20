@@ -1,14 +1,14 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`6f62593`, T58 ya mergeada en PR #110) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T59). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`685a974`, con T58 y T59 mergeadas) más el trabajo sin mergear de `fix/pep-llamada-que-se-sabotea` (T60). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
 | **Foto tomada** | 20 de septiembre de 2026, 07:40 CEST |
-| **Base** | `6f62593` (`origin/main`; T57 en PR #109 y T58 en PR #110, las dos mergeadas) + T59 sin mergear |
-| **Trabajo en curso** | T59: el coordinador es el único que lanza llamadas, y su `emitir_llamada` pasa por el backend. Decisión D27 |
+| **Base** | `685a974` (`origin/main`; T57 en #109, T58 en #110 y T59 en #111, las tres mergeadas) + T60 sin mergear |
+| **Trabajo en curso** | T60: la transcripción dejaba de envenenar la conversación, el mismo encargo no se marca dos veces y un email no llama. Decisión D28 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, sesión de implementación de T58 y T59 |
+| **Generado por** | Devin, sesión de implementación de T59 y T60 |
 
 ## Salud
 
@@ -16,8 +16,8 @@
 |---|---|
 | **Tests en `origin/main`** | **359 pass, 0 fail, 7 skipped.** `main` está verde. Verificado en worktree limpio de `6f62593` |
 | Historia de las 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») dejó 10 tests HTTP rojos: cada ejecución arranca en pausa y `/events`, `/interventions` y `/workflow/happyrobot/events` responden 409 con la mesa detenida. T58 los arregló y el merge #110 ya está en `main` |
-| Tests en `feat/pep-no-y-telefono-ui` | **366 pass, 0 fail, 7 skipped** (373 en total). Los 7 nuevos son de T59 |
-| `make check` en `feat/pep-no-y-telefono-ui` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
+| Tests en `fix/pep-llamada-que-se-sabotea` | **373 pass, 0 fail, 7 skipped** (380 en total). Los 7 nuevos son de T60 |
+| `make check` en `fix/pep-llamada-que-se-sabotea` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
 | Lint frontend | 0 avisos, 0 errores |
 | Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
 | Fixtures | `fixtures:check` verifica los 10 JSON reproducibles |
@@ -108,8 +108,40 @@ Cambios:
 - Base operativa previa (no tocada por T58): estado SQLite, cola serial por `planVersion`,
   callbacks idempotentes, cuatro especialistas, cierre honesto, D20–D24.
 
+## Qué cambió: T60, tres fallas vistas en una llamada real (D28)
+
+Una sola llamada de producción (`call-8d8f5c0a`) dejó ver tres defectos distintos.
+
+**1. Nuestra respuesta HTTP entraba en la conversación.** La transcripción guardada contiene,
+atribuida al humano, la línea
+`{"steps":[{"node":"POST transcript parcial","output":{"added":4,...,"total":4}}]}`. Es la
+respuesta de nuestro endpoint de transcripción: HappyRobot devuelve al agente la salida de sus
+nodos, el agente la leyó como conversación, perdió el hilo y repitió el saludo hasta que la
+llamada murió. Ahora el endpoint responde `204` sin cuerpo y la cuenta de líneas va al log.
+**El `204` no lo cierra solo**: el nodo tiene que dejar de devolver su salida al agente.
+
+**2. Cada replanificación volvía a llamar.** Espacios llamó dos veces por el mismo Lounge. La
+contraparte lo dijo en voz alta («me acaba de llamar su compañera») y contestó 120 plazas en una
+y 150 en la otra. El ejecutor descarta ahora una llamada cuyo objetivo normalizado coincida, o
+esté contenido, en otra a la misma área y contraparte dentro de `CALL_COOLDOWN_MS` (120 s). El
+resultado lleva `eventId` `no-repeat-` y **no** relanza al coordinador: replanificar generaría
+otra llamada repetida.
+
+**3. Una acción de `email` marcaba un teléfono.** Quedó registrada como `channel: "email"` con
+transcripción de voz. `isReal()` exige ahora `kind === "call"`, y el prompt dice que hoy el
+único canal que llega a una persona es la llamada. Consecuencia aceptada: el KPI «Informados»
+deja de moverse solo.
+
+La guarda anti-repetición es **deliberadamente conservadora**: compara el encargo, no solo la
+contraparte. Volver a llamar al mismo recinto por otro espacio es legítimo y tiene que pasar;
+dejar un área muda hunde la demo mucho más que una llamada de más. Quien evita la repetición
+reescrita es la regla del prompt.
+
 ## Qué falta, por riesgo para la demo
 
+0. **Silenciar `reportar_transcript` en el workflow de voz.** Es el arreglo con más efecto y no
+   depende de ningún merge. Mientras el nodo devuelva su salida al agente, las llamadas se
+   seguirán rompiendo solas.
 1. **Publicar la versión nueva del Orquestador** con `emitir_llamada` apuntando a
    `POST /workflow/coordinator/happyrobot/call`. Guion en
    [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
@@ -145,14 +177,14 @@ Cambios:
 
 ## Ramas vivas sin mergear
 
-- `feat/pep-no-y-telefono-ui`: un commit por delante de `main` (`39c3bfd`, T59). `make check` en
-  verde. T58 ya está en `main` por PR #110, y la rama se reutiliza para T59.
+- `fix/pep-llamada-que-se-sabotea`: T60. `make check` en verde.
+- `feat/pep-no-y-telefono-ui`: ya mergeada. T58 entró por PR #110 y T59 por PR #111 (`685a974`).
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
 - El resto de ramas remotas no se ha vuelto a auditar en esta sesión (`git branch -r`).
 
 ## Decisiones pendientes
 
-1. Aprobar y mergear T59 (D27). T58 (D25, D26) ya está en `main`.
+1. Aprobar y mergear T60 (D28). T58 y T59 ya están en `main`.
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica

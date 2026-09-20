@@ -347,6 +347,31 @@ test("a no-channel call_result never cascades into a replan", async () => {
   }
 });
 
+test("a no-repeat call_result never cascades into a replan", async () => {
+  let calls = 0;
+  const { database, states, instance } = engine(undefined, async () => {
+    calls += 1;
+    return JSON.stringify({ reading: "x", planVersion: 1, coordinatorStatus: "replanificando", actions: [], commitments: [], assignments: [], decision: null, unverified: [] });
+  });
+  try {
+    const run = states.ensureActiveRun();
+    // Sin esta guarda, bloquear una llamada repetida genera un plan nuevo, que genera otra
+    // llamada repetida: el mismo bucle con otro nombre.
+    const payload = {
+      eventId: "no-repeat-t1",
+      taskId: "t1",
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      status: "failed",
+      result: { outcome: "failed", summary: "No se repite la llamada: ya se llamó a Recinto hace 12 s.", conditions: [], evidence: {}, data: {} },
+    };
+    await instance.handle({ source: "happyrobot", kind: "call_result", payload });
+    assert.equal(calls, 0);
+  } finally {
+    database.close();
+  }
+});
+
 test("the coordinator status shows replanificando while the LLM works and the busy flag stays private", async () => {
   let statusDuringCall = "";
   let publicDuringCall: Record<string, unknown> = {};
