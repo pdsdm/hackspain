@@ -1,61 +1,106 @@
-import { useEffect } from 'react'
-import { Bot, Building2, Bus, Network, Users, Utensils, X } from 'lucide-react'
-import type { Area, CrisisState } from '../../domain/types'
-import { fmtClock } from '../../domain/time'
-import { Pill, type Tone } from '../ui/Pill'
-import { agentCorrection } from '../../domain/selectors'
-import { AGENT, COMMITMENT, COORD } from '../ui/status'
+import { useEffect } from "react";
+import { Bot, Building2, Bus, Network, Users, Utensils, X } from "lucide-react";
+import type { Area, CrisisState } from "../../domain/types";
+import { fmtClock } from "../../domain/time";
+import { Pill, type Tone } from "../ui/Pill";
+import { agentCorrection } from "../../domain/selectors";
+import { AGENT, COMMITMENT, COORD } from "../ui/status";
 
-const TONE: Record<Tone, string> = { ink: 'text-ink', amber: 'text-amber', red: 'text-red', green: 'text-green', muted: 'text-muted' }
-import { Glass } from './Glass'
+const TONE: Record<Tone, string> = {
+  ink: "text-ink",
+  amber: "text-amber",
+  red: "text-red",
+  green: "text-green",
+  muted: "text-muted",
+};
+import { Glass } from "./Glass";
 
-export type AgentFocus = 'coordinador' | Area
+export type AgentFocus = "coordinador" | Area;
 
-const ICONS = { coordinador: Network, espacios: Building2, catering: Utensils, transporte: Bus, asistentes: Users } as const
+const ICONS = {
+  coordinador: Network,
+  espacios: Building2,
+  catering: Utensils,
+  transporte: Bus,
+  asistentes: Users,
+} as const;
 
 function focusOf(s: CrisisState, id: AgentFocus) {
-  if (id === 'coordinador') {
-    const st = COORD[s.coordinatorStatus] ?? COORD.replanificando
+  if (id === "coordinador") {
+    const st = COORD[s.coordinatorStatus] ?? COORD.replanificando;
     return {
-      name: 'Coordinador',
+      name: "Coordinador",
       status: st,
-      objective: 'Coordina a los especialistas y adapta el plan de la operación.',
+      objective:
+        "Coordina a los especialistas y adapta el plan de la operación.",
       reason: `Coordinación global · Plan v${s.planVersion}`,
       lastResult: undefined as string | undefined,
       area: undefined as Area | undefined,
-    }
+    };
   }
-  const a = s.agents.find((agent) => agent.id === id)
-  const st = AGENT[a?.status ?? 'activo'] ?? AGENT.activo
+  const a = s.agents.find((agent) => agent.id === id);
+  const st = AGENT[a?.status ?? "activo"] ?? AGENT.activo;
   return {
     name: a?.name ?? id,
     status: st,
-    objective: a?.objective ?? 'Sin objetivo publicado.',
+    objective: a?.objective ?? "Sin objetivo publicado.",
     reason: a?.reason,
     lastResult: a?.lastResult,
     area: id,
-  }
+  };
 }
 
-export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentFocus; onClose: () => void }) {
-  const focus = focusOf(s, id)
-  const Icon = ICONS[id]
-  const correction = agentCorrection(s, focus.area)
-  const commitments = (focus.area ? s.commitments.filter((c) => c.area === focus.area) : s.commitments).slice(0, 4)
-  const events = [...s.events].reverse().filter((e) => (focus.area ? e.area === focus.area : !e.area || e.kind === 'decision' || e.kind === 'intervencion')).slice(0, 3)
+export function AgentDetailCard({
+  s,
+  id,
+  onClose,
+}: {
+  s: CrisisState;
+  id: AgentFocus;
+  onClose: () => void;
+}) {
+  const focus = focusOf(s, id);
+  const Icon = ICONS[id];
+  const correction = agentCorrection(s, focus.area);
+  const commitments = (
+    focus.area
+      ? s.commitments.filter((c) => c.area === focus.area)
+      : s.commitments
+  ).slice(0, 4);
+  const events = [...s.events]
+    .reverse()
+    .filter((e) =>
+      focus.area
+        ? e.area === focus.area
+        : !e.area || e.kind === "decision" || e.kind === "intervencion",
+    )
+    .slice(0, 3);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
-    <Glass label={`Detalle de ${focus.name}`} className="w-[300px] agent-detail">
+    <Glass
+      label={`Detalle de ${focus.name}`}
+      className="w-[300px] agent-detail"
+    >
       <header className="agent-detail-heading">
-        <div className="agent-detail-title"><Icon size={15} /><h2>Agente · {focus.name}</h2></div>
+        <div className="agent-detail-title">
+          <Icon size={15} />
+          <h2>Agente · {focus.name}</h2>
+        </div>
         <Pill tone={focus.status.tone}>{focus.status.label}</Pill>
-        <button type="button" className="agent-detail-close" onClick={onClose} aria-label="Cerrar detalle del agente">
+        <button
+          type="button"
+          className="agent-detail-close"
+          onClick={onClose}
+          aria-label="Cerrar detalle del agente"
+        >
           <X size={14} />
         </button>
       </header>
@@ -63,12 +108,23 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
         <p className="agent-detail-objective">{focus.objective}</p>
         {focus.reason && <p className="agent-role">{focus.reason}</p>}
         {focus.lastResult && (
-          <p className="agent-result"><span>Último resultado</span>{focus.lastResult}</p>
+          <p className="agent-result">
+            <span>Último resultado</span>
+            {focus.lastResult}
+          </p>
         )}
         {correction && (
-          <section className="agent-correction" aria-label="El agente corrigió su plan anterior">
-            <h3><Bot size={12} aria-hidden="true" /> El agente corrigió</h3>
-            <p className="agent-correction-failed">{correction.failed}{correction.note ? ` · ${correction.note}` : ''}</p>
+          <section
+            className="agent-correction"
+            aria-label="El agente corrigió su plan anterior"
+          >
+            <h3>
+              <Bot size={12} aria-hidden="true" /> El agente corrigió
+            </h3>
+            <p className="agent-correction-failed">
+              {correction.failed}
+              {correction.note ? ` · ${correction.note}` : ""}
+            </p>
             <p className="agent-correction-next">{correction.next}</p>
           </section>
         )}
@@ -77,13 +133,15 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
             <h3>Compromisos</h3>
             <ul>
               {commitments.map((c) => {
-                const meta = COMMITMENT[c.status] ?? COMMITMENT.propuesto
+                const meta = COMMITMENT[c.status] ?? COMMITMENT.propuesto;
                 return (
                   <li key={c.id}>
                     <span>{c.title}</span>
-                    <small className={TONE[meta.tone]}>{meta.label} · {c.counterpart}</small>
+                    <small className={TONE[meta.tone]}>
+                      {meta.label} · {c.counterpart}
+                    </small>
                   </li>
-                )
+                );
               })}
             </ul>
           </section>
@@ -95,7 +153,10 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
               {events.map((e) => (
                 <li key={e.id}>
                   <span>{e.text}</span>
-                  <small>{fmtClock(e.time)}{e.actor ? ` · ${e.actor}` : ''}</small>
+                  <small>
+                    {fmtClock(e.time)}
+                    {e.actor ? ` · ${e.actor}` : ""}
+                  </small>
                 </li>
               ))}
             </ul>
@@ -103,5 +164,5 @@ export function AgentDetailCard({ s, id, onClose }: { s: CrisisState; id: AgentF
         )}
       </div>
     </Glass>
-  )
+  );
 }
