@@ -337,8 +337,17 @@ export function createApp(
   app.post("/simulation/e2e/reset", authorizeWorkflow, (request, response, next) => {
     const body = request.body && typeof request.body === "object" ? request.body as Record<string, unknown> : {};
     const inputTokenHash = body.inputTokenHash;
+    const realTransportCall = body.realTransportCall === true;
     if (inputTokenHash !== undefined && (typeof inputTokenHash !== "string" || !/^[a-f0-9]{64}$/.test(inputTokenHash))) {
       response.status(400).json({ error: "inputTokenHash must be a SHA-256 hex digest" });
+      return;
+    }
+    if (body.realTransportCall !== undefined && typeof body.realTransportCall !== "boolean") {
+      response.status(400).json({ error: "realTransportCall must be boolean" });
+      return;
+    }
+    if (realTransportCall && (!config.hooks.transporte || !config.happyrobotApiKey || !config.happyrobotTestPhone)) {
+      response.status(503).json({ error: "Transport HappyRobot hook, API key and test phone are required" });
       return;
     }
     void engine
@@ -349,6 +358,7 @@ export function createApp(
         state.forceSimActions = true;
         state.e2eCoordinatorApply = true;
         state.e2eSuppressResultReplan = true;
+        state.e2eRealTransportCall = realTransportCall;
         state.e2eMode = "production-isolated";
         if (typeof inputTokenHash === "string") state.e2eInputTokenHash = inputTokenHash;
         state.agentsPaused = false;
@@ -356,7 +366,7 @@ export function createApp(
         state.clock.live = false;
         state.clock.speed = 1;
         stateRepository.saveState(run.id, state);
-        response.status(200).json({ ok: true, ...result, externalActions: "sim" });
+        response.status(200).json({ ok: true, ...result, externalActions: realTransportCall ? "transport-real-rest-sim" : "sim" });
       })
       .catch(next);
   });

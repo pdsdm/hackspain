@@ -193,3 +193,8 @@ sin plan, con el respaldo determinista solo para giros.
 - **Qué:** producción entró en bucle: cada `no_answer` de la llamada real a Espacios relanzaba al coordinador, que creaba otra llamada al mismo teléfono de pruebas mientras la anterior aún sonaba; el teléfono daba ocupado y volvía el `no_answer`. `planVersion` llegó a 43 y hubo 78 llamadas reales en dos horas.
 - **Decisión:** `no_answer` reintenta la misma tarea una vez y no relanza al coordinador. El executor solo mantiene una llamada real en curso. Tras 3 relanzamientos seguidos por resultados sin input externo nuevo, el coordinador se pausa hasta que llegue uno. En Railway, `COORDINATOR_VERBOSE` vacío equivale a `0` para que los logs sean legibles.
 - **Descartado:** rotar el número de pruebas o subir el timeout de 180 s; no atacan la causa.
+
+### D22: triaje visible y una llamada real controlada en la toma (20/09/2026)
+
+- **Qué:** el primer input es un lote de 10 mensajes sintéticos recibidos en 3,6 s; el Reasoning Agent descarta 9, consulta el mundo y actúa solo por la rotura. La primera acción de Transporte llama mediante HappyRobot al teléfono de pruebas autorizado; el resto sigue en `sim` y una segunda acción de Transporte no vuelve a llamar.
+- **Por qué:** demuestra selección de señal y ejecución externa sin fingir conversaciones con proveedores reales ni repetir el incidente de llamadas de T55. La toma exige flags explícitos y evidencia de transcript.

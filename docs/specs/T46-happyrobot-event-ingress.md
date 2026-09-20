@@ -8,7 +8,7 @@ Recibir informes de llamada y SMS desde HappyRobot como incidentes idempotentes 
 
 - [ ] `POST /workflow/happyrobot/events` exige `HAPPYROBOT_WEBHOOK_TOKEN`.
 - [ ] Contrato: `eventId`, `channel`, `actor`, `incidentId`, `summary`, `evidence.sessionId`.
-- [ ] `principal_pipe_burst` cierra Principal e invalida el plan original; `dock_blocked` reutiliza el efecto existente.
+- [ ] `inbox_batch` registra diez mensajes sin aplicar daño ni subir versión; el coordinador decide la señal. `principal_pipe_burst` conserva el respaldo directo y `dock_blocked` reutiliza el efecto existente.
 - [ ] Allowlist estricta: el workflow no envía operaciones ni parches de estado.
 - [ ] `eventId` duplicado no vuelve a aplicar ni coordinar.
 - [ ] Eventos casi simultáneos se procesan en orden sobre el estado/versión vigentes.

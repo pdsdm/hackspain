@@ -28,4 +28,4 @@ HAPPYROBOT_DEMO_INPUT_WORKFLOW_ID=
 
 Campos del trigger: `eventId`, `channel`, `actor`, `incidentId`, `summary`, `sessionId`, `backend_base_url`.
 
-La llamada simulada usa `channel=call` e `incidentId=principal_pipe_burst`; el SMS simulado usa `channel=sms` e `incidentId=dock_blocked`. Los actores empiezan por `SIMULACIÓN ·` para que la grabación no presente los inputs como telefonía real.
+El primer run usa `channel=call` e `incidentId=inbox_batch` con diez mensajes sintéticos en `summary`; el SMS simulado usa `channel=sms` e `incidentId=dock_blocked`. `principal_pipe_burst` queda como respaldo directo. Los actores empiezan por `SIMULACIÓN ·` para que la grabación no presente los inputs como telefonía real.

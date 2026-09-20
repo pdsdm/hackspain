@@ -219,7 +219,11 @@ test("apply=true persiste el plan aceptado", async () => {
             correlation_id: payload.correlation_id,
             run_id: payload.run_id,
             plan_version: payload.plan_version,
-            ...baseOutput({ planVersion: run.state.planVersion, operations: [{ op: "set_place", id: "accesoSur", status: "cerrado" }] }),
+            ...baseOutput({
+              planVersion: run.state.planVersion,
+              assignments: [{ groupId: "g-acceso", spaceId: "pabellonB", count: 90 }],
+              operations: [{ op: "set_place", id: "accesoSur", status: "cerrado" }],
+            }),
           });
         });
       },
@@ -227,8 +231,10 @@ test("apply=true persiste el plan aceptado", async () => {
     const report = await runHappyRobotCoordinator({ config: CONFIG, event: { source: "chat", kind: "free_text" }, deps, apply: true, registry, fetchFn: fake.fetchFn, pollMs: 20 });
     assert.equal(report.status, "accepted");
     assert.equal(report.applied, true);
-    const acceso = states.ensureActiveRun().state.spaces.find((space) => space.id === "accesoSur");
+    const state = states.ensureActiveRun().state;
+    const acceso = state.spaces.find((space) => space.id === "accesoSur");
     assert.equal(acceso?.status, "cerrado");
+    assert.deepEqual(state.assignments, [{ groupId: "g-acceso", spaceId: "pabellonB", count: 90, status: "proposed", planVersion: 2 }]);
   } finally {
     database.close();
   }
