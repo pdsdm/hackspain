@@ -398,6 +398,25 @@ export function parseClock(value: unknown): { speed?: number; paused?: boolean }
   return result;
 }
 
+/**
+ * Teléfono de la contraparte de un área, editable desde el panel.
+ *
+ * `null` borra el teléfono guardado y devuelve el control a `HAPPYROBOT_TEST_PHONE`.
+ */
+export function parseAgentPhone(value: unknown): { phone: string | null } {
+  const input = record(value, "body");
+  if (input.phone === null || input.phone === "") return { phone: null };
+  const phone = string(input.phone, "phone").trim();
+  if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+    throw new ContractError("phone must use E.164, for example +34600000000", 400);
+  }
+  return { phone };
+}
+
+export function parseArea(value: unknown, field = "area"): Area {
+  return enumValue(value, field, AREAS);
+}
+
 export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {
   if (value === undefined || value === null || (isRecord(value) && Object.keys(value).length === 0)) {
     return {};

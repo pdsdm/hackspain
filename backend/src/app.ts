@@ -20,6 +20,9 @@ import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
 import type { AppConfig } from "./config.js";
 import {
   ContractError,
+  isRecord,
+  parseAgentPhone,
+  parseArea,
   parseCoordinatorProposal,
   parseEvent,
   parseHappyRobotIncident,
@@ -27,6 +30,7 @@ import {
   parseClock,
   parseReset,
   parseSpecialistResult,
+  type Area,
   type SpecialistResultEnvelope,
 } from "./contracts/api.js";
 import { ControlService } from "./domain/control-service.js";
@@ -34,6 +38,7 @@ import { Engine } from "./domain/engine.js";
 import { DomainValidationError } from "./domain/plan-rules.js";
 import { verifyCallAcceptance, type CallAcceptanceVerification } from "./domain/result-verifier.js";
 import { WorkflowService, callResultText } from "./domain/workflow-service.js";
+import { ContactRepository } from "./state/contact-repository.js";
 import type { CrisisDatabase } from "./state/database.js";
 import { EventRepository } from "./state/event-repository.js";
 import { HappyRobotEventRepository } from "./state/happyrobot-event-repository.js";
@@ -123,10 +128,14 @@ export function createApp(
   if (config.jevEnabled && !jevEvaluateFn) {
     console.error("[jev] JEV_ENABLED=true pero falta TYPESAFE_API_KEY");
   }
-  const executor = new ActionExecutor(stateRepository, taskRepository, workflowService, {
-    ...config,
-    workflowToken: options.workflowToken ?? config.workflowToken,
-  });
+  const contactRepository = new ContactRepository(database.connection);
+  const executor = new ActionExecutor(
+    stateRepository,
+    taskRepository,
+    workflowService,
+    { ...config, workflowToken: options.workflowToken ?? config.workflowToken },
+    contactRepository,
+  );
   let llmConfig;
   try {
     llmConfig = config.coordinatorMode === "llm" ? loadLlmConfig() : undefined;
@@ -270,8 +279,39 @@ export function createApp(
     response.status(200).json({ status: "ok" });
   });
 
+  /**
+   * El teléfono de cada área viaja dentro de su agente.
+   *
+   * Vive en `app_metadata` y no en el documento de estado, para que un reset no lo borre,
+   * pero el panel lo lee del mismo sondeo que todo lo demás.
+   */
+  const stateWithPhones = () => {
+    const state = stateRepository.getPublicState();
+    const phones = contactRepository.list();
+    if (!Array.isArray(state.agents)) return state;
+    state.agents = state.agents.map((agent) => {
+      if (!isRecord(agent)) return agent;
+      const phone = phones[agent.id as Area] ?? config.happyrobotTestPhone;
+      return phone ? { ...agent, phone } : agent;
+    });
+    return state;
+  };
+
   app.get("/state", (_request, response) => {
-    response.status(200).json(stateRepository.getPublicState());
+    response.status(200).json(stateWithPhones());
+  });
+
+  app.post("/agents/:area/phone", (request, response, next) => {
+    try {
+      const area = parseArea(request.params.area);
+      const body = parseAgentPhone(request.body ?? {});
+      contactRepository.set(area, body.phone);
+      const phone = contactRepository.get(area) ?? config.happyrobotTestPhone ?? null;
+      console.log("[contacts] phone", area, body.phone === null ? "borrado" : "actualizado");
+      response.status(200).json({ ok: true, area, phone });
+    } catch (error) {
+      next(error);
+    }
   });
 
   /**

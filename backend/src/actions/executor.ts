@@ -64,6 +64,11 @@ function noChannelEnvelope(input: { task: DispatchTask; runId: string }): Specia
   };
 }
 
+/** Teléfonos por área que el responsable edita en el panel (T58). */
+export interface PhoneLookup {
+  get(area: string): string | undefined;
+}
+
 export class ActionExecutor {
   // Milisegundos reales que esperamos el callback de HappyRobot antes de dar la tarea por no
   // contestada. En segundos de reloj no servía: con el reloj en pausa el plazo no vencía
@@ -78,6 +83,7 @@ export class ActionExecutor {
     private readonly tasks: TaskRepository,
     private readonly workflows: WorkflowService,
     private readonly config: AppConfig,
+    private readonly phones?: PhoneLookup,
   ) {}
 
   attachEngine(engine: Engine): void {
@@ -182,7 +188,8 @@ export class ActionExecutor {
       planVersion: task.planVersion,
       callId,
       publicBaseUrl: this.config.publicBaseUrl,
-      testPhone: this.config.happyrobotTestPhone,
+      // El teléfono del panel manda sobre el de la variable de entorno.
+      phone: this.phones?.get(task.area) ?? this.config.happyrobotTestPhone,
       state,
     });
     this.tasks.markDispatchOutcome(task.id, outcome);
