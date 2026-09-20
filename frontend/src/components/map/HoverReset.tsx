@@ -13,6 +13,8 @@ function patchTooltipFade() {
   const close = proto.closeTooltip
   const open = proto.openTooltip
   proto.openTooltip = function (this: L.Layer, latlng?: L.LatLngExpression) {
+    const map = (this as L.Layer & { _map?: L.Map })._map
+    if (map) map.eachLayer((other) => { if (other !== this && other.getTooltip?.()?.isOpen()) other.closeTooltip() })
     const el = this.getTooltip()?.getElement()
     el?.classList.remove('is-leaving')
     return open.call(this, latlng)

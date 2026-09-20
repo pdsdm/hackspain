@@ -67,13 +67,16 @@ html, body, #root {
 .map-overlays { position: absolute; inset: 0; z-index: 1000; pointer-events: none; }
 .map-overlays > * { pointer-events: auto; }
 /* Timeline uses the dashboard glass surface, typography and semantic accents. */
-.chronology-panel { overflow: hidden; border-radius: 0; flex: 0 1 auto; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.chronology-panel { position: relative; overflow: hidden; border-radius: 0; flex: 0 1 auto; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.chronology-panel::before, .chronology-panel::after { content: ''; position: absolute; left: 0; right: 0; height: 44px; z-index: 2; pointer-events: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: linear-gradient(to bottom, rgba(244,244,242,.9), rgba(244,244,242,0)); -webkit-mask-image: linear-gradient(to bottom, #000, transparent); mask-image: linear-gradient(to bottom, #000, transparent); }
+.chronology-panel::before { top: 0; }
+.chronology-panel::after { bottom: var(--footer-rail); height: 20px; transform: scaleY(-1); }
 .chronology-panel .event-chat { background: rgba(255,255,255,.42); -webkit-backdrop-filter: blur(20px) saturate(1.2); backdrop-filter: blur(20px) saturate(1.2); border: 1px solid rgba(255,255,255,.92); box-shadow: 0 8px 28px rgba(26,29,36,.08); }
 .chronology-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid rgba(26,29,36,.08); flex: none; }
 .chronology-heading h2 { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
 .chronology-heading p { font-size: 11px; color: var(--color-muted); margin-top: 3px; }
 .chronology-count { font-size: 10px; white-space: nowrap; color: var(--color-muted); padding: 3px 0; text-transform: uppercase; letter-spacing: .04em; }
-.chat-log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0; padding: 4px 12px 12px 12px; scroll-padding: 16px; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 36px, #000 calc(100% - 10px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 36px, #000 calc(100% - 10px), transparent); }
+.chat-log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0; padding: 4px 12px 12px 12px; scroll-padding: 16px; }
 .timeline-item { position: relative; padding: 4px 0; }
 .timeline-card { flex: none; min-width: 0; padding: 10px 12px 10px 12px; border: 1px solid rgba(26,29,36,.09); border-left: 3px solid var(--event-accent, #b8b8b2); border-radius: 2px; color: var(--color-text); background: rgba(255,255,255,.42); -webkit-backdrop-filter: blur(20px) saturate(1.2); backdrop-filter: blur(20px) saturate(1.2); box-shadow: 0 4px 16px rgba(26,29,36,.08); transition: transform .15s, box-shadow .15s; }
 .timeline-card:hover { transform: translateX(2px); box-shadow: 0 4px 14px rgba(26,29,36,.08); }
