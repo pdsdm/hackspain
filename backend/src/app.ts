@@ -17,7 +17,7 @@ import {
   type HappyRobotSessionRegistry,
 } from "./agents/coordinator/happyrobot.js";
 import { createJevEvaluator, type JevEvaluateFn } from "./agents/jev.js";
-import type { AppConfig } from "./config.js";
+import { DEFAULT_TEST_PHONE, type AppConfig } from "./config.js";
 import {
   ContractError,
   isRecord,
@@ -64,7 +64,7 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     port: 8000,
     workflowToken,
     happyrobotApiKey: undefined,
-    happyrobotTestPhone: undefined,
+    happyrobotTestPhone: DEFAULT_TEST_PHONE,
     initialFixture: "calm",
     clockSpeed: 1,
     coordinatorMode: "rules",

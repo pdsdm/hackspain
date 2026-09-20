@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
 
 const DEFAULT_PORT = 8000;
+/** Teléfono de pruebas del equipo. Es el destino por defecto de todas las áreas. */
+export const DEFAULT_TEST_PHONE = "+34616500586";
 const FIXTURES = [
   "calm",
   "normal",
@@ -143,10 +145,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (transporte) hooks.transporte = transporte;
   if (asistentes) hooks.asistentes = asistentes;
   const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
-  const happyrobotTestPhone = readPhone(env.HAPPYROBOT_TEST_PHONE);
-  if (happyrobotApiKey && Object.keys(hooks).length > 0 && !happyrobotTestPhone) {
-    throw new Error("HAPPYROBOT_TEST_PHONE is required when HappyRobot hooks are enabled");
-  }
+  // Siempre hay un destino: así una llamada nunca sale sin número y el panel arranca con un
+  // teléfono visible. `HAPPYROBOT_TEST_PHONE` lo sustituye, y el panel manda sobre los dos
+  // (`POST /agents/:area/phone`).
+  const happyrobotTestPhone = readPhone(env.HAPPYROBOT_TEST_PHONE) ?? DEFAULT_TEST_PHONE;
 
   return {
     databasePath: readDatabasePath(env.DATABASE_URL),

@@ -219,6 +219,6 @@ sin plan, con el respaldo determinista solo para giros.
 
 ### D26: canal por área, teléfono desde el panel y plazos en tiempo real (20/09/2026)
 
-- **Qué:** `HAPPYROBOT_HOOK_DEFAULT` da canal a las áreas sin hook propio, con un único workflow de voz. El teléfono de cada área se edita en el panel de agentes (`POST /agents/:area/phone`), vive en `app_metadata` y manda sobre `HAPPYROBOT_TEST_PHONE`. El plazo de «no contesta» pasa a 180 s de tiempo real y el tick del reloj vence plazos y bombea la cola también en pausa.
+- **Qué:** `HAPPYROBOT_HOOK_DEFAULT` da canal a las áreas sin hook propio, con un único workflow de voz. El teléfono de cada área se edita en el panel de agentes (`POST /agents/:area/phone`), vive en `app_metadata` y manda sobre `HAPPYROBOT_TEST_PHONE`, que a su vez sustituye al destino por defecto del equipo (`+34616500586`, constante `DEFAULT_TEST_PHONE`). Siempre hay número: ya no existe la excepción «HAPPYROBOT_TEST_PHONE is required when hooks are enabled». El plazo de «no contesta» pasa a 180 s de tiempo real y el tick del reloj vence plazos y bombea la cola también en pausa.
 - **Por qué:** en Railway solo había `HAPPYROBOT_HOOK_ESPACIOS`, así que catering, transporte y asistentes morían sin llamar. Y con el reloj en pausa, el plazo en segundos de escenario no vencía nunca: una llamada sin resultado bloqueaba la cola entera.
 - **Descartado:** heredar el hook por defecto de `HAPPYROBOT_ENDPOINT` (abriría llamadas reales a quien solo tiene esa variable antigua) y guardar el teléfono en el documento de estado (un reset lo borraría).

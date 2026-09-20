@@ -68,7 +68,7 @@ El roster individual queda fuera de `/state`. Todas las llamadas de `calls[]` so
 
 Al cerrarse, cada llamada guarda lo que contestaron: `outcome` (`accepted` | `accepted_with_conditions` | `rejected` | `no_answer` | `failed`), `summary` y `conditions[]`. Esos tres campos son la memoria del coordinador (D25): el snapshot que va a HappyRobot los envía como `callResults` y el prompt los muestra en «RESULTADOS DE LLAMADAS», para que no vuelva a pedir lo mismo a quien ya dijo no.
 
-`agents[].phone` es el teléfono E.164 al que llama esa área. No vive en el documento de estado, sino en `app_metadata`, así que un reset no lo borra; si nadie lo ha fijado, se muestra `HAPPYROBOT_TEST_PHONE`. Se cambia con `POST /agents/:area/phone`.
+`agents[].phone` es el teléfono E.164 al que llama esa área. No vive en el documento de estado, sino en `app_metadata`, así que un reset no lo borra. Prioridad: lo que fije el panel > `HAPPYROBOT_TEST_PHONE` > el teléfono de pruebas del equipo (`+34616500586`), que es el valor por defecto de las cuatro áreas. Se cambia con `POST /agents/:area/phone`.
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
 
@@ -211,7 +211,7 @@ Fija el teléfono al que llama un área, sin redespliegue. Lo usa la tarjeta del
 { "phone": "+34600111222" }
 ```
 
-`phone` en E.164 (`+` y de 8 a 15 dígitos), o `null` para borrarlo y volver a `HAPPYROBOT_TEST_PHONE`. Responde con el valor efectivo:
+`phone` en E.164 (`+` y de 8 a 15 dígitos), o `null` para borrarlo y volver al destino por defecto (`HAPPYROBOT_TEST_PHONE`, o `+34616500586` si no está puesta). Responde con el valor efectivo:
 
 ```json
 { "ok": true, "area": "catering", "phone": "+34600111222" }
