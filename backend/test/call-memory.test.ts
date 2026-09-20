@@ -62,6 +62,8 @@ function dispatch(bundle: ReturnType<typeof deps>, area: string, counterpart: st
     { id: `call-${task.id}`, agent: area, counterpart, channel: "llamada", status: "en_curso", transcript: [] },
   ];
   bundle.states.saveState(run.id, state);
+  // claimNext deja la tarea en «dispatching», que es lo que espera markDispatchOutcome.
+  bundle.tasks.claimNext();
   bundle.tasks.markDispatchOutcome(task.id, "dispatched");
   return { run, task };
 }
