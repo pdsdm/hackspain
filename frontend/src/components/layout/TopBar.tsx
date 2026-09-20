@@ -39,7 +39,7 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
         <>
           <span className="w-px h-6 bg-line-2" />
           <div className="flex items-center gap-1">
-            {s.simulated && (
+            {(s.simulated || ctl.source === 'api') && (
               <>
             <button onClick={ctl.togglePause} className="w-9 h-9 grid place-items-center border border-line-2 text-ink hover:bg-ink/5" title={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'} aria-label={s.clock.paused ? 'Reanudar reloj' : 'Pausar reloj'}>
               {s.clock.paused ? <Play size={14} /> : <Pause size={14} />}
