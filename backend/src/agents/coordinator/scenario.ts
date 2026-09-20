@@ -159,6 +159,22 @@ export function liveCoordinatorInput(
     arriveAt: Number(vehicle.arriveAt ?? 0),
     status: String(vehicle.status ?? ""),
   }));
+  // Memoria de lo ya preguntado. Solo las llamadas con resultado, las últimas primero: sin
+  // esto el coordinador replanifica a ciegas y repite la misma llamada a la misma persona.
+  const callResults = asRecords(state.calls)
+    .filter((call) => typeof call.outcome === "string" && call.outcome !== "")
+    .slice(-8)
+    .reverse()
+    .map((call) => ({
+      area: String(call.agent ?? ""),
+      counterpart: String(call.counterpart ?? ""),
+      channel: String(call.channel ?? ""),
+      outcome: String(call.outcome),
+      summary: String(call.summary ?? ""),
+      conditions: Array.isArray(call.conditions)
+        ? call.conditions.filter((item): item is string => typeof item === "string")
+        : [],
+    }));
   const gates = asRecords(state.gates).map((gate) => ({
     id: String(gate.id),
     status: String(gate.status ?? ""),
@@ -179,6 +195,7 @@ export function liveCoordinatorInput(
     deliveries,
     vehicles,
     gates,
+    callResults,
     ...extras,
   };
 }

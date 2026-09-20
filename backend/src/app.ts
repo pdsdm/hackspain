@@ -33,7 +33,7 @@ import { ControlService } from "./domain/control-service.js";
 import { Engine } from "./domain/engine.js";
 import { DomainValidationError } from "./domain/plan-rules.js";
 import { verifyCallAcceptance, type CallAcceptanceVerification } from "./domain/result-verifier.js";
-import { WorkflowService } from "./domain/workflow-service.js";
+import { WorkflowService, callResultText } from "./domain/workflow-service.js";
 import type { CrisisDatabase } from "./state/database.js";
 import { EventRepository } from "./state/event-repository.js";
 import { HappyRobotEventRepository } from "./state/happyrobot-event-repository.js";
@@ -225,6 +225,7 @@ export function createApp(
       void engine.handle({
         source: "happyrobot",
         kind: "call_result",
+        text: callResultText(envelope),
         payload: {
           ...(envelope as unknown as Record<string, unknown>),
           ...(recorded.materialChange ? { materialChange: true, materialSummary: recorded.materialSummary } : {}),
@@ -342,6 +343,9 @@ export function createApp(
   app.post("/interventions", (request, response, next) => {
     try {
       const intervention = parseIntervention(request.body);
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de intervenir", 409);
+      }
       void engine
         .handle({
           source: "human",
@@ -379,6 +383,9 @@ export function createApp(
   app.post("/events", (request, response, next) => {
     try {
       const event = parseEvent(request.body);
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de enviar eventos", 409);
+      }
       const eventId = randomUUID();
       console.log("[events] POST /events", event.source, event.kind, event.text ?? "", eventId);
       void engine.handle({ ...event, id: eventId }).catch((error) => console.error("[events] handle", error));
@@ -390,6 +397,9 @@ export function createApp(
 
   app.post("/workflow/happyrobot/events", authorizeHappyRobotIncident, (request, response, next) => {
     try {
+      if (stateRepository.ensureActiveRun().state.clock.paused) {
+        throw new ContractError("La operación está pausada; inicia el reloj antes de recibir eventos", 409);
+      }
       const envelope = parseHappyRobotIncident(request.body);
       const reservation = happyrobotEventRepository.reserve(envelope);
       if (reservation.response) {

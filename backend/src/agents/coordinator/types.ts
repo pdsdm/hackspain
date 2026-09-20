@@ -68,6 +68,7 @@ export interface CoordinatorInput {
   vehicles?: InputVehicle[];
   gates?: InputGate[];
   pendingActions?: InputPendingAction[];
+  callResults?: InputCallResult[];
   world?: { places: Array<Record<string, unknown>>; links: Array<Record<string, unknown>> };
   event?: { source: string; kind: string; text?: string };
   queryAnswers?: unknown[];
@@ -115,6 +116,16 @@ export interface InputPendingAction {
   area: string;
   objective: string;
   counterpart: string;
+}
+
+/** Lo que ya contestó una contraparte. Es la memoria del coordinador entre planes. */
+export interface InputCallResult {
+  area: string;
+  counterpart: string;
+  channel: string;
+  outcome: string;
+  summary: string;
+  conditions: string[];
 }
 
 export interface CoordinatorAction {
