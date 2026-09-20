@@ -1,14 +1,14 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`685a974`, con T58 y T59 mergeadas) más el trabajo sin mergear de `fix/pep-llamada-que-se-sabotea` (T60). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`5cd3409`, T58, T59 y T21 mergeadas) más el trabajo sin mergear de `fix/pep-llamada-que-se-sabotea` (T60). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 07:40 CEST |
-| **Base** | `685a974` (`origin/main`; T57 en #109, T58 en #110 y T59 en #111, las tres mergeadas) + T60 sin mergear |
-| **Trabajo en curso** | T60: la transcripción dejaba de envenenar la conversación, el mismo encargo no se marca dos veces y un email no llama. Decisión D28 |
+| **Foto tomada** | 20 de septiembre de 2026, 09:45 CEST |
+| **Base** | `5cd3409` (`origin/main`; T57 en #109, T58 en #110, T59 en #111 y T21 en #112) + T60 sin mergear |
+| **Trabajo en curso** | T60: la transcripción deja de envenenar la conversación, el mismo encargo no se marca dos veces y un email no llama. Decisión D28 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | Devin, sesión de implementación de T59 y T60 |
+| **Generado por** | resolución de conflictos de #113 (T60 vs T21) |
 
 ## Salud
 
@@ -147,8 +147,8 @@ reescrita es la regla del prompt.
    [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
    versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
    resultado de cada llamada del coordinador se sigue perdiendo con 404.**
-2. **Mergear T59.** Mientras no se mergee, el backend desplegado no tiene el endpoint al que
-   debe apuntar el nodo nuevo.
+2. **Mergear T60.** T59 ya está en `main` (#111). T21 también (#112). Hasta que T60
+   despliegue, el backend de producción no responde `204` en transcripción ni aplica el cooldown.
 3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
    puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
 4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
@@ -178,13 +178,14 @@ reescrita es la regla del prompt.
 ## Ramas vivas sin mergear
 
 - `fix/pep-llamada-que-se-sabotea`: T60. `make check` en verde.
-- `feat/pep-no-y-telefono-ui`: ya mergeada. T58 entró por PR #110 y T59 por PR #111 (`685a974`).
+- `feat/pep-no-y-telefono-ui`: ya mergeada. T58 entró por PR #110 y T59 por PR #111.
+- `feat/pep-entrega`: ya mergeada en `main` vía PR #112.
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
 - El resto de ramas remotas no se ha vuelto a auditar en esta sesión (`git branch -r`).
 
 ## Decisiones pendientes
 
-1. Aprobar y mergear T60 (D28). T58 y T59 ya están en `main`.
+1. Aprobar y mergear T60 (D28). T21, T58 y T59 ya están en `main`.
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica

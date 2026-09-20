@@ -30,7 +30,7 @@
 | T18 | Entorno de demo y recuperación | Zhi | `fix/zhi-demo-readiness` | [T18](docs/specs/T18-entorno-demo.md) | doing |
 | T19 | Pitch, ensayo y vídeo de respaldo | Carlos | `feat/carlos-demo` | [T19](docs/specs/T19-demo.md) | todo |
 | T20 | P2: aprendizaje entre ejecuciones | Ventura | `feat/ventura-aprendizaje` | [T20](docs/specs/T20-aprendizaje.md) | todo |
-| T21 | Revisión y entrega final | Pep | `feat/pep-entrega` | [T21](docs/specs/T21-entrega.md) | todo |
+| T21 | Revisión y entrega final | Pep | `feat/pep-entrega` (PR #112, mergeada) | - | done |
 | T22 | P2: transcripción en directo | Devin | `feat/devin-transcripcion` | [T22](docs/specs/T22-transcripcion.md) | review |
 | T23 | Rediseño UI del panel: tema claro con estética Zhivel | Pep | `feat/pepe-ui-zhivel`, `fix/pepe-dashboard-layout` (mergeadas) | - | done |
 | T24 | Motor de eventos, mundo y coordinador en proceso | Pep | `feat/pep-motor-eventos` (PR #15, mergeada) | [T24](docs/specs/T24-motor-eventos.md) | done |

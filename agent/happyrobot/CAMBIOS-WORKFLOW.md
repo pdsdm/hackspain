@@ -30,7 +30,7 @@ El backend ya ayuda por su lado: desde T60 ese endpoint responde `204` sin cuerp
 El orden importa. La regla dura es que `CALLS_ON_DEMAND=true` va **al final**: con la variable puesta y el nodo antiguo, no sale ninguna llamada.
 
 1. Publicar la versión nueva del **outbound** con la tool de transcripción silenciada (punto 0). Es independiente del resto y arregla las llamadas hoy mismo.
-2. Mergear T59 y T60, y esperar el despliegue de Railway. Así el endpoint existe antes de que el nodo apunte a él.
+2. Mergear T60 (T59 ya está en `main`) y esperar el despliegue de Railway. Así el endpoint existe antes de que el nodo apunte a él.
 3. Validar el endpoint con un `curl` de área inválida (abajo). No marca a nadie.
 4. Publicar la versión nueva del Orquestador.
 5. Poner `CALLS_ON_DEMAND=true`.
