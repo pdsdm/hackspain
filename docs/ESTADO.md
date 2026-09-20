@@ -1,28 +1,25 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`5cd3409`, T58, T59 y T21 mergeadas) más el trabajo sin mergear de `fix/pep-llamada-que-se-sabotea` (T60). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`b08cbc1`, T57, T58, T59, T21 y T60 mergeadas) más el trabajo sin mergear de `fix/pep-happyrobot-trigger-env` (T61). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
-| **Foto tomada** | 20 de septiembre de 2026, 09:45 CEST |
-| **Base** | `5cd3409` (`origin/main`; T57 en #109, T58 en #110, T59 en #111 y T21 en #112) + T60 sin mergear |
-| **Trabajo en curso** | T60: la transcripción deja de envenenar la conversación, el mismo encargo no se marca dos veces y un email no llama. Decisión D28 |
+| **Foto tomada** | 20 de septiembre de 2026, 11:40 CEST |
+| **Base** | `b08cbc1` (`origin/main`; T57 en #109, T58 en #110, T59 en #111, T21 en #112, T60 en #113) + T61 sin mergear |
+| **Trabajo en curso** | T61: el trigger del coordinador HappyRobot moría con 404 en producción por dos variables de entorno desincronizadas. Decisión D29 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
-| **Generado por** | resolución de conflictos de #113 (T60 vs T21) |
+| **Generado por** | sesión de diagnóstico y arreglo del 404 en producción (T61) |
 
 ## Salud
 
 | Comprobación | Resultado |
 |---|---|
-| **Tests en `origin/main`** | **359 pass, 0 fail, 7 skipped.** `main` está verde. Verificado en worktree limpio de `6f62593` |
-| Historia de las 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») dejó 10 tests HTTP rojos: cada ejecución arranca en pausa y `/events`, `/interventions` y `/workflow/happyrobot/events` responden 409 con la mesa detenida. T58 los arregló y el merge #110 ya está en `main` |
-| Tests en `fix/pep-llamada-que-se-sabotea` | **373 pass, 0 fail, 7 skipped** (380 en total). Los 7 nuevos son de T60 |
-| `make check` en `fix/pep-llamada-que-se-sabotea` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
-| Lint frontend | 0 avisos, 0 errores |
-| Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
-| Fixtures | `fixtures:check` verifica los 10 JSON reproducibles |
-| Node usado en esta sesión | v22.22.3 (el repo exige ≥ 22.13) |
-| Railway producción | servicio `hackspain` **online**, región `sfo`, volumen 65 MB / 500 MB, último arranque 03:26 UTC. `/state` responde con una ejecución nueva del fixture `calm`, reloj en pausa, sin llamadas |
+| `make check` en `fix/pep-happyrobot-trigger-env` (= `origin/main` + el fix de T61) | **OK**: 382 tests (375 pass, 7 skipped, 0 fail), build backend OK, lint+build frontend OK, `fixtures:check` OK |
+| Tests de `happyrobot-coordinator.test.ts` | 17 pass, 0 fail (15 previos + 2 nuevos de T61) |
+| Node usado en esta sesión | v22 (verificado con `npx tsc`/`npx tsx` en `backend/`) |
+| Railway producción | servicio `hackspain` **online**, región `sfo`. `/health` responde `{"status":"ok"}` |
+| Trigger del coordinador HappyRobot en producción | **verificado con `/coordinator/happyrobot/shadow`** (modo shadow, no aplica plan): `status: "accepted"`, `happyrobotRunId` real, plan completo devuelto. Antes de T61 daba 404 en todos los eventos (ver abajo) |
+| Resto de `origin/main` (T58/T59/T60, ramas viejas, otras tareas) | no reauditado en esta sesión; ver la foto anterior en el historial de `docs/ESTADO.md` para esos detalles |
 
 ## Qué cambió: T58, el coordinador ya entiende un «no» (D25, D26)
 
@@ -137,47 +134,82 @@ contraparte. Volver a llamar al mismo recinto por otro espacio es legítimo y ti
 dejar un área muda hunde la demo mucho más que una llamada de más. Quien evita la repetición
 reescrita es la regla del prompt.
 
+## Qué cambió: T61, el trigger del coordinador dejaba de coincidir con su propio log (D29)
+
+Todas las llamadas del coordinador al Orquestador de HappyRobot morían con 404
+(`no live development version found for use case 1i6zafb6wodb`), sin crear ejecución,
+pese a que el log de informe decía `entorno: production`.
+
+Causa raíz, confirmada en Railway producción (`railway variables --kv`):
+`HAPPYROBOT_COORDINATOR_ENVIRONMENT=production` (correcto, alimenta solo la etiqueta del
+log) convivía con `HAPPYROBOT_COORDINATOR_HOOK_URL=.../hooks/development/1i6zafb6wodb`
+(el que de verdad enruta la llamada, apuntando a `development`, que no tiene versión
+viva). Dos fuentes de verdad independientes, y solo una se había actualizado.
+
+Se intentó primero quitar el hook y disparar siempre contra
+`{apiBase}/workflows/{id}/runs`: probado en vivo con `/coordinator/happyrobot/shadow`,
+esa ruta devuelve `Workflow not found` en la cuenta EU (documentado también en
+`docs/runbook-happyrobot-coordinator.md`). El hook es obligatorio para esta cuenta; no
+se tocó ese mecanismo.
+
+Cambios:
+
+- Railway producción: `HAPPYROBOT_COORDINATOR_HOOK_URL` corregido a
+  `https://workflows.platform.eu.happyrobot.ai/hooks/1i6zafb6wodb` (sin el segmento
+  `development`, según la convención de `.env.example`: `/hooks/<slug>` en production,
+  `/hooks/<entorno>/<slug>` en cualquier otro entorno).
+- `loadHappyRobotCoordinatorConfig` (`backend/src/agents/coordinator/happyrobot-config.ts`)
+  ahora compara el entorno codificado en `HAPPYROBOT_COORDINATOR_HOOK_URL` contra
+  `HAPPYROBOT_COORDINATOR_ENVIRONMENT` y lanza un error claro al arrancar si no
+  coinciden, en vez de dejar que cada trigger falle en silencio con un 404 confuso.
+- 2 tests nuevos en `happyrobot-coordinator.test.ts` cubren el error de divergencia y el
+  caso donde ambas variables coinciden (production sin segmento, y cualquier otro
+  entorno con segmento).
+
+**Verificado en producción tras el fix**, con `/coordinator/happyrobot/shadow`
+(modo shadow, no aplica el plan): `status: "accepted"`, `happyrobotRunId` real, plan
+completo devuelto por el Reasoning Agent.
+
 ## Qué falta, por riesgo para la demo
 
 0. **Silenciar `reportar_transcript` en el workflow de voz.** Es el arreglo con más efecto y no
    depende de ningún merge. Mientras el nodo devuelva su salida al agente, las llamadas se
-   seguirán rompiendo solas.
-1. **Publicar la versión nueva del Orquestador** con `emitir_llamada` apuntando a
-   `POST /workflow/coordinator/happyrobot/call`. Guion en
-   [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
-   versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
-   resultado de cada llamada del coordinador se sigue perdiendo con 404.**
-2. **Mergear T60.** T59 ya está en `main` (#111). T21 también (#112). Hasta que T60
-   despliegue, el backend de producción no responde `204` en transcripción ni aplica el cooldown.
-3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
-   puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
-4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
-   `my5asz8ibzd3`). Sin esa variable, tres de las cuatro áreas siguen sin canal. **No la he
-   tocado: es un cambio de producción y necesita tu OK.**
-5. **Comprobar el nombre del token del transcript** en el outbound
+   seguirán rompiendo solas. (Sin verificar en esta sesión si sigue pendiente tras T60.)
+1. **Mergear T61 a `main`.** El fix ya está aplicado en Railway producción (la variable se
+   corrigió directamente), pero el código (validación que evita que esto vuelva a pasar en
+   silencio) sigue solo en `fix/pep-happyrobot-trigger-env`.
+2. **`CALLS_ON_DEMAND=true` en Railway, solo si el nodo `emitir_llamada` del Orquestador ya
+   apunta a `POST /workflow/coordinator/happyrobot/call` (T59).** Con la variable puesta y el
+   nodo antiguo, no sale ninguna llamada. Estado de esa publicación: sin comprobar en esta
+   sesión.
+3. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
+   `my5asz8ibzd3`). Sin esa variable, tres de las cuatro áreas siguen sin canal. Estado: sin
+   comprobar en esta sesión.
+4. **Comprobar el nombre del token del transcript** en el outbound
    (`HAPPYROBOT_WEBHOK_TOKEN`, sin la `O`). Si la variable real es `HAPPYROBOT_WEBHOOK_TOKEN`,
    el Bearer va vacío, `/workflow/happyrobot/transcript` responde 401 y el panel no enseña la
-   conversación en directo. El fallo es silencioso.
-6. **Verificación con llamada real** de que un «no» real produce un plan distinto. No
-   ejecutada: hace sonar el teléfono `+34616500586`. Pendiente de autorización humana.
-7. **Latencia:** Railway está en `sfo` y HappyRobot en `eu`. Cada `consult_world` cruza el
-   Atlántico. El sondeo del run es cada 5 s. Sin medir en esta sesión.
-8. Lo anterior a T58 sigue pendiente y sin volver a comprobar: rotar el bearer de HappyRobot,
+   conversación en directo. El fallo es silencioso. Sin comprobar en esta sesión.
+5. **Verificación con llamada real** de que un «no» real produce un plan distinto. No
+   ejecutada: hace sonar un teléfono real. Pendiente de autorización humana.
+6. **Latencia:** Railway está en `sfo` y HappyRobot en `eu`. Cada `consult_world` cruza el
+   Atlántico. El sondeo del run es cada 5 s. Sin medir en esta sesión. La llamada de prueba de
+   esta sesión al Orquestador (vía `/shadow`) tardó 6,7 s en total.
+7. Lo anterior a T58 sigue pendiente y sin volver a comprobar: rotar el bearer de HappyRobot,
    aprobar textos de T45, grabar la toma.
 
 ## Bloqueos
 
 | Qué | Depende de | Externo |
 |---|---|---|
-| Que el «no» llegue en producción | publicar la versión nueva del Orquestador en HappyRobot | Sí |
-| Merge de T58 + T59 a `main` (y con ello arreglar `main`) | revisión humana | No |
+| Mergear T61 a `main` | revisión humana | No |
 | `CALLS_ON_DEMAND` y `HAPPYROBOT_HOOK_DEFAULT` en Railway | decisión humana; es cambio de producción, y el orden importa | No |
 | Prueba con llamada real | autorización humana; suena un teléfono de verdad | Sí |
 | Rotación de bearer, textos T45, grabación | sin comprobar en esta sesión | Parcial |
 
 ## Ramas vivas sin mergear
 
-- `fix/pep-llamada-que-se-sabotea`: T60. `make check` en verde.
+- `fix/pep-happyrobot-trigger-env`: T61. `make check` en verde.
+- `fix/pep-llamada-que-se-sabotea`: ya mergeada en `main` vía PR #113 (T60).
 - `feat/pep-no-y-telefono-ui`: ya mergeada. T58 entró por PR #110 y T59 por PR #111.
 - `feat/pep-entrega`: ya mergeada en `main` vía PR #112.
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
@@ -185,7 +217,7 @@ reescrita es la regla del prompt.
 
 ## Decisiones pendientes
 
-1. Aprobar y mergear T60 (D28). T21, T58 y T59 ya están en `main`.
+1. Aprobar y mergear T61 (D29).
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica
@@ -195,6 +227,10 @@ reescrita es la regla del prompt.
 
 ## Avisos para el siguiente agente
 
+- El trigger del coordinador HappyRobot **necesita** `HAPPYROBOT_COORDINATOR_HOOK_URL`
+  (cuenta EU: la ruta directa de la API da `Workflow not found`). No lo quites. Si tocas su
+  valor o `HAPPYROBOT_COORDINATOR_ENVIRONMENT`, ambos tienen que codificar el mismo entorno o
+  el backend no arranca (D29) — es la señal correcta, no un bug.
 - `origin/main` está verde desde el merge de T58 (#110). Si ves 10 tests HTTP rojos, te falta
   ese merge: los tests tienen que iniciar la operación antes de enviar eventos.
 - Con el reloj en pausa, el backend **rechaza** eventos e intervenciones con 409. Es
