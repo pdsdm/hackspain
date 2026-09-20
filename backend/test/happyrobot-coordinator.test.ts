@@ -145,6 +145,44 @@ test("loadHappyRobotCoordinatorConfig exige la clave y el workflow y no se activ
   assert.equal(loadConfig(ENV_BASE).coordinatorMode, "llm");
 });
 
+test("loadHappyRobotCoordinatorConfig rechaza un HOOK_URL cuyo entorno no coincide con ENVIRONMENT", () => {
+  assert.throws(
+    () =>
+      loadHappyRobotCoordinatorConfig({
+        ...ENV_BASE,
+        HAPPYROBOT_COORDINATOR_ENVIRONMENT: "production",
+        HAPPYROBOT_COORDINATOR_HOOK_URL: "https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb",
+      }),
+    /HAPPYROBOT_COORDINATOR_HOOK_URL.*"development".*HAPPYROBOT_COORDINATOR_ENVIRONMENT="production"/,
+  );
+  assert.throws(
+    () =>
+      loadHappyRobotCoordinatorConfig({
+        ...ENV_BASE,
+        HAPPYROBOT_COORDINATOR_ENVIRONMENT: "development",
+        HAPPYROBOT_COORDINATOR_HOOK_URL: "https://workflows.platform.eu.happyrobot.ai/hooks/1i6zafb6wodb",
+      }),
+    /HAPPYROBOT_COORDINATOR_HOOK_URL.*"production".*HAPPYROBOT_COORDINATOR_ENVIRONMENT="development"/,
+  );
+});
+
+test("loadHappyRobotCoordinatorConfig acepta un HOOK_URL cuyo entorno coincide con ENVIRONMENT", () => {
+  const production = loadHappyRobotCoordinatorConfig({
+    ...ENV_BASE,
+    HAPPYROBOT_COORDINATOR_ENVIRONMENT: "production",
+    HAPPYROBOT_COORDINATOR_HOOK_URL: "https://workflows.platform.eu.happyrobot.ai/hooks/1i6zafb6wodb",
+  });
+  assert.equal(production.environment, "production");
+  assert.equal(production.hookUrl, "https://workflows.platform.eu.happyrobot.ai/hooks/1i6zafb6wodb");
+
+  const development = loadHappyRobotCoordinatorConfig({
+    ...ENV_BASE,
+    HAPPYROBOT_COORDINATOR_ENVIRONMENT: "development",
+    HAPPYROBOT_COORDINATOR_HOOK_URL: "https://workflows.platform.eu.happyrobot.ai/hooks/development/1i6zafb6wodb",
+  });
+  assert.equal(development.environment, "development");
+});
+
 test("el trigger lleva runId, planVersion, prompt y snapshot fijados por el backend", () => {
   const input = crisisInput("crisis");
   const payload = buildTriggerPayload({

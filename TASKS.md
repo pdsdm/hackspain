@@ -69,6 +69,7 @@
 | T58 | El coordinador no aceptaba un «no»: memoria de llamadas en el snapshot, `no_disponible` aplicado, hook por área, plazos en tiempo real y teléfono editable en el panel | Pep | `feat/pep-no-y-telefono-ui` | [D25](docs/decisions.md), [D26](docs/decisions.md) | review |
 | T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | done |
 | T60 | Tres fallas vistas en una llamada real: la transcripción se inyectaba en la conversación, cada replan repetía la llamada y un email marcaba un teléfono | Pep | `fix/pep-llamada-que-se-sabotea` | [D28](docs/decisions.md) | review |
+| T61 | El trigger del coordinador HappyRobot fallaba con 404 en producción: `HAPPYROBOT_COORDINATOR_ENVIRONMENT` y `HAPPYROBOT_COORDINATOR_HOOK_URL` podían divergir en silencio | Pep | `fix/pep-happyrobot-trigger-env` | [D29](docs/decisions.md) | review |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**
