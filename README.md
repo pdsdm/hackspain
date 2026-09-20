@@ -2,6 +2,28 @@
 
 Sistema agéntico que gestiona una crisis de hospitalidad en directo: decide, llama por teléfono, coordina recursos y replanifica cuando el mundo cambia. Proyecto del equipo **Zhivel** para el track de [HappyRobot](https://happyrobot.ai) en HackSpain 2026 (Madrid, UPM–ETSIT).
 
+EG. PREGUNTAS (llamar al "+1 (571) 712-9980" o bien por el chatbot):
+Espacios
+1.⁠ ⁠Fuga de agua en el Pabellón Principal: 600 invitados se quedan sin recinto a 45 minutos de la apertura.
+2.⁠ ⁠Cortocircuito en el Pabellón B: la mitad del aforo queda inutilizable hasta revisión eléctrica.
+
+Accesos
+3.⁠ ⁠La Puerta Este (Campo de las Naciones) se cierra por seguridad: hay que desviar a todos los que llegan por ahí.
+4.⁠ ⁠Cola de más de 40 minutos en el Acceso Sur 2: la gente empieza a irse antes de entrar.
+
+Catering
+5.⁠ ⁠El proveedor de catering cancela la entrega en Muelle Sur a última hora.
+6.⁠ ⁠Los camiones de catering no pueden descargar en Muelle Este Sur: el acceso está bloqueado por un vehículo averiado.
+
+Transporte
+7.⁠ ⁠Uno de los shuttles se ha averiado camino del Parking Norte con pasajeros VIP a bordo.
+8.⁠ ⁠Atasco en el Acceso Paddock: los shuttles no llegan al Paddock Club Norte a la hora prevista.
+
+Asistentes / staff
+9.⁠ ⁠Faltan 4 personas de recepción en la Zona de espera Sur: no dan abasto con la llegada de invitados.
+
+
+
 ![Centro de operaciones: mapa de MADRING con aforos saturados y cronología de incidencias](docs/screenshots/panel-general.png)
 
 ## El escenario
