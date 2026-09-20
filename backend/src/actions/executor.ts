@@ -18,6 +18,7 @@ function records(state: CrisisStateDocument, field: string): Array<Record<string
 }
 
 interface DueResult {
+  /** Hora real (`Date.now()`) en la que vence el plazo, no segundos del escenario. */
   at: number;
   envelope: SpecialistResultEnvelope;
   // Un timeout solo se entrega si la tarea sigue esperando el callback real.
@@ -64,8 +65,10 @@ function noChannelEnvelope(input: { task: DispatchTask; runId: string }): Specia
 }
 
 export class ActionExecutor {
-  // Segundos de reloj que esperamos el callback de HappyRobot antes de dar la tarea por no contestada.
-  static readonly DISPATCH_TIMEOUT_SECONDS = 180;
+  // Milisegundos reales que esperamos el callback de HappyRobot antes de dar la tarea por no
+  // contestada. En segundos de reloj no servía: con el reloj en pausa el plazo no vencía
+  // nunca y una llamada sin resultado bloqueaba la cola para siempre.
+  static readonly DISPATCH_TIMEOUT_MS = 180_000;
 
   private due: DueResult[] = [];
   private engine: Engine | undefined;
@@ -85,7 +88,7 @@ export class ActionExecutor {
     this.due = [];
   }
 
-  fireDue(now: number): void {
+  fireDue(now: number = Date.now()): void {
     const ready = this.due.filter((item) => item.at <= now);
     this.due = this.due.filter((item) => item.at > now);
     for (const item of ready) {
@@ -186,7 +189,7 @@ export class ActionExecutor {
     logAction("dispatch outcome", { taskId: task.id, adapter: "happyrobot", outcome });
     if (outcome === "dispatched") {
       this.due.push({
-        at: Number(state.clock.simSeconds) + ActionExecutor.DISPATCH_TIMEOUT_SECONDS,
+        at: Date.now() + ActionExecutor.DISPATCH_TIMEOUT_MS,
         envelope: noAnswerEnvelope({ task, runId: run.id, callId }),
         onlyIfDispatched: true,
       });

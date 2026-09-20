@@ -128,10 +128,14 @@ function readJevTimeout(value: string | undefined): number {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
-  const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS);
-  const catering = readHook(env.HAPPYROBOT_HOOK_CATERING);
-  const transporte = readHook(env.HAPPYROBOT_HOOK_TRANSPORTE);
-  const asistentes = readHook(env.HAPPYROBOT_HOOK_ASISTENTES);
+  // Un área sin hook propio no tiene canal, y entonces su tarea muere en «Sin canal real
+  // configurado» sin llamar a nadie. El hook por defecto da voz a las cuatro áreas con un
+  // único workflow: el cuerpo ya lleva area, objective, counterpart y contact.role.
+  const fallback = readHook(env.HAPPYROBOT_HOOK_DEFAULT) ?? readHook(env.HAPPYROBOT_ENDPOINT);
+  const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS) ?? fallback;
+  const catering = readHook(env.HAPPYROBOT_HOOK_CATERING) ?? fallback;
+  const transporte = readHook(env.HAPPYROBOT_HOOK_TRANSPORTE) ?? fallback;
+  const asistentes = readHook(env.HAPPYROBOT_HOOK_ASISTENTES) ?? fallback;
   if (espacios) hooks.espacios = espacios;
   if (catering) hooks.catering = catering;
   if (transporte) hooks.transporte = transporte;
