@@ -48,7 +48,7 @@ export default function App() {
             <div className="map-overlays">
               <div className="absolute top-3 left-3 bottom-[calc(var(--footer-rail)+24px)] w-[300px] flex flex-col gap-3 min-h-0">
                 <AforoOverlay s={s} />
-                {openAgent && <AgentDetailCard s={s} id={openAgent} onClose={() => setOpenAgent(null)} />}
+                {openAgent && <AgentDetailCard s={s} id={openAgent} onClose={() => setOpenAgent(null)} onSavePhone={ctl.setAgentPhone} />}
                 <ActiveIncidents s={s} />
               </div>
               <div className="absolute top-3 left-[324px] right-[428px] flex flex-col items-center gap-3">

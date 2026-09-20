@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Bot, Building2, Bus, Network, Users, Utensils, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bot, Building2, Bus, Network, Phone, Users, Utensils, X } from "lucide-react";
 import type { Area, CrisisState } from "../../domain/types";
 import { fmtClock } from "../../domain/time";
 import { Pill, type Tone } from "../ui/Pill";
@@ -25,6 +25,70 @@ const ICONS = {
   asistentes: Users,
 } as const;
 
+/**
+ * Editor del teléfono del área.
+ *
+ * La llamada real sale a este número, así que el responsable tiene que poder cambiarlo en
+ * mitad de la operación sin tocar variables de entorno ni redespliegue.
+ */
+function PhoneField({ area, phone, onSave }: {
+  area: Area
+  phone: string | undefined
+  onSave: (area: Area, phone: string | null) => Promise<string | null>
+}) {
+  // `draft` en null significa «muestra lo que dice el backend»: así el sondeo refresca el
+  // campo sin pelearse con lo que el responsable está escribiendo.
+  const [draft, setDraft] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const stored = phone ?? ''
+  const value = draft ?? stored
+
+  const submit = async (next: string) => {
+    setSaving(true); setError(null); setSaved(false)
+    try {
+      await onSave(area, next)
+      setDraft(null)
+      setSaved(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="agent-phone" aria-label={`Teléfono de ${area}`}>
+      <h3><Phone size={12} aria-hidden="true" /> Teléfono de la llamada</h3>
+      <form
+        className="agent-phone-row"
+        onSubmit={(e) => { e.preventDefault(); if (value.trim() !== stored) void submit(value.trim()) }}
+      >
+        <input
+          type="tel"
+          inputMode="tel"
+          value={value}
+          placeholder="+34600000000"
+          aria-label={`Teléfono en formato E.164 para ${area}`}
+          onChange={(e) => { setDraft(e.target.value); setSaved(false); setError(null) }}
+          disabled={saving}
+        />
+        <button type="submit" disabled={saving || value.trim() === '' || value.trim() === stored}>
+          {saving ? '…' : 'Guardar'}
+        </button>
+      </form>
+      <p className="agent-phone-hint">
+        {error
+          ? <span className="text-red">{error}</span>
+          : saved
+            ? <span className="text-green">Guardado. La próxima llamada usa este número.</span>
+            : <>Formato internacional, por ejemplo <span className="num">+34600000000</span>.</>}
+      </p>
+    </section>
+  )
+}
+
 function focusOf(s: CrisisState, id: AgentFocus) {
   if (id === "coordinador") {
     const st = COORD[s.coordinatorStatus] ?? COORD.replanificando;
@@ -36,10 +100,12 @@ function focusOf(s: CrisisState, id: AgentFocus) {
       reason: `Coordinación global · Plan v${s.planVersion}`,
       lastResult: undefined as string | undefined,
       area: undefined as Area | undefined,
+      phone: undefined as string | undefined,
     };
   }
   const a = s.agents.find((agent) => agent.id === id);
   const st = AGENT[a?.status ?? "activo"] ?? AGENT.activo;
+  const phone = a?.phone;
   return {
     name: a?.name ?? id,
     status: st,
@@ -47,6 +113,7 @@ function focusOf(s: CrisisState, id: AgentFocus) {
     reason: a?.reason,
     lastResult: a?.lastResult,
     area: id,
+    phone,
   };
 }
 
@@ -54,10 +121,12 @@ export function AgentDetailCard({
   s,
   id,
   onClose,
+  onSavePhone,
 }: {
   s: CrisisState;
   id: AgentFocus;
   onClose: () => void;
+  onSavePhone: (area: Area, phone: string | null) => Promise<string | null>;
 }) {
   const focus = focusOf(s, id);
   const Icon = ICONS[id];
@@ -112,6 +181,9 @@ export function AgentDetailCard({
             <span>Último resultado</span>
             {focus.lastResult}
           </p>
+        )}
+        {focus.area && (
+          <PhoneField key={focus.area} area={focus.area} phone={focus.phone} onSave={onSavePhone} />
         )}
         {correction && (
           <section

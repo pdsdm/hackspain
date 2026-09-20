@@ -350,10 +350,16 @@ El esquema es el de T11 ([`types.ts`](../../backend/src/agents/spaces/types.ts),
 `null` para lo que no se haya dicho, nunca un cero ni un valor aproximado. `availability`:
 `disponible` | `condicionada` | `no_disponible` | `sin_respuesta`.
 
-> **Aviso honesto:** hoy el backend guarda `data` entero como evidencia y solo lee de ahí
-> `commitmentId`. El extractor de Espacios existe y está probado, pero todavía **no está
-> enganchado al callback**. Mandar el esquema correcto desde ya no cuesta nada y evita
-> rehacer el workflow cuando se conecte.
+> **Qué lee hoy el backend de `data.spaces[]`** (T58, D25): `availability: "no_disponible"`
+> pone el espacio en `descartado` con la condición o el resumen como nota, y `capacity` y
+> `readyAt` se aplican cuando la contraparte acepta. El resto de `data` se guarda como
+> evidencia, y de ahí solo se lee `commitmentId`. El extractor completo de Espacios sigue sin
+> engancharse al callback, así que manda el esquema correcto: lo que rellenes se usa.
+
+> **Y lo más importante:** `outcome: "rejected"` con su `summary` ya llega al coordinador. Se
+> guarda en la llamada, viaja en el snapshot como `callResults` y el prompt le prohíbe volver
+> a pedir lo mismo a quien dijo no. Un resumen vago aquí es un coordinador que decide a
+> ciegas: di **qué** han rechazado y **por qué**.
 
 ### 4.3. `reportar_novedad` — opcional, recomendable
 

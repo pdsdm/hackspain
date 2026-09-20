@@ -41,7 +41,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "coordinatorStatus": "replanificando",
   "spaces": [{ "id": "pabellonB", "name": "Pabellón B", "kind": "pabellon", "zone": "sur", "capacity": 450, "status": "pendiente", "pos": [40.468, -3.6172] }],
   "commitments": [{ "id": "c-pabB", "title": "…", "area": "espacios", "status": "aceptado_condiciones", "counterpart": "Recinto", "conditions": ["…"], "planVersion": 1, "updatedAt": 44160 }],
-  "agents": [{ "id": "espacios", "name": "Espacios", "objective": "…", "reason": "El aforo bloquea el resto del plan", "status": "llamada" }],
+  "agents": [{ "id": "espacios", "name": "Espacios", "objective": "…", "reason": "El aforo bloquea el resto del plan", "status": "llamada", "phone": "+34600000000" }],
   "shuttles": [],
   "deliveries": [],
   "guestGroups": [],
@@ -49,7 +49,7 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
   "gates": [],
   "attendanceExpected": 110000,
   "decisions": [{ "id": "decision-plan-2", "kind": "operational", "title": "Aceptar apertura escalonada", "summary": "…", "rationale": "…", "cost": 3200, "conditions": ["…"], "effectApprove": "…", "effectReject": "…", "status": "pendiente", "createdAt": 44280 }],
-  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "en_curso", "transcript": [] }],
+  "calls": [{ "id": "call-t1", "agent": "espacios", "counterpart": "Recinto", "channel": "llamada", "startedAt": 44100, "endsAfter": 90, "status": "terminada", "outcome": "rejected", "summary": "El recinto no cede el Pabellón B a esa hora.", "conditions": ["Nada antes de las 14:00"], "transcript": [] }],
   "events": [],
   "budget": { "contingency": 5000, "autonomousLimit": 1500, "authorized": 1500, "forecast": 3200, "committed": 0 },
   "constraints": ["Norte y Sur sin conexión interior"],
@@ -65,6 +65,10 @@ Devuelve el estado completo de la ejecución activa; el frontend hace polling ca
 `spaces[].kind`: `pabellon` | `lounge` | `acceso` | `muelle` | `espera` | `paddock` | `parking`. Solo `pabellon`, `lounge` y `espera` aceptan invitados (el coordinador rechaza el resto con `espacio_no_hospitalidad`). En `parking`, `capacity` cuenta vehículos.
 
 El roster individual queda fuera de `/state`. Todas las llamadas de `calls[]` son reales, vía HappyRobot; el panel siempre etiqueta «vía HappyRobot». `calls[].transcript` crece con los callbacks parciales de T22 mientras el estado siga `en_curso`; sus líneas están ordenadas por `at`, no se duplican al reenviar un snapshot y permanecen en `/state` después de pasar a `terminada` y después de reiniciar el backend.
+
+Al cerrarse, cada llamada guarda lo que contestaron: `outcome` (`accepted` | `accepted_with_conditions` | `rejected` | `no_answer` | `failed`), `summary` y `conditions[]`. Esos tres campos son la memoria del coordinador (D25): el snapshot que va a HappyRobot los envía como `callResults` y el prompt los muestra en «RESULTADOS DE LLAMADAS», para que no vuelva a pedir lo mismo a quien ya dijo no.
+
+`agents[].phone` es el teléfono E.164 al que llama esa área. No vive en el documento de estado, sino en `app_metadata`, así que un reset no lo borra; si nadie lo ha fijado, se muestra `HAPPYROBOT_TEST_PHONE`. Se cambia con `POST /agents/:area/phone`.
 
 ### Cierre de la crisis (`resolved`, `closureSummary`, `coordinatorStatus: atascado`)
 
@@ -198,6 +202,22 @@ Los dos campos son opcionales, pero hace falta al menos uno. `speed` entre 1 y 6
 ```json
 { "ok": true, "speed": 5, "paused": false }
 ```
+
+### `POST /agents/:area/phone`
+
+Fija el teléfono al que llama un área, sin redespliegue. Lo usa la tarjeta del agente en el panel. `:area` es `espacios` | `catering` | `transporte` | `asistentes`.
+
+```json
+{ "phone": "+34600111222" }
+```
+
+`phone` en E.164 (`+` y de 8 a 15 dígitos), o `null` para borrarlo y volver a `HAPPYROBOT_TEST_PHONE`. Responde con el valor efectivo:
+
+```json
+{ "ok": true, "area": "catering", "phone": "+34600111222" }
+```
+
+Un formato inválido o un área desconocida responden `400`. El valor se guarda en `app_metadata` y sobrevive a `POST /simulation/reset` y a un redespliegue con volumen. La llamada real usa este número por encima de `HAPPYROBOT_TEST_PHONE` y del contacto del seed.
 
 ### Afluencia en los accesos (`gates[]`)
 

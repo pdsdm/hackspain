@@ -39,11 +39,14 @@ test("un hook por defecto da canal a las cuatro áreas, y el específico manda",
   });
 });
 
-test("HAPPYROBOT_ENDPOINT sirve de hook por defecto para no dejar áreas sin canal", () => {
+test("el hook por defecto es opt-in: sin él no se inventan canales reales", () => {
+  // HAPPYROBOT_ENDPOINT existe en .env desde antes y no abre canales por su cuenta: activar
+  // llamadas reales sin pedirlo llamaría a gente de verdad.
+  assert.deepEqual(loadConfig({ HAPPYROBOT_ENDPOINT: "https://hook.test/unico" }).hooks, {});
   const hooks = loadConfig({
     HAPPYROBOT_API_KEY: "key",
     HAPPYROBOT_TEST_PHONE: "+34600000000",
-    HAPPYROBOT_ENDPOINT: "https://hook.test/unico",
+    HAPPYROBOT_HOOK_DEFAULT: "https://hook.test/unico",
   }).hooks;
   assert.deepEqual(Object.keys(hooks).sort(), ["asistentes", "catering", "espacios", "transporte"]);
   assert.equal(hooks.asistentes, "https://hook.test/unico");

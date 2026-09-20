@@ -49,6 +49,33 @@ test("CrisisState survives restart without dropping future contract fields", () 
   }
 });
 
+test("con el reloj en pausa el tick no avanza el escenario, pero sí vence plazos y bombea la cola", () => {
+  const database = openDatabase(":memory:");
+  try {
+    const repository = new StateRepository(database.connection);
+    const run = repository.ensureActiveRun();
+    run.state.clock.paused = true;
+    repository.saveState(run.id, run.state);
+    const simSeconds = Number(run.state.clock.simSeconds);
+    let fired = 0;
+    let pumped = 0;
+    const executor = {
+      fireDue() { fired += 1; },
+      pump() { pumped += 1; },
+    } as unknown as ActionExecutor;
+
+    new SimulationClock(repository, executor).tick();
+
+    // Sin esto, una llamada real sin resultado no vencía nunca con la mesa detenida y
+    // bloqueaba la cola entera hasta que alguien pulsaba iniciar.
+    assert.equal(fired, 1);
+    assert.equal(pumped, 1);
+    assert.equal(repository.ensureActiveRun().state.clock.simSeconds, simSeconds);
+  } finally {
+    database.close();
+  }
+});
+
 test("a Railway deployment creates one clean paused run and preserves it across restarts", () => {
   const database = openDatabase(":memory:");
   try {

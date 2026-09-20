@@ -47,6 +47,8 @@ export interface Agent {
   reason?: string
   status: AgentStatus
   lastResult?: string
+  /** Teléfono E.164 al que llama este agente. Editable en el panel de agentes. */
+  phone?: string
 }
 
 export type ShuttleStatus = 'en_ruta' | 'retrasado' | 'llegado' | 'reasignado'

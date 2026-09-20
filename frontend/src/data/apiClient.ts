@@ -32,6 +32,11 @@ export const api = {
       text: `Llamar a ${input.counterpart}: ${input.objective}`,
       payload: input,
     }) }),
+  setAgentPhone: (area: Area, phone: string | null) =>
+    req<{ ok: boolean; area: Area; phone: string | null }>(`/agents/${area}/phone`, {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    }),
   sendEvent: (text: string) =>
     req<{ ok: boolean; eventId: string }>('/events', { method: 'POST', body: JSON.stringify({ source: 'chat', kind: 'free_text', text }) }),
 }

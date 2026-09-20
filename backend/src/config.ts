@@ -129,9 +129,11 @@ function readJevTimeout(value: string | undefined): number {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const hooks: AppConfig["hooks"] = {};
   // Un área sin hook propio no tiene canal, y entonces su tarea muere en «Sin canal real
-  // configurado» sin llamar a nadie. El hook por defecto da voz a las cuatro áreas con un
-  // único workflow: el cuerpo ya lleva area, objective, counterpart y contact.role.
-  const fallback = readHook(env.HAPPYROBOT_HOOK_DEFAULT) ?? readHook(env.HAPPYROBOT_ENDPOINT);
+  // configurado» sin llamar a nadie. HAPPYROBOT_HOOK_DEFAULT da voz a las cuatro áreas con
+  // un único workflow: el cuerpo ya lleva area, objective, counterpart y contact.role.
+  // Es opt-in explícito: activar canales reales sin querer obliga a tener teléfono y saca
+  // llamadas de verdad, así que no se hereda de otras variables.
+  const fallback = readHook(env.HAPPYROBOT_HOOK_DEFAULT);
   const espacios = readHook(env.HAPPYROBOT_HOOK_ESPACIOS) ?? fallback;
   const catering = readHook(env.HAPPYROBOT_HOOK_CATERING) ?? fallback;
   const transporte = readHook(env.HAPPYROBOT_HOOK_TRANSPORTE) ?? fallback;
