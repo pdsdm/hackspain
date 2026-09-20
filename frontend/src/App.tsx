@@ -73,7 +73,7 @@ export default function App() {
           </CrisisMap>
           </div>
               <div className="absolute z-[1000] top-3 right-3 bottom-3 w-[404px] flex flex-col justify-end gap-3 pointer-events-none [&>*]:pointer-events-auto">
-                <LlamadaCard s={s} call={call} disabled={disabled} className="mx-3" onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
+                <LlamadaCard s={s} call={call} disabled={disabled} className="mx-[14px]" onTake={() => { if (!disabled && call) void ctl.intervene({ type: 'take_call', payload: { callId: call.id } }) }} />
                 <CronologiaChat s={s} className="min-h-0 max-h-full" footer={
                   <EventChat className="event-chat border-t border-line p-3 flex-none" disabled={disabled || ctl.source !== 'api'} pending={ctl.pending} onSend={ctl.sendEvent} placeholder={ctl.source === 'api' ? 'Describe qué está pasando…' : 'Eventos libres solo contra el backend'} />
                 } />
