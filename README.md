@@ -1,110 +1,99 @@
-# HackSpain 2026 ¿Puede la IA gestionar una crisis?
+# Zhivel · Centro de Operaciones MADRING
 
-Proyecto para el [HackSpain 2026](https://hackspain.es) (Madrid, UPM–ETSIT, 18–20 de septiembre). Track de HappyRobot: un sistema agéntico que gestiona una crisis que se mueve mientras corre.
+Sistema agéntico que gestiona una crisis de hospitalidad en directo: decide, llama por teléfono, coordina recursos y replanifica cuando el mundo cambia. Proyecto del equipo **Zhivel** para el track de [HappyRobot](https://happyrobot.ai) en HackSpain 2026 (Madrid, UPM–ETSIT).
 
-**El tipo de crisis lo elegimos nosotros.** El entorno cambia. Los recursos de voz, chat y email van por la plataforma de [HappyRobot](https://happyrobot.ai).
+![Centro de operaciones: mapa de MADRING con aforos saturados y cronología de incidencias](docs/screenshots/panel-general.png)
 
----
+## El escenario
 
-## El reto
+Domingo de Gran Premio en **MADRING** (IFEMA). Una avería de agua cierra el Pabellón Principal con 600 invitados a 45 minutos de la apertura: hay que reubicar espacios, rehacer catering y shuttles, y comunicar el plan nuevo. Restricción dura: MADRING Norte y Sur no están conectados por el interior.
 
-En una crisis nunca hay toda la información, y lo que vale a las 12:00 ya no sirve a las 12:20. Un agente con una lista de pasos fija se queda atrás en el primer cambio. El sistema tiene que contestar **estas seis preguntas una y otra vez** mientras la situación cambia:
+Escenario completo: [`escenario/escenario.md`](escenario/escenario.md). Por qué esta idea: [`docs/decisions.md`](docs/decisions.md) (D4).
 
-| Pregunta | Qué implica |
-| --- | --- |
-| **Qué información importa** | Llegan cien mensajes y solo tres cambian algo. Quedarse con esos tres. |
-| **Qué va primero** | Se pueden hacer veinte cosas a la vez. Decir por dónde se empieza ahora. |
-| **A quién se avisa y cuándo** | Un vecino, un bombero y un responsable no necesitan lo mismo. |
-| **Dónde van los recursos** | Tres ambulancias y cinco sitios que las piden. Mandarlas a un lado es dejar el otro esperando. |
-| **Qué se hace ahora** | La siguiente acción concreta y quién la hace. No basta con narrar. |
-| **Cuándo tirar el plan** | Cambia el viento y el plan de hace veinte minutos ya no vale. ¿Se da cuenta el sistema? |
+## Cómo funciona
 
-Escenario: una crisis que elegimos nosotros.  
-Entorno: cambia mientras el sistema corre.  
-Recursos: plataforma HappyRobot.
+- **Coordinador** (LLM o workflow de HappyRobot): propone planes, ejecuta acciones y replanifica con cada dato nuevo. Entiende un «no»: si una contraparte rechaza, el espacio queda descartado y el plan cambia.
+- **Cuatro especialistas** (Espacios, Catering, Transporte, Asistentes): negocian por teléfono con llamadas de voz reales, SMS y email a través de la plataforma HappyRobot.
+- **Motor de mundo determinista**: puertas con aforo y colas, shuttles con rutas OSRM, entregas, incidencias y un reloj acelerable.
+- **Panel de operaciones**: mapa en tiempo real, cronología, decisiones pendientes con aprobar/rechazar (el humano sigue al mando) y teléfono editable por agente.
+- **Persistencia SQLite** con cola transaccional por `planVersion` y callbacks idempotentes.
 
----
+## Capturas
 
-## Qué tiene que saber hacer el agente
+| Decisión pendiente de aprobación humana | Vista móvil |
+|---|---|
+| ![Tarjeta de decisión con aprobar y rechazar](docs/screenshots/panel-decision.png) | ![Cronología en móvil](docs/screenshots/panel-movil.png) |
 
-1. **Enterarse de lo que pasa** Recoger llamadas, mensajes, sensores, APIs. Montar una pantalla donde en dos segundos se vea qué está pasando y qué ha cambiado en los últimos minutos.
-2. **Priorizar** De lo abierto, qué se atiende primero y por qué. Con los medios que quedan, no con los que harían falta.
-3. **Coordinar la respuesta** Avisar, repartir tareas, seguir quién ha cogido qué. El sistema mueve cosas (llamadas, mensajes, tickets, APIs), no solo las propone.
-4. **Adaptarse** A mitad de la ejecución algo cambia (carretera cortada, integración caída, cincuenta personas más). El sistema rehace el plan.
+Para regenerarlas con la demo corriendo: `./scripts/screenshots.sh`.
 
----
+## Requisitos
 
-## Requisitos de la entrega
+- **Node.js ≥ 22.13**
+- Sin claves de API funciona igual: el coordinador cae al modo `rules` (determinista) y no se hacen llamadas reales.
+- Para llamadas y LLM: claves de HappyRobot y/o de un proveedor compatible con OpenAI (ver `.env.example`).
 
-| Qué | Qué significa | Estado |
-| --- | --- | --- |
-| Sistema agéntico | Decide y actúa por su cuenta. Un chatbot que contesta preguntas no entra. | Obligatorio |
-| Escenario que se mueve | La situación cambia mientras el sistema corre. Si el caso es fijo, no hay nada que adaptar. | Obligatorio |
-| Respuesta de varios pasos | Una cadena de acciones con un objetivo, no una acción suelta. | Obligatorio |
-| Interacción de verdad | Llama, escribe, crea tickets o mueve datos en un sistema real. Hablar con una persona cuenta. | Obligatorio |
-| Interfaz para la persona | Una pantalla para entender la situación, ver qué está haciendo el sistema e intervenir. | Obligatorio |
-| Aprende de interacciones pasadas | Revisa llamadas y decisiones anteriores, ve qué funcionó y ajusta la próxima vez. | Bonus |
-
----
-
-## Evaluación
-
-Tres bloques al mismo peso: **cómo decide**, **cómo actúa** y **cómo se supervisa**.
-
-**Cómo decide**
-
-- Decisión: ¿decide algo sensato sin tener todos los datos?
-- Prioridad: ¿sabe qué va primero cuando todo parece urgente?
-- Adaptación: ¿hace algo distinto cuando la situación cambia?
-
-**Cómo actúa**
-
-- Coordinación: ¿lleva a la vez a la gente, la información y los medios?
-- Ejecución: ¿ejecuta acciones fuera del sistema o solo las propone? (llamadas, mensajes, tickets, APIs)
-
-**Cómo se supervisa**
-
-- Control: ¿se entiende qué está haciendo y se puede intervenir?
-- Creatividad: ¿el escenario y la forma de gestionarlo tienen algo propio?
-- Aprendizaje: puntos extra si aprende de ejecuciones anteriores.
-
-La demo cuenta tanto como el sistema. Hay que ensayar el pitch.
-
----
-
-## Escenario
-
-**Elegido:** operaciones de hospitalidad el domingo de Gran Premio en **MADRING** (IFEMA Madrid). Una avería deja fuera el pabellón principal de 600 invitados a 45 minutos de la apertura; hay que reubicar, rehacer catering y shuttles, y comunicar el plan nuevo. Restricción dura: MADRING Norte y Sur no están conectados por el interior.
-
-Contexto completo: [`escenario/escenario.md`](escenario/escenario.md). Por qué esta idea y qué descartamos: [`docs/decisions.md`](docs/decisions.md) (D4).
-
-HappyRobot pone la plataforma de producción (voz, chat, email) y estará en el evento el fin de semana.
-
----
-
-## Equipo: zhivel
-
-| Nombre | Rol / foco | GitHub |
-|---|---|---|
-| Zhi Chen Xiang | | |
-| Pepe Moyano Font | | [pdsdm](https://github.com/pdsdm) |
-| Carlos Mata Carrillo | | |
-| Buenaventura Porcel Esquivel | | [ventura14](https://github.com/ventura14) |
-| Álvaro Iglesias Reina | | |
-
-## Quickstart
+## Arranque rápido
 
 ```bash
 git clone https://github.com/pdsdm/hackspain.git
 cd hackspain
-cp .env.example .env   # rellenar API keys
-./scripts/setup.sh     # instala dependencias según lo que haya en backend/ y frontend/
-make check             # verifica lint + tests + build
+./scripts/setup.sh          # instala dependencias y crea .env
+./scripts/demo.sh up-local  # backend :8000 + frontend :5173, sin túnel
 ```
 
-Simulación, modo API, endpoints y recorrido HappyRobot: [`docs/guia-pruebas.md`](docs/guia-pruebas.md).
+Abre <http://localhost:5173>. La ejecución arranca **pausada**: pulsa ▶ en la barra superior o:
 
-Cómo está montado el sistema de agentes, qué entidades hay y con qué tiempos corre: [`docs/entorno-agentico.md`](docs/entorno-agentico.md).
+```bash
+curl -X POST http://localhost:8000/simulation/clock \
+  -H 'Content-Type: application/json' -d '{"paused":false}'
+```
+
+El estado persiste en `backend/data/demo.db`. Logs y PIDs en `.demo/` (ignorado por Git).
+
+### Escenarios de partida (fixtures)
+
+`calm` (defecto), `normal`, `crisis`, `proposal`, `recovered`, `lounge_unavailable`, `pabellon_b_400`:
+
+```bash
+./scripts/demo.sh reset pabellon_b_400
+```
+
+## Modo real: LLM y llamadas HappyRobot
+
+Copia `.env.example` a `.env` y rellena:
+
+- **Coordinador**: `COGNITION_API_KEY` (u `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `HELMCODE_API_KEY`). Alternativa: `COORDINATOR_HARNESS=happyrobot` + `HAPPYROBOT_COORDINATOR_WORKFLOW_ID` para que un workflow de HappyRobot coordine.
+- **Voz/SMS/email**: `HAPPYROBOT_API_KEY`, `HAPPYROBOT_HOOK_ESPACIOS/CATERING/TRANSPORTE/ASISTENTES` (o `HAPPYROBOT_HOOK_DEFAULT` para las cuatro), `HAPPYROBOT_TEST_PHONE` (E.164) y `HAPPYROBOT_WEBHOOK_TOKEN`.
+- **Callbacks**: `PUBLIC_BASE_URL` con una URL pública HTTPS que llegue al backend (`./scripts/demo.sh up` abre el túnel solo).
+
+Montaje del workflow en la plataforma (trigger, outbound, AI Extract, callback autenticado): [`docs/guia-pruebas.md`](docs/guia-pruebas.md) §4. Cambios pendientes en los workflows: [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](agent/happyrobot/CAMBIOS-WORKFLOW.md).
+
+## Comandos
+
+| Comando | Qué hace |
+|---|---|
+| `./scripts/setup.sh` | Instala dependencias y crea `.env` |
+| `./scripts/demo.sh up-local` | Backend y frontend locales |
+| `./scripts/demo.sh up` | Lo mismo + túnel público para callbacks |
+| `./scripts/demo.sh status` / `reset` / `down` / `doctor` | Operación y diagnóstico del entorno |
+| `make check` | Lint + tests + build de todo el repo |
+| `./scripts/screenshots.sh` | Regenera `docs/screenshots/` con Chrome headless |
+| `cd backend && npm run dev` | Solo el backend |
+| `cd frontend && npm run dev` | Solo el frontend (proxy a `127.0.0.1:8000`) |
+
+## Endpoints principales
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /state` · `GET /health` | Estado de la crisis y salud |
+| `POST /events` | Comunica un evento (texto libre o estructurado) |
+| `POST /interventions` | Aprobar/rechazar decisiones, tomar llamadas |
+| `POST /simulation/reset` · `POST /simulation/clock` | Reinicia con un fixture · pausa/velocidad |
+| `POST /agents/:area/phone` | Cambia el teléfono de un especialista |
+| `POST /workflow/results` | Callback autenticado de HappyRobot |
+| `POST /workflow/coordinator/happyrobot/call` | La tool `emitir_llamada` del coordinador |
+
+Contrato completo: [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Despliegues
 
@@ -114,68 +103,61 @@ Cómo está montado el sistema de agentes, qué entidades hay y con qué tiempos
 | Backend | https://hackspain-production.up.railway.app/ | Railway, Node.js 22 y una réplica |
 | Salud | https://hackspain-production.up.railway.app/health | Debe responder `{ "status": "ok" }` |
 
-Vercel usa `VITE_API_URL` sin barra final. Los secretos de LLM y HappyRobot existen solo en Railway. SQLite vive en el volumen persistente `/data` con `DATABASE_URL=/data/crisis.db`.
+Vercel usa `VITE_API_URL` sin barra final. Los secretos de LLM y HappyRobot existen solo en Railway. SQLite vive en el volumen persistente `/data` con `DATABASE_URL=/data/crisis.db`. Railway aporta `RAILWAY_DEPLOYMENT_ID`: cada despliegue nuevo crea una ejecución `calm` pausada; un reinicio del mismo despliegue conserva el progreso.
 
-Railway aporta `RAILWAY_DEPLOYMENT_ID`. La primera instancia de cada deployment crea una ejecución `calm` nueva y pausada; un reinicio del mismo deployment conserva el progreso. Los runs anteriores permanecen inactivos como auditoría.
-
-## Estructura del repo
+## Estructura del repositorio
 
 ```
 .
-├── AGENTS.md             # reglas estables para agentes de IA (todo el repo, <150 líneas)
-├── CLAUDE.md             # solo importa AGENTS.md (Claude Code no lee AGENTS.md directamente)
-├── TASKS.md              # tablero: tarea | responsable | rama | spec | estado
-├── Makefile              # `make check` = verificación única antes de dar algo por hecho
-├── backend/AGENTS.md     # reglas y comandos solo del backend
-├── frontend/AGENTS.md    # reglas y comandos solo del frontend
-├── docs/
-│   ├── specs/            # una spec corta por feature (copiar _plantilla.md)
-│   ├── decisions.md      # decisiones tomadas y su porqué
-│   ├── api-contract.md   # contrato backend ↔ frontend (fuente de verdad)
-│   ├── entorno-agentico.md # entidades, tiempos del bucle y cómo montarlo
-│   └── guia_hackathon.md # horarios, sitios, tracks
-├── escenario/
-│   └── escenario.md      # escenario MADRING: crisis, agentes, demo
-├── .agents/skills/       # procedimientos repetibles para agentes (p. ej. cerrar-tarea)
-├── .claude/skills        # enlace simbólico a .agents/skills
-├── scripts/              # setup, seed data, utilidades
-└── .github/              # templates de issues y PRs
+├── backend/            # API Express 5 + agentes + mundo (Node 22, TypeScript)
+│   ├── src/agents/     # coordinador y especialistas
+│   ├── src/domain/     # reglas deterministas
+│   ├── src/state/      # SQLite, cola transaccional
+│   ├── fixtures/       # escenarios reproducibles (calm, crisis, …)
+│   └── test/           # runner integrado de Node
+├── frontend/           # Panel de operaciones (Vite + React 19 + Tailwind 4 + Leaflet)
+├── agent/              # Notas y guiones de los workflows HappyRobot
+├── escenario/          # Escenario MADRING completo
+├── docs/               # api-contract, decisions, specs, guía de pruebas, capturas
+├── scripts/            # setup.sh, demo.sh, screenshots.sh, fixtures
+├── TASKS.md            # tablero de tareas del equipo
+├── AGENTS.md           # reglas para agentes de IA
+└── Makefile            # `make check`
 ```
+
+## El reto
+
+Track HappyRobot de HackSpain 2026: *¿Puede la IA gestionar una crisis?* Un sistema agéntico (no un chatbot) sobre un escenario que cambia mientras corre, con respuesta de varios pasos, interacción real (llamadas, mensajes, tickets) y una interfaz para supervisar e intervenir. Tres bloques al mismo peso: **cómo decide**, **cómo actúa** y **cómo se supervisa**.
 
 ## Cómo trabajamos con agentes
 
-Cada uno puede usar el agente que quiera (Claude Code, Codex, Cursor…): todos leen las mismas reglas.
-La idea clave es **separar lo que no cambia de lo que cambia cada hora**:
+Cada uno usa el agente que quiere (Claude Code, Codex, Cursor, Devin…): todos leen las mismas reglas en `AGENTS.md`. La idea clave es separar lo que no cambia de lo que cambia cada hora:
 
 | Si quieres decirle al agente… | Va en… |
 |---|---|
-| Una regla que vale para todo el proyecto ("nunca hardcodees la URL del backend") | `AGENTS.md` (o el de `backend/` / `frontend/` si solo aplica ahí) |
-| Qué tiene que construir ahora y cuándo está terminado | `docs/specs/T<id>-<nombre>.md` |
-| Quién hace qué y en qué estado está | `TASKS.md` |
-| Algo que hemos decidido y por qué ("usamos FastAPI porque…") | `docs/decisions.md` |
+| Una regla estable del proyecto | `AGENTS.md` (o el de `backend/`/`frontend/`) |
+| Qué construir ahora y cuándo está hecho | `docs/specs/` |
+| Quién hace qué y en qué estado | `TASKS.md` |
+| Una decisión y su porqué | `docs/decisions.md` |
 | Cómo se hablan backend y frontend | `docs/api-contract.md` |
-| Un procedimiento que se repite (cerrar tarea, preparar demo…) | `.agents/skills/<nombre>/SKILL.md` |
-
-- **`AGENTS.md` no es un diario.** Solo se añade una regla cuando el agente comete el mismo error dos veces, y va a "Lecciones aprendidas".
-- **Arranca cada tarea con su spec:** "implementa `docs/specs/T4-subida-pdf.md`".
-- **Termina con `make check`** o con la skill `cerrar-tarea`.
+| Un procedimiento que se repite | `.agents/skills/` |
 
 Ramas, worktrees y PRs: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Checklist de entrega (domingo 11:00)
+## Equipo Zhivel
 
-- [ ] Código final en `main`
-- [ ] README con problema, solución y cómo correr la demo
-- [ ] Demo grabada en vídeo como backup
-- [ ] Pitch ensayado (la demo cuenta tanto como el sistema)
-- [ ] `.env.example` actualizado (nunca subir `.env` ni API keys)
+| Nombre | GitHub |
+|---|---|
+| Zhi Chen Xiang | |
+| Pepe Moyano Font | [pdsdm](https://github.com/pdsdm) |
+| Carlos Mata Carrillo | |
+| Buenaventura Porcel Esquivel | [ventura14](https://github.com/ventura14) |
+| Álvaro Iglesias Reina | |
 
-⚠️ **Lo que no esté subido a las 11:00 del domingo no se evalúa.**
+## Licencia
+
+[MIT](LICENSE) © 2026 equipo Zhivel.
 
 ---
 
-## Evento
-
 HackSpain 2026 · Madrid · UPM–ETSIT · 18–20 de septiembre · [@hackspain26](https://x.com/hackspain26)
-
-Reto de HappyRobot para HackSpain 2026.
