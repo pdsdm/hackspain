@@ -16,17 +16,20 @@ type PublicState = {
   coordinatorStatus: string;
   resolved: boolean;
   closureSummary?: string;
-  spaces: Array<{ id: string; status: string }>;
-  deliveries: Array<{ id: string; status: string }>;
+  spaces: Array<{ id: string; status: string; zone?: string }>;
+  deliveries: Array<{ id: string; status: string; dockId?: string }>;
+  shuttles: Array<{ id: string; destinationId: string }>;
   guestGroups: Array<{ count: number; confirmedCount: number }>;
+  assignments?: Array<{ groupId: string; spaceId: string; count: number }>;
+  inboxTriage?: { received?: number; relevant?: number; ignored?: number; status?: string; selected?: string };
   commitments: Array<{ id: string; status: string; conditions?: unknown[] }>;
   agents: Array<{ id: string; status: string; objective?: string; reason?: string; lastResult?: string }>;
-  calls: Array<{ status: string; simulated?: boolean }>;
+  calls: Array<{ agent?: string; status: string; simulated?: boolean; transcript?: unknown[] }>;
   events: TimelineEvent[];
 };
 
 type ActionsResponse = { tasks: unknown[] };
-type CoordinatorReport = { correlationId: string; happyrobotRunId: string | null; runId: string; planVersion: number; status: string; applied: boolean; latencyMs: number; submissions: number; validationErrors: string[] };
+type CoordinatorReport = { correlationId: string; happyrobotRunId: string | null; runId: string; planVersion: number; status: string; applied: boolean; latencyMs: number; consults: number; submissions: number; validationErrors: string[]; output?: { operations?: Array<Record<string, unknown>> } | null };
 type FetchFn = typeof fetch;
 type DemoEvent = ReturnType<typeof event>;
 
@@ -184,7 +187,33 @@ function validateCalm(state: PublicState): void {
   requireCheckpoint(missing.length === 0, `M0 incoherente: faltan especialistas ${missing.join(", ")}`);
 }
 
-function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoEvent, sms: DemoEvent): void {
+function assignmentTotals(state: PublicState): { total: number; pabellonB: number; loungeSur: number; other: number } {
+  const result = { total: 0, pabellonB: 0, loungeSur: 0, other: 0 };
+  for (const assignment of state.assignments ?? []) {
+    result.total += assignment.count;
+    if (assignment.spaceId === "pabellonB") result.pabellonB += assignment.count;
+    else if (assignment.spaceId === "loungeSur") result.loungeSur += assignment.count;
+    else result.other += assignment.count;
+  }
+  return result;
+}
+
+function validateFirstCycle(state: PublicState, mode: InputMode): void {
+  const distribution = assignmentTotals(state);
+  requireCheckpoint(
+    distribution.total === 600 && distribution.pabellonB === 450 && distribution.loungeSur === 150 && distribution.other === 0,
+    `M2 incoherente: reparto ${JSON.stringify(distribution)}, esperado B 450 + Lounge 150`,
+  );
+  if (mode === "happyrobot") {
+    const triage = state.inboxTriage;
+    requireCheckpoint(
+      triage?.received === 10 && triage.relevant === 1 && triage.ignored === 9 && triage.status === "triaged" && triage.selected === "principal_pipe_burst",
+      `M2 incoherente: triaje ${JSON.stringify(triage)}, esperado 10/1/9 seleccionado`,
+    );
+  }
+}
+
+function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoEvent, sms: DemoEvent, realTransportCall: boolean): void {
   requireCheckpoint(state.planVersion >= 2, `Final incoherente: planVersion=${state.planVersion}, esperado >=2`);
   requireCheckpoint(observesInput(state, call), `Final incoherente: falta procedencia de llamada ${call.eventId}`);
   requireCheckpoint(observesInput(state, sms), `Final incoherente: falta procedencia de SMS ${sms.eventId}`);
@@ -193,6 +222,22 @@ function validateFinal(state: PublicState, actions: ActionsResponse, call: DemoE
   requireCheckpoint(openCalls === 0, `Final incoherente: quedan ${openCalls} llamadas abiertas`);
   const realCalls = state.calls.filter((item) => item.simulated === false);
   requireCheckpoint(realCalls.length === 0, `Final incoherente: las tareas persistidas deben seguir en sim; observadas ${realCalls.length} llamadas reales`);
+  for (const id of ["CAT-01", "CAT-02"]) {
+    const delivery = state.deliveries.find((item) => item.id === id);
+    requireCheckpoint(delivery?.dockId === "muelleSur", `Final incoherente: ${id} apunta a ${String(delivery?.dockId)}, esperado muelleSur`);
+  }
+  const places = new Map(state.spaces.map((space) => [space.id, space]));
+  requireCheckpoint(state.shuttles.length === 4, `Final incoherente: hay ${state.shuttles.length} shuttles, esperados 4`);
+  requireCheckpoint(
+    state.shuttles.every((shuttle) => places.get(shuttle.destinationId)?.zone === "sur"),
+    "Final incoherente: algún shuttle no termina en un destino conocido de Sur",
+  );
+  if (realTransportCall) {
+    const transport = state.agents.find((agent) => agent.id === "transporte");
+    requireCheckpoint(Boolean(transport?.objective?.trim() && transport.reason?.trim() && transport.lastResult?.trim()), "Final incoherente: el agente Transporte no conserva objetivo, motivo y resultado");
+    const transportCall = state.calls.find((item) => item.agent === "transporte" && item.simulated === true);
+    requireCheckpoint(Boolean(transportCall?.transcript?.length), "Final incoherente: falta transcript visible de la acción de Transporte");
+  }
   const conditionalConfirmed = state.commitments.filter((item) => item.conditions?.length && item.status === "confirmado");
   requireCheckpoint(conditionalConfirmed.length === 0, `Compromisos condicionados marcados como confirmados: ${conditionalConfirmed.map((item) => item.id).join(", ")}`);
   const incomplete = ["espacios", "catering", "transporte", "asistentes"].flatMap((area) => {
@@ -317,13 +362,15 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
       console.log("[VIDEO] M0 validado: 600/600, Principal confirmado y cero inputs previos. Mantén visible el Principal.");
 
       const tag = `${Date.now().toString(36)}-${index}`;
-      const call = event(tag, "inbox_batch");
+      const call = event(tag, mode === "happyrobot" ? "inbox_batch" : "principal_pipe_burst");
       const sms = event(tag, "dock_blocked");
       const send = mode === "api"
         ? (payload: DemoEvent) => sendDirect(fetchFn, apiUrl, token, payload)
         : (payload: DemoEvent) => sendHappyRobot(fetchFn, happyRobotConfig!, payload);
 
-      console.log(`[VIDEO] Input 1 (${mode}): 10 mensajes SIMULADOS en 3,6 s; solo la rotura debe cambiar el plan.`);
+      console.log(mode === "happyrobot"
+        ? "[VIDEO] Input 1 (happyrobot): 10 mensajes SIMULADOS en 3,6 s; solo la rotura debe cambiar el plan."
+        : "[VIDEO] Input 1 (api): rotura SIMULADA directa del Pabellón Principal para el respaldo determinista.");
       const callResult = await send(call);
       evidence.inputs.push({ incidentId: call.incidentId, eventId: call.eventId, ...callResult });
       if (callResult.workflowRunId) console.log(`[VIDEO] HappyRobot run ${callResult.workflowRunId}`);
@@ -335,11 +382,13 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         diagnostic,
       );
       requireCheckpoint(firstCycle.planVersion >= 2, `M2 incoherente: planVersion=${firstCycle.planVersion}, esperado >=2`);
+      validateFirstCycle(firstCycle, mode);
       let firstCoordinator: CoordinatorReport | undefined;
       if (mode === "happyrobot") {
         requireCheckpoint(Boolean(reset.runId), "M2 incoherente: reset sin runId");
         firstCoordinator = await waitCoordinatorReport(reset.runId!, firstCycle.planVersion - 1);
         requireCheckpoint(firstCoordinator.status === "accepted" && firstCoordinator.applied, `M2 incoherente: HappyRobot ${firstCoordinator.status}, applied=${firstCoordinator.applied}`);
+        requireCheckpoint(firstCoordinator.consults >= 1, `M2 incoherente: el Reasoning Agent hizo ${firstCoordinator.consults} consultas, esperaba consult_world`);
         requireCheckpoint(firstCoordinator.submissions === 1 && firstCoordinator.validationErrors.length === 0, `M2 incoherente: ${firstCoordinator.submissions} submissions, errores=${firstCoordinator.validationErrors.join("; ")}`);
         evidence.coordinatorRuns.push(firstCoordinator);
       }
@@ -367,6 +416,13 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         const secondCoordinator = await waitCoordinatorReport(reset.runId!, Number(firstCoordinator?.planVersion ?? 1) + 1, firstCoordinator?.correlationId);
         requireCheckpoint(secondCoordinator.status === "accepted" && secondCoordinator.applied, `M4 incoherente: HappyRobot ${secondCoordinator.status}, applied=${secondCoordinator.applied}`);
         requireCheckpoint(secondCoordinator.submissions === 1 && secondCoordinator.validationErrors.length === 0, `M4 incoherente: ${secondCoordinator.submissions} submissions, errores=${secondCoordinator.validationErrors.join("; ")}`);
+        const operations = secondCoordinator.output?.operations ?? [];
+        for (const id of ["CAT-01", "CAT-02"]) {
+          requireCheckpoint(
+            operations.some((operation) => operation.op === "redirect_delivery" && operation.id === id && operation.dockId === "muelleSur"),
+            `M4 incoherente: falta redirect_delivery de ${id} a muelleSur`,
+          );
+        }
         evidence.coordinatorRuns.push(secondCoordinator);
       }
 
@@ -377,13 +433,15 @@ export async function runVideoDirector(fetchFn: FetchFn = fetch): Promise<void> 
         ({ state, actions }) => state.coordinatorStatus !== "replanificando" && actions.tasks.length === 0 && state.calls.every((item) => item.status !== "en_curso"),
         ({ state, actions }) => `${diagnostic(state)}, openTasks=${actions.tasks.length}`,
       );
-      validateFinal(settled.state, settled.actions, call, sms);
+      validateFinal(settled.state, settled.actions, call, sms, realTransportCall);
       evidence.checkpoints.push(checkpoint("final", settled.state, settled.actions.tasks.length));
       evidence.outcome = "passed";
       evidence.finishedAt = new Date().toISOString();
       persistReport(reportPath, report);
-      console.log(`[VIDEO] Final validado · plan v${settled.state.planVersion} · ${settled.state.coordinatorStatus} · 4 especialistas con objetivo, motivo y resultado · 0 tareas · 0 llamadas.`);
-      console.log("[VIDEO] Abre compromisos y Resultado. Solo la ejecución del sistema es real; llamada, SMS y acciones sim siguen siendo SIMULACIÓN.");
+      console.log(`[VIDEO] Final validado · plan v${settled.state.planVersion} · ${settled.state.coordinatorStatus} · 4 especialistas con objetivo, motivo y resultado · 0 tareas · 0 llamadas abiertas.`);
+      console.log(realTransportCall
+        ? "[VIDEO] La llamada real controlada de Transporte está autorizada; los dos inputs y las acciones persistidas siguen etiquetados como SIMULACIÓN."
+        : "[VIDEO] Abre compromisos y Resultado. Los inputs y todas las acciones siguen siendo SIMULACIÓN; no se autorizó telefonía real.");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       evidence.outcome = "failed";

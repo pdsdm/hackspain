@@ -59,9 +59,11 @@ export interface CoordinatorInput {
   planVersion: number;
   spaces: InputSpace[];
   guestGroups: InputGuestGroup[];
+  assignments?: CoordinatorAssignment[];
   commitments: InputCommitment[];
   budget: InputBudget;
   constraints: string[];
+  e2eRealTransportCall?: boolean;
   shuttles?: InputShuttle[];
   deliveries?: InputDelivery[];
   vehicles?: InputVehicle[];

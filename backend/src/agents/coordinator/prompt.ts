@@ -141,6 +141,7 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     `APERTURA: ${time(input.clock.openingAt)} · ALMUERZO: ${time(input.clock.lunchAt)} · CARRERA: ${time(input.clock.raceAt)}`,
   );
   lines.push(`VERSIÓN DE PLAN ACTUAL: ${input.planVersion}`);
+  lines.push(`CONTROL E2E: e2eRealTransportCall=${input.e2eRealTransportCall === true ? "true" : "false"}`);
 
   lines.push("", "ESPACIOS");
   for (const space of input.spaces) {
@@ -158,6 +159,13 @@ export function buildUserPrompt(input: CoordinatorInput): string {
     if (group.informedCount !== undefined) parts.push(`${group.informedCount} informados`);
     if (group.needs !== undefined) parts.push(`necesidades: ${group.needs}`);
     lines.push(`- ${parts.join(" · ")}`);
+  }
+
+  if (input.assignments && input.assignments.length > 0) {
+    lines.push("", "ASIGNACIONES VIGENTES (conservar salvo que el evento inutilice el espacio)");
+    for (const assignment of input.assignments) {
+      lines.push(`- ${assignment.groupId} · ${assignment.count} personas → ${assignment.spaceId}`);
+    }
   }
 
   lines.push("", "COMPROMISOS");

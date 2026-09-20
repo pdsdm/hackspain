@@ -3,8 +3,8 @@ import test from "node:test";
 
 import { extractJsonObject, loadLlmConfig, takeSseDataEvents } from "../src/agents/coordinator/llm.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../src/agents/coordinator/prompt.js";
-import { hm, crisisInput } from "../src/agents/coordinator/scenario.js";
-import type { CoordinatorOutput } from "../src/agents/coordinator/types.js";
+import { hm, crisisInput, liveCoordinatorInput, loadFixture } from "../src/agents/coordinator/scenario.js";
+import type { CoordinatorInput, CoordinatorOutput } from "../src/agents/coordinator/types.js";
 import { operationReady, parseOutput, validateOutput } from "../src/agents/coordinator/validate.js";
 
 // Plan de referencia del escenario: Pabellón B (450) + Lounge Sur (150) para las 600 personas,
@@ -257,6 +257,76 @@ test("el prompt lleva las horas en segundos y las restricciones del escenario", 
   assert.match(SYSTEM_PROMPT, /inbox_batch.*10 recibidos.*1 relevante.*9 descartados/);
   assert.match(SYSTEM_PROMPT, /principal_pipe_burst.*B 450 \+ Lounge 150/);
   assert.match(SYSTEM_PROMPT, /dock_blocked.*acciones distintas y visibles de espacios, catering, transporte y asistentes/);
+});
+
+test("el prompt expone la autorización de llamada y las asignaciones vigentes", () => {
+  const state = {
+    ...loadFixture("crisis"),
+    assignments: [
+      { groupId: "g-acceso", spaceId: "pabellonB", count: 90 },
+      { groupId: "g-propios", spaceId: "loungeSur", count: 150 },
+    ],
+    e2eRealTransportCall: true,
+  } as unknown as Record<string, unknown>;
+
+  const prompt = buildUserPrompt(liveCoordinatorInput(state));
+
+  assert.match(prompt, /e2eRealTransportCall=true/);
+  assert.match(prompt, /g-acceso · 90 personas → pabellonB/);
+  assert.match(prompt, /g-propios · 150 personas → loungeSur/);
+});
+
+test("dock_blocked rechaza perder asignaciones u omitir redirecciones de entregas", () => {
+  const input = crisisInput() as CoordinatorInput & {
+    assignments: Array<{ groupId: string; spaceId: string; count: number }>;
+  };
+  input.event = { source: "happyrobot", kind: "dock_blocked", text: "Muelle Este bloqueado" };
+  input.assignments = validPlan().assignments;
+  input.deliveries = [
+    { id: "CAT-01", dockId: "muelleEste", arriveAt: hm(12, 30), status: "bloqueada" },
+    { id: "CAT-02", dockId: "muelleEste", arriveAt: hm(12, 35), status: "bloqueada" },
+  ];
+  const plan = validPlan();
+  plan.coordinatorStatus = "replanificando";
+  plan.decision = null;
+  plan.assignments = [
+    { groupId: "g-acceso", spaceId: "pabellonB", count: 90 },
+    { groupId: "g-shuttles", spaceId: "pabellonB", count: 180 },
+    { groupId: "g-propios", spaceId: "loungeSur", count: 150 },
+  ];
+  plan.operations = [{ op: "set_place", id: "muelleEste", status: "cerrado" }];
+
+  const { output, issues } = validateOutput(plan, input);
+
+  assert.equal(output, null);
+  assert.deepEqual(new Set(issues.map((issue) => issue.code)), new Set([
+    "asignaciones_vigentes_perdidas",
+    "entrega_sin_redireccion",
+  ]));
+});
+
+test("dock_blocked acepta conservar asignaciones y redirigir todas las entregas bloqueadas", () => {
+  const input = crisisInput() as CoordinatorInput & {
+    assignments: Array<{ groupId: string; spaceId: string; count: number }>;
+  };
+  input.event = { source: "happyrobot", kind: "dock_blocked", text: "Muelle Este bloqueado" };
+  input.assignments = validPlan().assignments;
+  input.deliveries = [
+    { id: "CAT-01", dockId: "muelleEste", arriveAt: hm(12, 30), status: "bloqueada" },
+    { id: "CAT-02", dockId: "muelleEste", arriveAt: hm(12, 35), status: "bloqueada" },
+  ];
+  const plan = validPlan();
+  plan.coordinatorStatus = "replanificando";
+  plan.decision = null;
+  plan.operations = [
+    { op: "redirect_delivery", id: "CAT-01", dockId: "muelleSur" },
+    { op: "redirect_delivery", id: "CAT-02", dockId: "muelleSur" },
+  ];
+
+  const { output, issues } = validateOutput(plan, input);
+
+  assert.deepEqual(issues, []);
+  assert.ok(output);
 });
 
 test("el prompt evita set_agent y el validador descarta operaciones incompletas", () => {
