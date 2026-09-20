@@ -72,17 +72,21 @@ export function groups(s: CrisisState) {
   return { acceso: g('g-acceso'), shuttles: g('g-shuttles'), propios: g('g-propios') }
 }
 
+/** A partir de aquí el backend da la llamada real por perdida (no_answer). */
+export const REAL_CALL_TIMEOUT_SECONDS = 180
+
 /**
- * Techo de lo que la tarjeta aguanta en pantalla si nadie cierra la llamada. El backend la
- * cierra al llegar el resultado, pero un callback real perdido —túnel caído, workflow sin
- * publicar— dejaba «Llamada en curso» colgada encima del mapa para siempre.
+ * Cuánto aguanta la tarjeta en pantalla si nadie cierra la llamada. La simulada la cierra
+ * su propio resultado; la real depende del callback de HappyRobot, y un callback perdido
+ * —túnel caído, workflow sin publicar— dejaba «Llamada en curso» colgada para siempre.
  */
-const CALL_SCREEN_CAP_SECONDS = 30
+export function callCapSeconds(s: CrisisState, c: Call) {
+  return s.simulated || c.simulated ? Math.max(c.endsAfter ?? 0, 30) : REAL_CALL_TIMEOUT_SECONDS
+}
 
 export function activeCall(s: CrisisState) {
   return s.calls.find((c) => {
     if (c.status !== 'en_curso') return false
-    const elapsed = s.clock.simSeconds - c.startedAt
-    return elapsed <= Math.max(c.endsAfter ?? 0, CALL_SCREEN_CAP_SECONDS)
+    return s.clock.simSeconds - c.startedAt <= callCapSeconds(s, c)
   }) ?? null
 }

@@ -20,3 +20,17 @@ export function fmtCountdown(sec: number) {
 }
 
 export const fmtEur = (n: number | null) => n === null ? 'Sin estimar' : `${n.toLocaleString('es-ES')} €`
+
+/** Duración de una llamada en MM:SS. Sigue contando pasada la hora en vez de romperse. */
+export function fmtElapsed(sec: number) {
+  const s = Math.max(0, Math.floor(sec))
+  const m = Math.floor(s / 60)
+  const ss = s % 60
+  return `${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+}
+
+/** Hora de pared local a partir de un epoch ms. Para la cronología, que registra el ahora. */
+export function fmtRealClock(ms: number) {
+  const d = new Date(ms)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}

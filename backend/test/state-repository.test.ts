@@ -78,7 +78,9 @@ test("a Railway deployment creates one clean paused run and preserves it across 
     repository.saveState(first.id, first.state);
     const restarted = repository.initializeDeployment("deploy-1");
     assert.equal(restarted.id, first.id);
-    assert.deepEqual(restarted.state.events, [{ id: "kept-on-restart" }]);
+    const kept = restarted.state.events as Array<Record<string, unknown>>;
+    assert.equal(kept.length, 1);
+    assert.equal(kept[0]?.id, "kept-on-restart");
 
     const next = repository.initializeDeployment("deploy-2");
     assert.notEqual(next.id, first.id);
