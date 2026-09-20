@@ -1,12 +1,12 @@
 # Estado del proyecto
 
-> Foto de `origin/main` (`c4883c3`) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T58 y T59). Actualizar esta página después de cada merge relevante.
+> Foto de `origin/main` (`6f62593`, T58 ya mergeada en PR #110) más el trabajo sin mergear de `feat/pep-no-y-telefono-ui` (T59). Actualizar esta página después de cada merge relevante.
 
 | | |
 |---|---|
 | **Foto tomada** | 20 de septiembre de 2026, 07:40 CEST |
-| **Base** | `c4883c3` (`origin/main`; T57 ya mergeada en PR #109) + `feat/pep-no-y-telefono-ui` sin mergear |
-| **Trabajo en curso** | T58 + T59 en la misma rama: el coordinador recibe los «no», y ahora es el único que lanza llamadas. Decisiones D25, D26 y D27 |
+| **Base** | `6f62593` (`origin/main`; T57 en PR #109 y T58 en PR #110, las dos mergeadas) + T59 sin mergear |
+| **Trabajo en curso** | T59: el coordinador es el único que lanza llamadas, y su `emitir_llamada` pasa por el backend. Decisión D27 |
 | **Entrega** | domingo 20 a las 11:00, hora de Madrid |
 | **Generado por** | Devin, sesión de implementación de T58 y T59 |
 
@@ -14,9 +14,9 @@
 
 | Comprobación | Resultado |
 |---|---|
-| **Tests en `origin/main`** | **337 pass, 10 fail, 7 skipped.** `main` está rojo. Verificado en worktree limpio de `c4883c3` |
-| Causa de esas 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») hace que cada ejecución arranque en pausa y que `/events`, `/interventions` y `/workflow/happyrobot/events` respondan 409 con la mesa detenida. Los tests HTTP no se actualizaron en ese commit |
-| Tests en `feat/pep-no-y-telefono-ui` | **366 pass, 0 fail, 7 skipped** (373 en total). Incluye el arreglo de esas 10, los tests de T58 y 7 nuevos de T59 |
+| **Tests en `origin/main`** | **359 pass, 0 fail, 7 skipped.** `main` está verde. Verificado en worktree limpio de `6f62593` |
+| Historia de las 10 fallas | `c4883c3` («bloquea operaciones hasta iniciar») dejó 10 tests HTTP rojos: cada ejecución arranca en pausa y `/events`, `/interventions` y `/workflow/happyrobot/events` responden 409 con la mesa detenida. T58 los arregló y el merge #110 ya está en `main` |
+| Tests en `feat/pep-no-y-telefono-ui` | **366 pass, 0 fail, 7 skipped** (373 en total). Los 7 nuevos son de T59 |
 | `make check` en `feat/pep-no-y-telefono-ui` | **OK** (lint + test + build backend, lint + build frontend, fixtures:check) |
 | Lint frontend | 0 avisos, 0 errores |
 | Build frontend | OK; el chunk único sigue por encima de 500 kB (aviso, no error) |
@@ -115,8 +115,8 @@ Cambios:
    [`agent/happyrobot/CAMBIOS-WORKFLOW.md`](../agent/happyrobot/CAMBIOS-WORKFLOW.md). Las tres
    versiones están bloqueadas (`is_version_locked`), así que hay que forkear. **Sin esto, el
    resultado de cada llamada del coordinador se sigue perdiendo con 404.**
-2. **Mergear `feat/pep-no-y-telefono-ui`.** Mientras no se mergee, `main` sigue con 10 tests
-   rojos y el coordinador desplegado sigue repitiendo llamadas.
+2. **Mergear T59.** Mientras no se mergee, el backend desplegado no tiene el endpoint al que
+   debe apuntar el nodo nuevo.
 3. **`CALLS_ON_DEMAND=true` en Railway, después del paso 1 y nunca antes.** Con la variable
    puesta y el nodo antiguo, no sale ninguna llamada. **No la he tocado.**
 4. **Configurar `HAPPYROBOT_HOOK_DEFAULT` en Railway** (por ejemplo el mismo hook
@@ -145,14 +145,14 @@ Cambios:
 
 ## Ramas vivas sin mergear
 
-- `feat/pep-no-y-telefono-ui`: T58 y T59 completas (backend, frontend, 17 tests nuevos, docs).
-  `make check` en verde. Arregla además las 10 fallas de `main`. PR #110.
+- `feat/pep-no-y-telefono-ui`: un commit por delante de `main` (`39c3bfd`, T59). `make check` en
+  verde. T58 ya está en `main` por PR #110, y la rama se reutiliza para T59.
 - `feat/pep-sin-simulacion`: ya mergeada en `main` vía PR #109; la rama sigue en el remoto.
 - El resto de ramas remotas no se ha vuelto a auditar en esta sesión (`git branch -r`).
 
 ## Decisiones pendientes
 
-1. Aprobar y mergear T58 y T59 (D25, D26, D27).
+1. Aprobar y mergear T59 (D27). T58 (D25, D26) ya está en `main`.
 2. ¿Se añade `HAPPYROBOT_HOOK_DEFAULT` en Railway para dar voz a las cuatro áreas, o se
    acepta que solo Espacios llame?
 3. ¿Se mantiene el arranque en pausa de `c4883c3` como comportamiento definitivo? Hoy implica
@@ -162,8 +162,8 @@ Cambios:
 
 ## Avisos para el siguiente agente
 
-- **`origin/main` está rojo** (10 tests) por `c4883c3`. No es tu cambio. La rama de T58 lo
-  arregla: los tests HTTP tienen que iniciar la operación antes de enviar eventos.
+- `origin/main` está verde desde el merge de T58 (#110). Si ves 10 tests HTTP rojos, te falta
+  ese merge: los tests tienen que iniciar la operación antes de enviar eventos.
 - Con el reloj en pausa, el backend **rechaza** eventos e intervenciones con 409. Es
   intencionado (`c4883c3`), no un bug. Y con la mesa detenida **no sale ninguna llamada ni
   vence ningún plazo**: T58 hizo que el tick bombeara la cola en pausa y se revirtió después
