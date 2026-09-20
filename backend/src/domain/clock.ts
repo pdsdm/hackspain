@@ -61,7 +61,12 @@ export class SimulationClock {
   tick(): void {
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
+    // La cola y los plazos de las llamadas no dependen del reloj del escenario. Con el reloj
+    // en pausa seguían vivos los dos problemas: una llamada sin resultado no vencía nunca y
+    // las tareas nuevas no salían hasta reanudar.
     if (state.clock.paused) {
+      this.executor.fireDue();
+      this.executor.pump();
       return;
     }
     const delta = Number(state.clock.speed ?? this.speed);
@@ -114,7 +119,7 @@ export class SimulationClock {
     }
 
     if (changed) this.states.saveState(run.id, state);
-    this.executor.fireDue(now);
+    this.executor.fireDue();
     this.executor.pump();
   }
 
