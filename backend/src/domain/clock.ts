@@ -62,7 +62,6 @@ export class SimulationClock {
     const run = this.states.ensureActiveRun();
     const state = structuredClone(run.state);
     if (state.clock.paused) {
-      this.executor.pump();
       return;
     }
     const delta = Number(state.clock.speed ?? this.speed);

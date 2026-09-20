@@ -40,6 +40,13 @@ function acceptedResult(envelope: SpecialistResultEnvelope): boolean {
     (envelope.result.outcome === "accepted" || envelope.result.outcome === "accepted_with_conditions");
 }
 
+/** `no_disponible`, «no disponible», `unavailable`: el workflow contesta como quiere. */
+function saysUnavailable(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replaceAll("_", " ").trim();
+  return ["no disponible", "unavailable", "not available", "descartado", "rechazado"].includes(text);
+}
+
 function applySpaceFacts(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
@@ -47,7 +54,8 @@ function applySpaceFacts(
   changes: string[],
 ): void {
   const updates = envelope.result.data.spaces;
-  if (task.area !== "espacios" || !acceptedResult(envelope) || !Array.isArray(updates)) return;
+  if (task.area !== "espacios" || envelope.status !== "completed" || !Array.isArray(updates)) return;
+  const accepted = acceptedResult(envelope);
   const data = taskData(task);
   const candidates = Array.isArray(data.candidateIds)
     ? new Set(data.candidateIds.filter((id): id is string => typeof id === "string" && id.trim() !== ""))
@@ -60,6 +68,17 @@ function applySpaceFacts(
     if (candidates.size > 0 && !candidates.has(id)) continue;
     const space = state.spaces.find((item) => item.id === id);
     if (!space) continue;
+    // Un «no disponible» es la noticia más importante de la llamada. Sin aplicarlo, el
+    // espacio sigue pareciendo utilizable y el coordinador lo vuelve a proponer igual.
+    if (saysUnavailable(raw.availability)) {
+      if (space.status !== "descartado") {
+        space.status = "descartado";
+        space.note = envelope.result.conditions[0] ?? envelope.result.summary.slice(0, 120);
+        changes.push(`${id}: no disponible según ${task.area}`);
+      }
+      continue;
+    }
+    if (!accepted) continue;
     if (typeof raw.capacity === "number" && Number.isFinite(raw.capacity) && raw.capacity > 0) {
       const capacity = Math.floor(raw.capacity);
       if (space.capacity !== capacity) {
@@ -127,6 +146,19 @@ function applyCoordinatorState(
   return next;
 }
 
+/**
+ * El texto del evento `call_result` que lee el coordinador.
+ *
+ * Sin esto, un «no» llegaba al razonador como «happyrobot · call_result» y nada más: veía
+ * un mundo igual al de antes y volvía a proponer el mismo plan.
+ */
+export function callResultText(envelope: SpecialistResultEnvelope): string {
+  const conditions = envelope.result.conditions.length > 0
+    ? ` Condiciones: ${envelope.result.conditions.join("; ")}.`
+    : "";
+  return `Resultado de llamada (${envelope.result.outcome}): ${envelope.result.summary}${conditions}`;
+}
+
 function applySpecialistState(
   state: CrisisStateDocument,
   envelope: SpecialistResultEnvelope,
@@ -174,6 +206,11 @@ function applySpecialistState(
     const call = calls.find((item) => item.id === callId);
     if (call) {
       call.status = envelope.status === "no_answer" ? "sin_respuesta" : "terminada";
+      // Lo que contestaron se guarda en la llamada, no solo en la cronología: es la memoria
+      // que lee el coordinador para no volver a pedir lo mismo a quien ya dijo no.
+      call.outcome = envelope.result.outcome;
+      call.summary = envelope.result.summary;
+      call.conditions = envelope.result.conditions;
       if (envelope.result.evidence.transcript) {
         const current = Array.isArray(call.transcript)
           ? call.transcript as NonNullable<SpecialistResultEnvelope["result"]["evidence"]["transcript"]>

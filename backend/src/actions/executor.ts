@@ -2,7 +2,7 @@ import type { AppConfig, AreaHook } from "../config.js";
 import type { SpecialistResultEnvelope } from "../contracts/api.js";
 import type { CrisisStateDocument } from "../domain/crisis-state.js";
 import type { Engine } from "../domain/engine.js";
-import type { WorkflowService } from "../domain/workflow-service.js";
+import { callResultText, type WorkflowService } from "../domain/workflow-service.js";
 import type { StateRepository } from "../state/state-repository.js";
 import type { DispatchTask, TaskRepository } from "../state/task-repository.js";
 import { logAction, logActionError } from "../log.js";
@@ -96,7 +96,7 @@ export class ActionExecutor {
 
   pump(): void {
     const run = this.states.ensureActiveRun();
-    if (run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
+    if (run.state.clock.paused || run.state.agentsPaused || run.state.waitingForDecision || run.state.rejectedPlanVersion === run.state.planVersion) return;
     for (let index = 0; index < 3; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
@@ -219,6 +219,7 @@ export class ActionExecutor {
       void this.engine?.handle({
         source: "happyrobot",
         kind: "call_result",
+        text: callResultText(envelope),
         payload: {
           ...(envelope as unknown as Record<string, unknown>),
           ...(recorded.materialChange ? { materialChange: true, materialSummary: recorded.materialSummary } : {}),
