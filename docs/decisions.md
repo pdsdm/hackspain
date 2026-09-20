@@ -187,3 +187,9 @@ sin plan, con el respaldo determinista solo para giros.
 
 - **Qué:** `COORDINATOR_HARNESS=happyrobot` con apply activo genera los dos planes mediante `consult_world` y `submit_plan`; el backend valida y aplica. HappyRobot también transporta los dos inputs simulados. Las acciones de especialistas siguen en `sim` etiquetado.
 - **Por qué:** decisión humana del 20/09 tras E2E real en Railway. Conservamos `rules` como contingencia técnica; no presentamos telefonía simulada como real ni usamos Helmcode en el camino de la toma.
+
+### D21: sin replanificación por `no_answer` y una sola llamada real en curso (20/09/2026)
+
+- **Qué:** producción entró en bucle: cada `no_answer` de la llamada real a Espacios relanzaba al coordinador, que creaba otra llamada al mismo teléfono de pruebas mientras la anterior aún sonaba; el teléfono daba ocupado y volvía el `no_answer`. `planVersion` llegó a 43 y hubo 78 llamadas reales en dos horas.
+- **Decisión:** `no_answer` reintenta la misma tarea una vez y no relanza al coordinador. El executor solo mantiene una llamada real en curso. Tras 3 relanzamientos seguidos por resultados sin input externo nuevo, el coordinador se pausa hasta que llegue uno. En Railway, `COORDINATOR_VERBOSE` vacío equivale a `0` para que los logs sean legibles.
+- **Descartado:** rotar el número de pruebas o subir el timeout de 180 s; no atacan la causa.

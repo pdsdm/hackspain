@@ -91,6 +91,7 @@ export class ActionExecutor {
     for (let index = 0; index < batchSize; index += 1) {
       const task = this.tasks.claimNext();
       if (!task) return;
+      if (this.deferRealCall(task)) return;
       this.dispatch(task).catch((error) => {
         logActionError("dispatch failed", {
           taskId: task.id,
@@ -101,6 +102,22 @@ export class ActionExecutor {
     }
   }
 
+  private isReal(task: DispatchTask, state: CrisisStateDocument): boolean {
+    const hook = this.config.hooks[task.area as AreaHook];
+    return state.forceSimActions !== true && Boolean(hook && this.config.happyrobotApiKey);
+  }
+
+  private deferRealCall(task: DispatchTask): boolean {
+    const state = this.states.ensureActiveRun().state;
+    if (!this.isReal(task, state)) return false;
+    const busy = records(state, "calls").some((call) =>
+      call.simulated === false && call.status === "en_curso" &&
+      ["dispatching", "dispatched"].includes(this.tasks.get(String(call.id).replace(/^call-/, ""))?.status ?? ""));
+    if (!busy) return false;
+    this.tasks.release(task.id);
+    return true;
+  }
+
   private async dispatch(task: DispatchTask): Promise<void> {
     const run = this.states.ensureActiveRun();
     const payload = isRecord(task.payload) ? task.payload : {};
@@ -108,7 +125,7 @@ export class ActionExecutor {
     const state = structuredClone(run.state);
     const calls = records(state, "calls");
     const hook = this.config.hooks[task.area as AreaHook];
-    const real = state.forceSimActions !== true && Boolean(hook && this.config.happyrobotApiKey);
+    const real = this.isReal(task, state);
     calls.push({
       id: callId,
       agent: task.area,

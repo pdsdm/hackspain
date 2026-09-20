@@ -259,6 +259,67 @@ test("a dispatched task without callback times out as no_answer", async () => {
   }
 });
 
+test("only one real call is in flight at a time; the next waits for the callback", async () => {
+  const database = openDatabase(":memory:");
+  const states = new StateRepository(database.connection);
+  const tasks = new TaskRepository(database.connection);
+  const workflows = new WorkflowService(states, tasks, new WorkflowEventRepository(database.connection));
+  const config = {
+    ...loadConfig(),
+    coordinatorMode: "rules" as const,
+    hooks: { transporte: "http://hook.test/transporte", espacios: "http://hook.test/espacios" },
+    happyrobotApiKey: "key",
+    happyrobotTestPhone: "+34600000000",
+  };
+  const executor = new ActionExecutor(states, tasks, workflows, config);
+  const originalFetch = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (input) => {
+    urls.push(String(input));
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const run = states.ensureActiveRun();
+    const first = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "espacios",
+      kind: "call",
+      payload: { objective: "Confirmar Pabellón B", counterpart: "Recinto" },
+      idempotencyKey: "call-1",
+    });
+    const second = tasks.enqueue({
+      runId: run.id,
+      planVersion: run.state.planVersion,
+      area: "transporte",
+      kind: "call",
+      payload: { objective: "Confirmar desvío", counterpart: "Transportes" },
+      idempotencyKey: "call-2",
+    });
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const statuses = () => [first, second].map((task) => tasks.get(task.id)?.status);
+    assert.deepEqual([...statuses()].sort(), ["dispatched", "pending"]);
+    const waiting = statuses()[0] === "pending" ? first : second;
+    const active = waiting === first ? second : first;
+    assert.equal(tasks.get(waiting.id)?.attempts, 0);
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(tasks.get(waiting.id)?.status, "pending");
+    assert.equal(urls.length, 1);
+    const now = Number(run.state.clock.simSeconds);
+    executor.fireDue(now + ActionExecutor.DISPATCH_TIMEOUT_SECONDS + 1);
+    assert.equal(tasks.get(active.id)?.status, "failed");
+    executor.pump();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(tasks.get(waiting.id)?.status, "dispatched");
+    assert.deepEqual([...urls].sort(), ["http://hook.test/espacios", "http://hook.test/transporte"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    database.close();
+  }
+});
+
 test("HappyRobot receives an explicit call, sms or email channel", async () => {
   const database = openDatabase(":memory:");
   const states = new StateRepository(database.connection);

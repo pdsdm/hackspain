@@ -241,7 +241,8 @@ async function postRaw(
 export function llmVerbose(): boolean {
   const value = process.env.COORDINATOR_VERBOSE?.trim().toLowerCase();
   if (value === "0" || value === "false" || value === "off") return false;
-  return true;
+  if (value === "1" || value === "true" || value === "on") return true;
+  return !process.env.RAILWAY_ENVIRONMENT;
 }
 
 function deltaText(delta: Record<string, unknown> | undefined, key: string): string {
