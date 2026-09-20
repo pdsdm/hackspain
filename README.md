@@ -4,6 +4,10 @@ Sistema agéntico que gestiona una crisis de hospitalidad en directo: decide, ll
 
 Proyecto del equipo **Zhivel** para el track de [HappyRobot](https://happyrobot.ai) en HackSpain 2026 (Madrid, UPM–ETSIT).
 
+
+![Centro de operaciones: mapa de MADRING con aforos saturados y cronología de incidencias](docs/screenshots/panel-general.png)
+
+
 ## Ejemplos de preguntas
 
 Puedes llamar al **+1 (571) 712-9980** o usar el chatbot.
@@ -32,8 +36,6 @@ Puedes llamar al **+1 (571) 712-9980** o usar el chatbot.
 
 9. **Falta de personal:** faltan cuatro personas de recepción en la Zona de Espera Sur; el equipo no da abasto con la llegada de invitados.
 
-
-![Centro de operaciones: mapa de MADRING con aforos saturados y cronología de incidencias](docs/screenshots/panel-general.png)
 
 ## El escenario
 
