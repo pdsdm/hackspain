@@ -641,7 +641,7 @@ test("el incidente HappyRobot atraviesa ingesta, coordinador, submit_plan y pers
     COORDINATOR_VERBOSE: "0",
   } satisfies Record<string, string | undefined>;
   const restoreEnv = replaceEnv(coordinatorEnv);
-  const config = loadConfig({ ...coordinatorEnv, INITIAL_FIXTURE: "calm" });
+  const config = loadConfig({ ...coordinatorEnv, INITIAL_FIXTURE: "calm", AUTH_REQUIRED: "false" });
   const server = createApp(database, { workflowToken: token, config }).listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();

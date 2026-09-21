@@ -81,7 +81,7 @@ test("costly event, real-channel callbacks and replan finish without financial a
   const app = createApp(database, {
     workflowToken: TOKEN,
     config: {
-      ...loadConfig({ DATABASE_URL: ":memory:", INITIAL_FIXTURE: "calm", COORDINATOR_MODE: "rules" }),
+      ...loadConfig({ DATABASE_URL: ":memory:", INITIAL_FIXTURE: "calm", COORDINATOR_MODE: "rules", AUTH_REQUIRED: "false" }),
       hooks: { espacios: HOOK_URL },
       happyrobotApiKey: "key",
       happyrobotTestPhone: "+34600000000",

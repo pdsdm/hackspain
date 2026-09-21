@@ -60,3 +60,11 @@ test("Railway deployment id is optional and trimmed", () => {
   assert.equal(loadConfig({ RAILWAY_DEPLOYMENT_ID: " deploy-42 " }).deploymentId, "deploy-42");
   assert.equal(loadConfig({}).deploymentId, undefined);
 });
+
+test("el panel exige sesión salvo AUTH_REQUIRED=false", () => {
+  assert.equal(loadConfig({}).authEnabled, true);
+  assert.equal(loadConfig({ AUTH_REQUIRED: "false" }).authEnabled, false);
+  assert.equal(loadConfig({ AUTH_REQUIRED: "0" }).authEnabled, false);
+  assert.equal(loadConfig({ AUTH_DEV_ECHO: "true" }).authDevEcho, true);
+  assert.equal(loadConfig({ AUTH_DEV_ECHO: "true", RESEND_API_KEY: "re_test" }).authDevEcho, false);
+});

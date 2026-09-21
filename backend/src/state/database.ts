@@ -108,6 +108,34 @@ const SCHEMA = `
     received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT
   ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS auth_codes (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    purpose TEXT NOT NULL CHECK (purpose IN ('register', 'login')),
+    code_hash TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    consumed_at INTEGER,
+    created_at INTEGER NOT NULL
+  ) STRICT;
+
+  CREATE INDEX IF NOT EXISTS auth_codes_email_created
+    ON auth_codes(email, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS auth_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  ) STRICT;
 `;
 
 export function openDatabase(path: string): CrisisDatabase {
@@ -125,7 +153,7 @@ export function openDatabase(path: string): CrisisDatabase {
   connection
     .prepare(`
       INSERT INTO app_metadata (key, value)
-      VALUES ('schema_version', '5')
+      VALUES ('schema_version', '6')
       ON CONFLICT (key) DO UPDATE SET
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP

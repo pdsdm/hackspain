@@ -1,5 +1,7 @@
 export type Zone = 'norte' | 'sur'
 export type Area = 'espacios' | 'catering' | 'transporte' | 'asistentes'
+export type ContactRole = 'coordinador' | Area
+export const CONTACT_ROLES: readonly ContactRole[] = ['coordinador', 'espacios', 'catering', 'transporte', 'asistentes']
 export type LatLng = [number, number]
 
 export type SpaceStatus = 'cerrado' | 'operativo' | 'propuesto' | 'pendiente' | 'confirmado' | 'descartado' | 'inactivo'
@@ -247,6 +249,8 @@ export interface CrisisState {
   agentsPaused: boolean
   resolved: boolean
   closureSummary?: string
+  /** Teléfono E.164 del coordinador, si el onboarding lo fijó. */
+  coordinatorPhone?: string
 }
 
 export type InterventionType =

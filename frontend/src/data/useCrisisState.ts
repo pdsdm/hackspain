@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Area, CrisisState, Intervention } from '../domain/types'
+import type { ContactRole, CrisisState, Intervention } from '../domain/types'
 import { createFixtureState } from '../domain/fixtures'
 import { api } from './apiClient'
 
@@ -18,7 +18,7 @@ export interface CrisisController {
   reset: () => void
   sendEvent: (text: string) => Promise<boolean>
   /** Cambia el teléfono al que llama un área. Con `null` vuelve al del entorno. */
-  setAgentPhone: (area: Area, phone: string | null) => Promise<string | null>
+  setAgentPhone: (area: ContactRole, phone: string | null) => Promise<string | null>
 }
 
 export function useCrisisState(): CrisisController {
@@ -110,10 +110,15 @@ export function useCrisisState(): CrisisController {
       setFeedback(null)
       try {
         const saved = await api.setAgentPhone(area, phone)
-        setState((current) => ({
-          ...current,
-          agents: current.agents.map((agent) => (agent.id === area ? { ...agent, ...(saved.phone ? { phone: saved.phone } : { phone: undefined }) } : agent)),
-        }))
+        setState((current) => {
+          if (area === 'coordinador') {
+            return { ...current, ...(saved.phone ? { coordinatorPhone: saved.phone } : { coordinatorPhone: undefined }) }
+          }
+          return {
+            ...current,
+            agents: current.agents.map((agent) => (agent.id === area ? { ...agent, ...(saved.phone ? { phone: saved.phone } : { phone: undefined }) } : agent)),
+          }
+        })
         setFeedback(phone === null ? `Teléfono de ${area} devuelto al del entorno.` : `Teléfono de ${area} actualizado.`)
         return saved.phone
       } catch (e) {
