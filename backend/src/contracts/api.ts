@@ -1,6 +1,7 @@
 import type { PlanProposal } from "../domain/plan-rules.js";
 
 const AREAS = ["espacios", "catering", "transporte", "asistentes"] as const;
+export const CONTACT_ROLES = ["coordinador", ...AREAS] as const;
 const ACTION_KINDS = ["call", "sms", "email", "manual"] as const;
 const COMMITMENT_STATUSES = ["propuesto", "en_consulta", "aceptado_condiciones"] as const;
 const INTERVENTION_TYPES = ["approve_spend", "reject_spend", "approve_plan", "reject_plan", "reject_split", "pause", "resume", "set_constraint", "take_call"] as const;
@@ -12,6 +13,7 @@ const RESULT_STATUSES = ["completed", "failed", "no_answer"] as const;
 const OUTCOMES = ["accepted", "accepted_with_conditions", "rejected", "no_answer", "failed"] as const;
 
 export type Area = (typeof AREAS)[number];
+export type ContactRole = (typeof CONTACT_ROLES)[number];
 export type ActionKind = (typeof ACTION_KINDS)[number];
 export type CommitmentStatus = (typeof COMMITMENT_STATUSES)[number];
 export type InterventionType = (typeof INTERVENTION_TYPES)[number];
@@ -89,7 +91,7 @@ export interface SpecialistResultEnvelope {
 }
 
 export class ContractError extends Error {
-  constructor(message: string, readonly status: 400 | 404 | 409 | 503 = 400) {
+  constructor(message: string, readonly status: 400 | 401 | 404 | 409 | 429 | 503 = 400) {
     super(message);
     this.name = "ContractError";
   }
@@ -415,6 +417,23 @@ export function parseAgentPhone(value: unknown): { phone: string | null } {
 
 export function parseArea(value: unknown, field = "area"): Area {
   return enumValue(value, field, AREAS);
+}
+
+export function parseContactRole(value: unknown, field = "area"): ContactRole {
+  return enumValue(value, field, CONTACT_ROLES);
+}
+
+/** Los cinco teléfonos del onboarding. Ninguno puede faltar ni ser null. */
+export function parseAgentPhones(value: unknown): Record<ContactRole, string> {
+  const input = record(value, "body");
+  exactFields(input, "body", CONTACT_ROLES);
+  const phones = {} as Record<ContactRole, string>;
+  for (const role of CONTACT_ROLES) {
+    const parsed = parseAgentPhone({ phone: input[role] });
+    if (!parsed.phone) throw new ContractError(`${role} is required`, 400);
+    phones[role] = parsed.phone;
+  }
+  return phones;
 }
 
 export function parseReset(value: unknown): { fixture?: (typeof FIXTURE_NAMES)[number] } {

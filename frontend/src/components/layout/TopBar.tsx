@@ -1,11 +1,13 @@
-import { Pause, Play, RotateCcw } from 'lucide-react'
+import { Pause, Play, RotateCcw, LogOut } from 'lucide-react'
 import type { CrisisController } from '../../data/useCrisisState'
+import { useAuth } from '../../data/useAuth'
 import { fmtClock, fmtCountdown } from '../../domain/time'
 
 const CYCLE = [1, 2, 5, 10, 20]
 
 export function TopBar({ ctl }: { ctl: CrisisController }) {
   const { state: s } = ctl
+  const auth = useAuth()
   const speedIndex = CYCLE.indexOf(s.clock.speed)
   const nextSpeed = CYCLE[(speedIndex + 1) % CYCLE.length]
   const left = s.clock.openingAt - s.clock.simSeconds
@@ -37,6 +39,15 @@ export function TopBar({ ctl }: { ctl: CrisisController }) {
         <button onClick={ctl.reset} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Reiniciar simulación" aria-label="Reiniciar simulación">
           <RotateCcw size={14} />
         </button>
+        {auth.required && auth.user && (
+          <>
+            <span className="w-px h-6 bg-line-2" />
+            <span className="text-[12px] text-muted max-w-[180px] truncate" title={auth.user.email}>{auth.user.email}</span>
+            <button onClick={() => void auth.logout()} className="w-9 h-9 grid place-items-center border border-line-2 text-muted hover:text-ink hover:bg-ink/5" title="Cerrar sesión" aria-label="Cerrar sesión">
+              <LogOut size={14} />
+            </button>
+          </>
+        )}
       </div>
 
     </header>

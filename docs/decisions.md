@@ -240,4 +240,9 @@ sin plan, con el respaldo determinista solo para giros.
 
 - **Qué:** `loadHappyRobotCoordinatorConfig` compara el segmento de entorno codificado en `HAPPYROBOT_COORDINATOR_HOOK_URL` (`/hooks/<slug>` en production, `/hooks/<entorno>/<slug>` en cualquier otro) contra `HAPPYROBOT_COORDINATOR_ENVIRONMENT`, y lanza un error claro al arrancar si no coinciden.
 - **Por qué:** en Railway producción, `HAPPYROBOT_COORDINATOR_ENVIRONMENT=production` (correcto) convivía con `HAPPYROBOT_COORDINATOR_HOOK_URL=.../hooks/development/1i6zafb6wodb` (development, con el Orquestador sin versión viva ahí). El informe de log decía `entorno: production` porque solo lee la primera variable, pero el trigger de verdad usaba el hook y pedía siempre `development`: dos fuentes de verdad independientes, y las llamadas del coordinador morían con 404 sin que el log lo delatara.
-- **Descartado:** quitar el hook y disparar siempre contra `{apiBase}/workflows/{id}/runs`. Confirmado en vivo (y documentado en `docs/runbook-happyrobot-coordinator.md`): ese endpoint devuelve `Workflow not found` en la cuenta EU. El hook es obligatorio; lo que había que cerrar era la posibilidad de que su entorno y `HAPPYROBOT_COORDINATOR_ENVIRONMENT` se desincronizaran en silencio.
+### D30: acceso al panel con código de 6 dígitos al correo (sin OAuth de terceros)
+
+- **Qué:** registro y login son passwordless. El backend genera un código de 6 dígitos, lo guarda hasheado en SQLite y lo envía por correo (Brevo vía `fetch`, sin SDK). El panel manda un bearer de sesión. Sin `BREVO_API_KEY` el código se imprime en el log; `AUTH_DEV_ECHO` lo devuelve en JSON solo en local. `AUTH_REQUIRED=false` deja el panel abierto para tests. HappyRobot sigue con su propio bearer.
+- **Por qué:** todo el mundo entraba al panel. Un código al correo cierra la puerta sin contraseñas ni dependencia nueva. En Brevo basta verificar un remitente (sin dominio) para escribir a cualquier correo.
+- **Descartado:** Google/GitHub OAuth, magic link, `@supabase/supabase-js` (D18 ya lo retiró), nodemailer y Resend.
+

@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { notifyRemote } from "./database.js";
-import type { Area } from "../contracts/api.js";
+import { CONTACT_ROLES, type Area, type ContactRole } from "../contracts/api.js";
 
 // Vive en app_metadata, no en el estado de la ejecución: un reset carga un fixture y se
 // llevaría por delante los teléfonos que el responsable acaba de escribir en el panel.
@@ -15,16 +15,28 @@ interface Row {
 export class ContactRepository {
   constructor(private readonly database: DatabaseSync) {}
 
-  list(): Partial<Record<Area, string>> {
+  list(): Partial<Record<ContactRole, string>> {
     const rows = this.database
       .prepare("SELECT key, value FROM app_metadata WHERE key LIKE ?")
       .all(`${KEY_PREFIX}%`) as unknown as Row[];
-    const phones: Partial<Record<Area, string>> = {};
+    const phones: Partial<Record<ContactRole, string>> = {};
     for (const row of rows) {
-      const area = row.key.slice(KEY_PREFIX.length) as Area;
-      if (row.value.trim() !== "") phones[area] = row.value;
+      const role = row.key.slice(KEY_PREFIX.length) as ContactRole;
+      if (row.value.trim() !== "") phones[role] = row.value;
     }
     return phones;
+  }
+
+  snapshot(): Record<ContactRole, string | null> {
+    const stored = this.list();
+    const phones = {} as Record<ContactRole, string | null>;
+    for (const role of CONTACT_ROLES) phones[role] = stored[role] ?? null;
+    return phones;
+  }
+
+  complete(): boolean {
+    const stored = this.list();
+    return CONTACT_ROLES.every((role) => Boolean(stored[role]));
   }
 
   get(area: string): string | undefined {
@@ -34,7 +46,7 @@ export class ContactRepository {
     return row?.value.trim() ? row.value : undefined;
   }
 
-  set(area: Area, phone: string | null): void {
+  set(area: ContactRole | Area, phone: string | null): void {
     if (phone === null) {
       this.database.prepare("DELETE FROM app_metadata WHERE key = ?").run(`${KEY_PREFIX}${area}`);
     } else {

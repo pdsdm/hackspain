@@ -19,7 +19,7 @@ async function withServer(
   const states = new StateRepository(database.connection);
   const phones = new ContactRepository(database.connection);
   const config = {
-    ...loadConfig({ HAPPYROBOT_TEST_PHONE: "+34600000000" }),
+    ...loadConfig({ HAPPYROBOT_TEST_PHONE: "+34600000000", AUTH_REQUIRED: "false" }),
     coordinatorMode: "rules" as const,
     hooks: { espacios: HOOK, catering: HOOK, transporte: HOOK, asistentes: HOOK },
     happyrobotApiKey: "key",
@@ -84,6 +84,53 @@ test("un teléfono vacío vuelve al destino del entorno, y un reset no borra el 
     const cleared = await post(base, "/agents/transporte/phone", { phone: null });
     assert.deepEqual(await cleared.json(), { ok: true, area: "transporte", phone: "+34600000000" });
     assert.equal(phones.get("transporte"), undefined);
+  });
+});
+
+test("el onboarding exige los cinco teléfonos y no cuenta el destino por defecto", async () => {
+  await withServer(async (base) => {
+    const empty = await fetch(`${base}/agents/phones`);
+    assert.equal(empty.status, 200);
+    const before = (await empty.json()) as { complete: boolean; phones: Record<string, string | null> };
+    assert.equal(before.complete, false);
+    assert.equal(before.phones.coordinador, null);
+    assert.equal(before.phones.espacios, null);
+
+    const missing = await post(base, "/agents/phones", {
+      coordinador: "+34600111000",
+      espacios: "+34600111222",
+      catering: "+34600111333",
+      transporte: "+34600111444",
+    });
+    assert.equal(missing.status, 400);
+
+    const invalid = await post(base, "/agents/phones", {
+      coordinador: "+34600111000",
+      espacios: "+34600111222",
+      catering: "+34600111333",
+      transporte: "+34600111444",
+      asistentes: "611 222 333",
+    });
+    assert.equal(invalid.status, 400);
+
+    const saved = await post(base, "/agents/phones", {
+      coordinador: "+34600111000",
+      espacios: "+34600111222",
+      catering: "+34600111333",
+      transporte: "+34600111444",
+      asistentes: "+34600111555",
+    });
+    assert.equal(saved.status, 200);
+    const body = (await saved.json()) as { complete: boolean; phones: Record<string, string> };
+    assert.equal(body.complete, true);
+    assert.equal(body.phones.coordinador, "+34600111000");
+
+    const state = (await (await fetch(`${base}/state`)).json()) as {
+      coordinatorPhone?: string
+      agents: Array<{ id: string; phone?: string }>
+    };
+    assert.equal(state.coordinatorPhone, "+34600111000");
+    assert.equal(state.agents.find((agent) => agent.id === "asistentes")?.phone, "+34600111555");
   });
 });
 

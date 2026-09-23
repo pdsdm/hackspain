@@ -70,6 +70,7 @@
 | T59 | Un único dueño de las llamadas: `emitir_llamada` pasa por el backend, el plan deja de marcar por su cuenta y el resultado deja de perderse con 404 | Pep | `feat/pep-no-y-telefono-ui` | [D27](docs/decisions.md), [Guía de workflow](agent/happyrobot/CAMBIOS-WORKFLOW.md) | done |
 | T60 | Tres fallas vistas en una llamada real: la transcripción se inyectaba en la conversación, cada replan repetía la llamada y un email marcaba un teléfono | Pep | `fix/pep-llamada-que-se-sabotea` (PR #113, mergeada) | [D28](docs/decisions.md) | done |
 | T61 | El trigger del coordinador HappyRobot fallaba con 404 en producción: `HAPPYROBOT_COORDINATOR_ENVIRONMENT` y `HAPPYROBOT_COORDINATOR_HOOK_URL` podían divergir en silencio | Pep | `fix/pep-happyrobot-trigger-env` (PR #114, mergeada) | [D29](docs/decisions.md) | done |
+| T62 | Acceso al panel: registro y login con código de 6 dígitos al correo | Pep | `feat/pep-auth-otp` | [T62](docs/specs/T62-auth-otp.md), [D30](docs/decisions.md) | doing |
 
 **Plan de la demo con dos inputs reales HappyRobot: [`docs/plan-demo-happyrobot.md`](docs/plan-demo-happyrobot.md).**
 **Plan de ejecución del sábado, con carriles, dependencias y horas: [`docs/plan-sabado.md`](docs/plan-sabado.md).**

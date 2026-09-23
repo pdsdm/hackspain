@@ -33,7 +33,7 @@ async function setup(options: {
   let events = 0;
   const app = createApp(database, {
     workflowToken: TOKEN,
-    config: loadConfig({ INITIAL_FIXTURE: "proposal", JEV_ENABLED: "true", JEV_APPLY_CONFIRMATIONS: "true", ...options.env }),
+    config: loadConfig({ INITIAL_FIXTURE: "proposal", JEV_ENABLED: "true", JEV_APPLY_CONFIRMATIONS: "true", AUTH_REQUIRED: "false", ...options.env }),
     jevEvaluateFn: async (input) => {
       evaluations += 1;
       return options.evaluate ? options.evaluate(input) : SCORES;

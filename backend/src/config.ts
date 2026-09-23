@@ -39,6 +39,12 @@ export interface AppConfig {
   callCooldownMs: number;
   publicBaseUrl: string;
   deploymentId?: string;
+  /** Si hay `AUTH_SECRET` (o `AUTH_REQUIRED=true`), el panel exige sesión. */
+  authEnabled: boolean;
+  authSecret: string;
+  mailFrom: string;
+  authDevEcho: boolean;
+  brevoApiKey?: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -155,6 +161,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (catering) hooks.catering = catering;
   if (transporte) hooks.transporte = transporte;
   if (asistentes) hooks.asistentes = asistentes;
+  const authSecret = env.AUTH_SECRET?.trim() || "dev-insecure-change-me";
+  const authRequiredFlag = env.AUTH_REQUIRED?.trim().toLowerCase();
+  const authEnabled = !["0", "false"].includes(authRequiredFlag ?? "true");
+  const brevoApiKey = env.BREVO_API_KEY?.trim() || undefined;
   const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
   // Siempre hay un destino: así una llamada nunca sale sin número y el panel arranca con un
   // teléfono visible. `HAPPYROBOT_TEST_PHONE` lo sustituye, y el panel manda sobre los dos
@@ -191,6 +201,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     callCooldownMs: readCallCooldown(env.CALL_COOLDOWN_MS),
     publicBaseUrl: env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") || "http://localhost:8000",
     ...(env.RAILWAY_DEPLOYMENT_ID?.trim() ? { deploymentId: env.RAILWAY_DEPLOYMENT_ID.trim() } : {}),
+    authEnabled,
+    authSecret,
+    mailFrom: env.MAIL_FROM?.trim() || "Zhivel <noreply@localhost>",
+    // Solo en local, y nunca si hay proveedor de correo: el código viaja en la respuesta HTTP.
+    authDevEcho: ["1", "true"].includes(env.AUTH_DEV_ECHO?.trim().toLowerCase() ?? "") && !brevoApiKey,
+    ...(brevoApiKey ? { brevoApiKey } : {}),
   };
 }
 

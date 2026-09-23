@@ -12,11 +12,12 @@ Base URL local: `http://localhost:8000` (`VITE_API_URL` en el frontend, ver D6).
 Todos los cuerpos son JSON. Los errores usan `{ "error": "mensaje legible" }`:
 
 - `400`: cuerpo, campo o enum inválido.
-- `401`: token de workflow ausente o incorrecto.
-- `404`: ejecución, tarea, llamada o decisión inexistente.
-- `409`: ejecución/versión obsoleta, decisión resuelta o `eventId` en conflicto.
+- `401`: token de workflow ausente o incorrecto, sesión de panel inválida, o código de acceso incorrecto/caducado.
+- `404`: ejecución, tarea, llamada, decisión o cuenta inexistente.
+- `409`: ejecución/versión obsoleta, decisión resuelta, `eventId` en conflicto, o correo ya registrado.
+- `429`: se ha pedido otro código demasiado pronto (1 minuto).
 - `500`: error interno no esperado.
-- `503`: integración de workflows no configurada.
+- `503`: integración de workflows o de correo no configurada.
 
 Los tiempos del escenario son segundos desde medianoche (`12:15 = 44100`) y los importes están en euros. `planVersion` aumenta cuando cambia el plan. Un resultado anterior se conserva como evidencia, pero no muta el estado vigente.
 
@@ -24,11 +25,56 @@ Los tiempos del escenario son segundos desde medianoche (`12:15 = 44100`) y los 
 
 ### `GET /health`
 
+**Respuesta 200**: `{ "status": "ok" }`. Pública. No exige sesión.
+
+## Acceso al panel (código al correo)
+
+Sin sesión, `GET /state` y el resto de rutas del panel responden `401`. Los webhooks de HappyRobot siguen con su bearer. `AUTH_REQUIRED=false` deja el panel abierto (solo tests).
+
+Registro y login son el mismo mecanismo: un código de 6 dígitos al correo, válido 10 minutos, un uso. No hay contraseña.
+
+### `GET /auth/config`
+
+**Respuesta 200**: `{ "required": true }`. Pública.
+
+### `POST /auth/request-code`
+
+```json
+{ "email": "ana@zhivel.test", "purpose": "register" }
+```
+
+`purpose`: `register` | `login`. El correo se normaliza a minúsculas.
+
+- `register` sobre un correo ya dado de alta: `409`.
+- `login` sobre un correo desconocido: `404`.
+- Otro código al mismo correo antes de 60 s: `429`.
+- Email inválido: `400`.
+
+**Respuesta 200**: `{ "ok": true, "expiresInSeconds": 600 }`. Con `AUTH_DEV_ECHO=true` y sin `BREVO_API_KEY` añade `"code": "123456"` para poder probar en local. Nunca en producción.
+
+### `POST /auth/verify`
+
+```json
+{ "email": "ana@zhivel.test", "code": "123456" }
+```
+
+**Respuesta 200**: `{ "token": "…", "user": { "id": "…", "email": "ana@zhivel.test" } }`. El frontend manda `Authorization: Bearer <token>` en las peticiones del panel. Código incorrecto o caducado: `401`. Cinco fallos invalidan el código.
+
+### `GET /auth/me`
+
+Con bearer. **200**: `{ "user": { "id": "…", "email": "…" } }`. **401** si la sesión no vale.
+
+### `POST /auth/logout`
+
+Invalida el bearer. **200**: `{ "ok": true }` también sin sesión.
+
+## Panel de supervisión
+
 **Respuesta 200**: `{ "status": "ok" }`.
 
 ## Panel de supervisión
 
-El frontend usa siempre estos endpoints. El tipo público es `CrisisState` en `frontend/src/domain/types.ts` y sus ejemplos completos están en `backend/fixtures/madring/states/`.
+El frontend usa siempre estos endpoints. El tipo público es `CrisisState` en `frontend/src/domain/types.ts` y sus ejemplos completos están en `backend/fixtures/madring/states/`. Con auth activo (por defecto) exigen `Authorization: Bearer` de `/auth/verify`.
 
 ### `GET /state`
 
@@ -94,7 +140,7 @@ El coordinador emite `estimatedCost: number | null`, independiente de `decision`
 
 Cronología reciente sin arrastrar el estado entero. Mismo contenido que `state.events`, para
 consumidores que solo quieren saber qué acaba de pasar y no necesitan espacios, rutas ni
-vehículos en cada sondeo. Solo lectura y sin token, igual que `GET /state`.
+vehículos en cada sondeo. Solo lectura. Con auth activo exige la misma sesión que `GET /state`.
 
 ```json
 {
@@ -154,7 +200,7 @@ sobrevive a los resets porque una ejecución se desactiva pero no se borra.
 `createdAt` es la hora real de registro en UTC, la que pone SQLite. El orden es por
 inserción, no por `createdAt`, que solo tiene resolución de segundo y empata a menudo.
 
-Solo lectura y sin token, igual que `GET /state` y `GET /events`.
+Solo lectura. Con auth activo exige la misma sesión que `GET /state` y `GET /events`.
 
 ### `POST /interventions`
 
@@ -211,13 +257,52 @@ Fija el teléfono al que llama un área, sin redespliegue. Lo usa la tarjeta del
 { "phone": "+34600111222" }
 ```
 
-`phone` en E.164 (`+` y de 8 a 15 dígitos), o `null` para borrarlo y volver al destino por defecto (`HAPPYROBOT_TEST_PHONE`, o `+34616500586` si no está puesta). Responde con el valor efectivo:
+`phone` en E.164 (`+` y de 8 a 15 dígitos), o `null` para borrarlo y volver al destino por defecto (`HAPPYROBOT_TEST_PHONE`, o `+34616500586` si no está puesta). `:area` admite también `coordinador`. Responde con el valor efectivo:
 
 ```json
 { "ok": true, "area": "catering", "phone": "+34600111222" }
 ```
 
 Un formato inválido o un área desconocida responden `400`. El valor se guarda en `app_metadata` y sobrevive a `POST /simulation/reset` y a un redespliegue con volumen. La llamada real usa este número por encima de `HAPPYROBOT_TEST_PHONE` y del contacto del seed.
+
+### Onboarding de teléfonos
+
+Tras el login, el panel no se abre hasta que hay un número E.164 para el coordinador y para cada agente (`espacios`, `catering`, `transporte`, `asistentes`). El destino por defecto del entorno no cuenta: hay que guardarlos.
+
+#### `GET /agents/phones`
+
+```json
+{
+  "phones": {
+    "coordinador": null,
+    "espacios": "+34600111222",
+    "catering": null,
+    "transporte": null,
+    "asistentes": null
+  },
+  "complete": false
+}
+```
+
+`complete` es `true` solo si los cinco están guardados. Con auth activo exige la misma sesión que `GET /state`.
+
+#### `POST /agents/phones`
+
+```json
+{
+  "coordinador": "+34600111000",
+  "espacios": "+34600111222",
+  "catering": "+34600111333",
+  "transporte": "+34600111444",
+  "asistentes": "+34600111555"
+}
+```
+
+Los cinco campos son obligatorios, E.164, sin `null`. Extra o falta: `400`.
+
+**Respuesta 200**: `{ "ok": true, "phones": { … }, "complete": true }`.
+
+`GET /state` expone `agents[].phone` como hasta ahora y, si está guardado, `coordinatorPhone`.
 
 ### Afluencia en los accesos (`gates[]`)
 

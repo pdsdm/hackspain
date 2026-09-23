@@ -2,6 +2,11 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 
 import express, { type NextFunction, type Request, type Response } from "express";
 
+import { mountAuth, requirePanelSession } from "./auth/http.js";
+import { createAuthMailer, type SendAuthEmail } from "./auth/mailer.js";
+import { AuthRepository } from "./auth/repository.js";
+import { AuthService } from "./auth/service.js";
+
 import {
   translateHappyRobotResult,
   translateHappyRobotTranscript,
@@ -23,7 +28,8 @@ import {
   ContractError,
   isRecord,
   parseAgentPhone,
-  parseArea,
+  parseAgentPhones,
+  parseContactRole,
   parseCoordinatorProposal,
   parseEvent,
   parseHappyRobotIncident,
@@ -32,6 +38,7 @@ import {
   parseReset,
   parseSpecialistResult,
   type Area,
+  type ContactRole,
   type SpecialistResultEnvelope,
 } from "./contracts/api.js";
 import { ControlService } from "./domain/control-service.js";
@@ -56,6 +63,7 @@ export interface AppOptions {
   completeFn?: CompleteFn;
   jevEvaluateFn?: JevEvaluateFn;
   happyrobot?: { config?: HappyRobotCoordinatorConfig; fetchFn?: FetchFn; registry?: HappyRobotSessionRegistry };
+  sendAuthEmail?: SendAuthEmail;
 }
 
 function defaultConfig(workflowToken: string | undefined): AppConfig {
@@ -80,6 +88,10 @@ function defaultConfig(workflowToken: string | undefined): AppConfig {
     callsOnDemand: false,
     callCooldownMs: 120_000,
     publicBaseUrl: "http://localhost:8000",
+    authEnabled: false,
+    authSecret: "test-auth-secret",
+    mailFrom: "Zhivel <noreply@localhost>",
+    authDevEcho: false,
   };
 }
 
@@ -193,6 +205,21 @@ export function createApp(
   app.options("/{*path}", (_request, response) => response.sendStatus(204));
   app.use(express.json({ limit: "256kb" }));
 
+  const authService = config.authEnabled
+    ? new AuthService(new AuthRepository(database.connection), {
+        secret: config.authSecret,
+        sendEmail:
+          options.sendAuthEmail ??
+          createAuthMailer({
+            mailFrom: config.mailFrom,
+            ...(config.brevoApiKey ? { brevoApiKey: config.brevoApiKey } : {}),
+          }),
+        ...(config.authDevEcho ? { echoCode: true } : {}),
+      })
+    : undefined;
+  mountAuth(app, authService);
+  app.use(requirePanelSession(authService));
+
   const authorizeWorkflow = (request: Request, response: Response, next: NextFunction) => {
     const token = options.workflowToken ?? config.workflowToken;
     if (!token) {
@@ -297,19 +324,44 @@ export function createApp(
       const phone = phones[agent.id as Area] ?? config.happyrobotTestPhone;
       return phone ? { ...agent, phone } : agent;
     });
+    if (phones.coordinador) state.coordinatorPhone = phones.coordinador;
     return state;
+  };
+
+  const phonesPayload = () => {
+    const phones = contactRepository.snapshot();
+    return { phones, complete: contactRepository.complete() };
   };
 
   app.get("/state", (_request, response) => {
     response.status(200).json(stateWithPhones());
   });
 
+  app.get("/agents/phones", (_request, response) => {
+    response.status(200).json(phonesPayload());
+  });
+
+  app.post("/agents/phones", (request, response, next) => {
+    try {
+      const body = parseAgentPhones(request.body ?? {});
+      for (const [role, phone] of Object.entries(body) as Array<[ContactRole, string]>) {
+        contactRepository.set(role, phone);
+      }
+      console.log("[contacts] onboarding", Object.keys(body).join(","));
+      response.status(200).json({ ok: true, ...phonesPayload() });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.post("/agents/:area/phone", (request, response, next) => {
     try {
-      const area = parseArea(request.params.area);
+      const area = parseContactRole(request.params.area);
       const body = parseAgentPhone(request.body ?? {});
       contactRepository.set(area, body.phone);
-      const phone = contactRepository.get(area) ?? config.happyrobotTestPhone ?? null;
+      const phone =
+        contactRepository.get(area) ??
+        (area === "coordinador" ? null : config.happyrobotTestPhone ?? null);
       console.log("[contacts] phone", area, body.phone === null ? "borrado" : "actualizado");
       response.status(200).json({ ok: true, area, phone });
     } catch (error) {
