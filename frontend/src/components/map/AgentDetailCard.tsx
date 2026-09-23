@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bot, Building2, Bus, Network, Phone, Users, Utensils, X } from "lucide-react";
-import type { Area, CrisisState } from "../../domain/types";
+import type { Area, ContactRole, CrisisState } from "../../domain/types";
 import { fmtClock } from "../../domain/time";
 import { Pill, type Tone } from "../ui/Pill";
 import { agentCorrection } from "../../domain/selectors";
@@ -32,9 +32,9 @@ const ICONS = {
  * mitad de la operación sin tocar variables de entorno ni redespliegue.
  */
 function PhoneField({ area, phone, onSave }: {
-  area: Area
+  area: ContactRole
   phone: string | undefined
-  onSave: (area: Area, phone: string | null) => Promise<string | null>
+  onSave: (area: ContactRole, phone: string | null) => Promise<string | null>
 }) {
   // `draft` en null significa «muestra lo que dice el backend»: así el sondeo refresca el
   // campo sin pelearse con lo que el responsable está escribiendo.
@@ -100,7 +100,8 @@ function focusOf(s: CrisisState, id: AgentFocus) {
       reason: `Coordinación global · Plan v${s.planVersion}`,
       lastResult: undefined as string | undefined,
       area: undefined as Area | undefined,
-      phone: undefined as string | undefined,
+      phoneRole: "coordinador" as ContactRole,
+      phone: s.coordinatorPhone,
     };
   }
   const a = s.agents.find((agent) => agent.id === id);
@@ -113,6 +114,7 @@ function focusOf(s: CrisisState, id: AgentFocus) {
     reason: a?.reason,
     lastResult: a?.lastResult,
     area: id,
+    phoneRole: id,
     phone,
   };
 }
@@ -126,7 +128,7 @@ export function AgentDetailCard({
   s: CrisisState;
   id: AgentFocus;
   onClose: () => void;
-  onSavePhone: (area: Area, phone: string | null) => Promise<string | null>;
+  onSavePhone: (area: ContactRole, phone: string | null) => Promise<string | null>;
 }) {
   const focus = focusOf(s, id);
   const Icon = ICONS[id];
@@ -182,9 +184,7 @@ export function AgentDetailCard({
             {focus.lastResult}
           </p>
         )}
-        {focus.area && (
-          <PhoneField key={focus.area} area={focus.area} phone={focus.phone} onSave={onSavePhone} />
-        )}
+        <PhoneField key={focus.phoneRole} area={focus.phoneRole} phone={focus.phone} onSave={onSavePhone} />
         {correction && (
           <section
             className="agent-correction"
