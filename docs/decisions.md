@@ -242,7 +242,7 @@ sin plan, con el respaldo determinista solo para giros.
 - **Por qué:** en Railway producción, `HAPPYROBOT_COORDINATOR_ENVIRONMENT=production` (correcto) convivía con `HAPPYROBOT_COORDINATOR_HOOK_URL=.../hooks/development/1i6zafb6wodb` (development, con el Orquestador sin versión viva ahí). El informe de log decía `entorno: production` porque solo lee la primera variable, pero el trigger de verdad usaba el hook y pedía siempre `development`: dos fuentes de verdad independientes, y las llamadas del coordinador morían con 404 sin que el log lo delatara.
 ### D30: acceso al panel con código de 6 dígitos al correo (sin OAuth de terceros)
 
-- **Qué:** registro y login son passwordless. El backend genera un código de 6 dígitos, lo guarda hasheado en SQLite y lo envía por correo (Resend vía `fetch`, sin SDK). El panel manda un bearer de sesión. Sin `RESEND_API_KEY` el código se imprime en el log; `AUTH_DEV_ECHO` lo devuelve en JSON solo en local. `AUTH_REQUIRED=false` deja el panel abierto para tests. HappyRobot sigue con su propio bearer.
-- **Por qué:** todo el mundo entraba al panel. Un código al correo cierra la puerta sin contraseñas ni dependencia nueva.
-- **Descartado:** Google/GitHub OAuth, magic link, `@supabase/supabase-js` (D18 ya lo retiró) y nodemailer.
+- **Qué:** registro y login son passwordless. El backend genera un código de 6 dígitos, lo guarda hasheado en SQLite y lo envía por correo (Brevo vía `fetch`, sin SDK). El panel manda un bearer de sesión. Sin `BREVO_API_KEY` el código se imprime en el log; `AUTH_DEV_ECHO` lo devuelve en JSON solo en local. `AUTH_REQUIRED=false` deja el panel abierto para tests. HappyRobot sigue con su propio bearer.
+- **Por qué:** todo el mundo entraba al panel. Un código al correo cierra la puerta sin contraseñas ni dependencia nueva. En Brevo basta verificar un remitente (sin dominio) para escribir a cualquier correo.
+- **Descartado:** Google/GitHub OAuth, magic link, `@supabase/supabase-js` (D18 ya lo retiró), nodemailer y Resend.
 

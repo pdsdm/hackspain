@@ -50,7 +50,7 @@ Registro y login son el mismo mecanismo: un código de 6 dígitos al correo, vá
 - Otro código al mismo correo antes de 60 s: `429`.
 - Email inválido: `400`.
 
-**Respuesta 200**: `{ "ok": true, "expiresInSeconds": 600 }`. Con `AUTH_DEV_ECHO=true` y sin `RESEND_API_KEY` añade `"code": "123456"` para poder probar en local. Nunca en producción.
+**Respuesta 200**: `{ "ok": true, "expiresInSeconds": 600 }`. Con `AUTH_DEV_ECHO=true` y sin `BREVO_API_KEY` añade `"code": "123456"` para poder probar en local. Nunca en producción.
 
 ### `POST /auth/verify`
 

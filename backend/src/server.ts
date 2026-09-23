@@ -15,7 +15,7 @@ const server = app.listen(config.port, config.host, () => {
   console.log(`Backend listening on http://${config.host}:${config.port}`);
   if (config.authEnabled) {
     console.log("[auth] el panel exige código de 6 dígitos al correo");
-    if (!config.resendApiKey) console.log("[auth] sin RESEND_API_KEY: el código se imprime en este log");
+    if (!config.brevoApiKey) console.log("[auth] sin BREVO_API_KEY: el código se imprime en este log");
   } else {
     console.log("[auth] abierto: pon AUTH_SECRET (o AUTH_REQUIRED=true) para cerrar el panel");
   }

@@ -44,7 +44,7 @@ export interface AppConfig {
   authSecret: string;
   mailFrom: string;
   authDevEcho: boolean;
-  resendApiKey?: string;
+  brevoApiKey?: string;
 }
 
 function readPort(value: string | undefined): number {
@@ -164,7 +164,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const authSecret = env.AUTH_SECRET?.trim() || "dev-insecure-change-me";
   const authRequiredFlag = env.AUTH_REQUIRED?.trim().toLowerCase();
   const authEnabled = !["0", "false"].includes(authRequiredFlag ?? "true");
-  const resendApiKey = env.RESEND_API_KEY?.trim() || undefined;
+  const brevoApiKey = env.BREVO_API_KEY?.trim() || undefined;
   const happyrobotApiKey = env.HAPPYROBOT_API_KEY?.trim() || undefined;
   // Siempre hay un destino: así una llamada nunca sale sin número y el panel arranca con un
   // teléfono visible. `HAPPYROBOT_TEST_PHONE` lo sustituye, y el panel manda sobre los dos
@@ -205,8 +205,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     authSecret,
     mailFrom: env.MAIL_FROM?.trim() || "Zhivel <noreply@localhost>",
     // Solo en local, y nunca si hay proveedor de correo: el código viaja en la respuesta HTTP.
-    authDevEcho: ["1", "true"].includes(env.AUTH_DEV_ECHO?.trim().toLowerCase() ?? "") && !resendApiKey,
-    ...(resendApiKey ? { resendApiKey } : {}),
+    authDevEcho: ["1", "true"].includes(env.AUTH_DEV_ECHO?.trim().toLowerCase() ?? "") && !brevoApiKey,
+    ...(brevoApiKey ? { brevoApiKey } : {}),
   };
 }
 

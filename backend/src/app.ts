@@ -212,7 +212,7 @@ export function createApp(
           options.sendAuthEmail ??
           createAuthMailer({
             mailFrom: config.mailFrom,
-            ...(config.resendApiKey ? { resendApiKey: config.resendApiKey } : {}),
+            ...(config.brevoApiKey ? { brevoApiKey: config.brevoApiKey } : {}),
           }),
         ...(config.authDevEcho ? { echoCode: true } : {}),
       })

@@ -66,5 +66,5 @@ test("el panel exige sesión salvo AUTH_REQUIRED=false", () => {
   assert.equal(loadConfig({ AUTH_REQUIRED: "false" }).authEnabled, false);
   assert.equal(loadConfig({ AUTH_REQUIRED: "0" }).authEnabled, false);
   assert.equal(loadConfig({ AUTH_DEV_ECHO: "true" }).authDevEcho, true);
-  assert.equal(loadConfig({ AUTH_DEV_ECHO: "true", RESEND_API_KEY: "re_test" }).authDevEcho, false);
+  assert.equal(loadConfig({ AUTH_DEV_ECHO: "true", BREVO_API_KEY: "xkeysib-test" }).authDevEcho, false);
 });

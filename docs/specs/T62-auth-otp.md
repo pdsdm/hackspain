@@ -18,4 +18,4 @@ OAuth de Google/GitHub, contraseñas, roles, y cambiar el bearer de HappyRobot.
 
 ## Notas
 
-`AUTH_REQUIRED=false` deja el panel abierto (tests). Sin `RESEND_API_KEY` el código sale en el log del backend. D30.
+`AUTH_REQUIRED=false` deja el panel abierto (tests). Sin `BREVO_API_KEY` el código sale en el log del backend. D30.

@@ -5,7 +5,7 @@ import type { AuthPurpose, SendAuthEmail } from "./mailer.js";
 import { AuthRepository, type AuthUser } from "./repository.js";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 60 * 1000;
+const CODE_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -68,7 +68,7 @@ export class AuthService {
 
     const now = this.options.now?.() ?? Date.now();
     const latest = this.users.latestCode(email);
-    if (latest && now - latest.created_at < RESEND_COOLDOWN_MS && latest.consumed_at === null) {
+    if (latest && now - latest.created_at < CODE_COOLDOWN_MS && latest.consumed_at === null) {
       throw new ContractError("Espera un minuto para pedir otro código", 429);
     }
 
