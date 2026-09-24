@@ -51,6 +51,17 @@ Escenario completo: [`escenario/escenario.md`](escenario/escenario.md). Por qué
 - **Panel de operaciones**: mapa en tiempo real, cronología, decisiones pendientes con aprobar/rechazar (el humano sigue al mando) y teléfono editable por agente.
 - **Persistencia SQLite** con cola transaccional por `planVersion` y callbacks idempotentes.
 
+## Cómo usar la demo
+
+Abre [zhivel.vercel.app](https://zhivel.vercel.app/); no requiere usuario ni contraseña. El despliegue mantiene una única operación compartida: si quieres empezar desde el estado inicial, pulsa **↻ Reiniciar** y después **▶ Iniciar**. Reiniciar afecta también a las demás personas conectadas.
+
+Puedes comunicar una incidencia de dos formas:
+
+- **Por chat:** escribe lo que está ocurriendo en la caja **«Comunicar un evento»** y envíalo al coordinador.
+- **Por teléfono:** con la operación iniciada, llama al [**+1 (571) 712-9980**](tel:+15717129980) y cuéntale la incidencia al agente de voz. La llamada entra en la misma operación que muestra el panel.
+
+Espera unos segundos mientras el coordinador procesa la información. Después puedes seguir en el mapa y la cronología cómo cambia el plan, abrir cada agente para ver su objetivo y resultados, y aprobar o rechazar las decisiones que requieran intervención humana.
+
 ## Capturas
 
 | Decisión pendiente de aprobación humana | Vista móvil |
