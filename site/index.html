@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#F4ECD8" />
+    <meta name="color-scheme" content="light" />
+    <meta name="description" content="Zhivel: así construimos en HackSpain 2026 un centro de operaciones agéntico para gestionar una crisis de hospitalidad en MADRING." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:title" content="Zhivel — 45 minutos para cambiarlo todo" />
+    <meta property="og:description" content="El reto de HappyRobot en HackSpain 2026, nuestra idea, la crisis en MADRING y cómo construimos Zhivel." />
+    <meta property="og:image" content="https://zibel.com/assets/panel-general.webp" />
+    <link rel="canonical" href="https://zibel.com/" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:opsz,wght@9..40,600..900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>Zhivel — 45 minutos para cambiarlo todo</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <header class="topbar">
+      <div class="topbar-inner page-width">
+        <a class="brand" href="#inicio" aria-label="Zhivel, volver al inicio">
+          <img src="/assets/zhivel-logo.webp" alt="Zhivel" width="210" height="70" />
+        </a>
+        <nav class="topnav" aria-label="Navegación principal">
+          <a href="#reto">El reto</a>
+          <a href="#historia">Nuestra historia</a>
+          <a href="#sistema">El sistema</a>
+          <a href="#equipo">Equipo</a>
+        </nav>
+        <a class="button button-small" href="https://platform.zibel.app/">Lanzar app <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+
+    <main id="contenido">
+      <section class="hero page-width" id="inicio" aria-labelledby="hero-title">
+        <div class="hero-meta">
+          <span>HackSpain 2026</span>
+          <span>Track HappyRobot</span>
+          <span>Madrid · 18—20 septiembre</span>
+        </div>
+        <div class="hero-grid mosaic">
+          <div class="hero-main tile paper-tile">
+            <p class="eyebrow">Un fin de semana para responder a una pregunta</p>
+            <h1 id="hero-title">¿Puede la IA gestionar una crisis?</h1>
+            <p class="hero-lead">Nuestra respuesta fue Zhivel: un centro de operaciones que coordina decisiones, llamadas y personas cuando el plan deja de servir.</p>
+            <div class="hero-actions">
+              <a class="button" href="#reto">Descubrir la historia <span aria-hidden="true">↓</span></a>
+              <a class="text-link" href="https://platform.zibel.app/">Lanzar app ↗</a>
+            </div>
+          </div>
+          <div class="hero-clock tile red-tile">
+            <span class="tile-label">Tiempo hasta la apertura</span>
+            <strong>45<span>min</span></strong>
+            <p>Una avería de agua cierra el Pabellón Principal.</p>
+            <div class="clock-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="hero-count tile gold-tile">
+            <span class="tile-label">Personas afectadas</span>
+            <strong>600</strong>
+            <p>Invitados de hospitalidad que necesitan un plan nuevo.</p>
+          </div>
+          <div class="hero-map tile teal-tile" aria-label="El escenario separa MADRING Norte y Sur, sin conexión interior">
+            <span class="tile-label">La restricción que cambia todo</span>
+            <div class="map-zones" aria-hidden="true">
+              <span class="zone zone-north">Norte</span>
+              <span class="map-cut">Sin paso interior</span>
+              <span class="zone zone-south">Sur</span>
+            </div>
+            <p>Mover invitados entre zonas exige coordinar el traslado por fuera del recinto.</p>
+          </div>
+          <div class="hero-footer tile ink-tile">
+            <span>01 / 07</span>
+            <span>La historia detrás del prototipo</span>
+            <span aria-hidden="true">↓</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section page-width" id="reto" aria-labelledby="reto-title">
+        <div class="section-heading"><span class="section-number">01</span><div><p class="eyebrow">El punto de partida</p><h2 id="reto-title">Un sistema que decide, actúa y se deja supervisar.</h2></div></div>
+        <div class="section-intro">
+          <p class="lead">El track de HappyRobot preguntaba si la IA podía gestionar una crisis. En el README del proyecto lo traducimos a un sistema agéntico sobre un escenario cambiante, con varios pasos, interacción real y un lugar desde el que una persona pudiera intervenir.</p>
+          <p>La prueba no consistía en responder bien a una pregunta aislada. Había que mantener un plan útil mientras entraban datos nuevos, hablar con los implicados y mostrar qué estaba confirmado y qué seguía pendiente.</p>
+        </div>
+        <div class="three-grid mosaic" aria-label="Tres dimensiones del reto">
+          <article class="tile gold-tile"><span class="mini-index">01 / Decidir</span><h3>Leer el mundo.</h3><p>El coordinador consulta aforos, rutas, tiempos y resultados antes de proponer un plan.</p></article>
+          <article class="tile orange-tile"><span class="mini-index">02 / Actuar</span><h3>Salir del chat.</h3><p>Las acciones pasan por tareas y workflows; las conversaciones de voz usan HappyRobot.</p></article>
+          <article class="tile teal-tile"><span class="mini-index">03 / Supervisar</span><h3>Dejar ver el criterio.</h3><p>El panel enseña incidencias, decisiones, llamadas, compromisos y límites del resultado.</p></article>
+        </div>
+        <p class="source-note">Síntesis del reto documentada por el equipo en el <a href="https://github.com/pdsdm/hackspain#el-reto">README del proyecto</a>.</p>
+      </section>
+
+      <section class="section page-width" id="historia" aria-labelledby="historia-title">
+        <div class="section-heading"><span class="section-number">02</span><div><p class="eyebrow">De la primera idea al escenario</p><h2 id="historia-title">Elegimos una crisis que obligara a coordinar de verdad.</h2></div></div>
+        <div class="history-grid">
+          <div class="history-copy">
+            <p class="lead">Empezamos pensando en gestión de eventos con un cliente empresarial creíble y llamadas reales. Sobre la mesa estuvieron emergencias de ciudad, una gala genérica y operar un gran evento completo.</p>
+            <p>Acotamos la idea a un solo bloque de hospitalidad en MADRING. Una rotura de tubería cierra su sede 45 minutos antes de abrir: la urgencia se entiende enseguida y cada cambio de espacio afecta a comida, transporte, recepción y mensajes.</p>
+            <p>La división entre Norte y Sur evita una solución fácil. Un espacio con 600 plazas al otro lado del circuito puede parecer perfecto en una tabla, pero no sirve sin un traslado exterior viable.</p>
+            <a class="text-link" href="https://github.com/pdsdm/hackspain/blob/main/docs/decisions.md">Leer las decisiones de diseño ↗</a>
+          </div>
+          <div class="idea-stack mosaic" aria-label="Evolución de la idea">
+            <div class="tile sand-tile"><span class="mini-index">Primera dirección</span><strong>Gestión de eventos</strong><p>Una crisis en directo y contactos con el mundo real.</p></div>
+            <div class="tile red-tile"><span class="mini-index">El giro</span><strong>MADRING</strong><p>Un caso concreto, con tiempo, geografía y consecuencias encadenadas.</p></div>
+            <div class="tile gold-tile"><span class="mini-index">El límite elegido</span><strong>600 invitados</strong><p>Hospitalidad, no la dirección de toda la carrera.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section page-width" id="escenario" aria-labelledby="escenario-title">
+        <div class="section-heading"><span class="section-number">03</span><div><p class="eyebrow">Domingo de Gran Premio · escenario ficticio</p><h2 id="escenario-title">El plan original se rompe a las 12:15.</h2></div></div>
+        <div class="scenario-grid mosaic">
+          <div class="tile ink-tile scenario-statement"><span class="mini-index">13:00 / Apertura</span><p>El Pabellón Principal queda inutilizable. Los 600 invitados ya están llegando. El catering apunta al muelle del pabellón y cuatro shuttles avanzan hacia Sur.</p><span class="scenario-sign">Ahora todo depende de todo.</span></div>
+          <div class="tile paper-tile scenario-facts"><div><strong>450</strong><span>plazas en Pabellón B</span></div><div><strong>150</strong><span>plazas en Lounge Sur</span></div><p>La suma da 600, pero una capacidad anunciada no equivale a un acuerdo confirmado.</p></div>
+          <div class="tile teal-tile scenario-route"><span class="mini-index">Alternativa condicionada</span><strong>Norte C</strong><p>600 plazas desde las 13:45. Requiere traslado exterior y aceptar la apertura tardía.</p></div>
+        </div>
+        <p class="source-note">Nexo Events, los proveedores, las cifras operativas y los incidentes forman parte del <a href="https://github.com/pdsdm/hackspain/blob/main/escenario/escenario.md">escenario ficticio del prototipo</a>.</p>
+      </section>
+
+      <section class="section page-width" id="sistema" aria-labelledby="sistema-title">
+        <div class="section-heading"><span class="section-number">04</span><div><p class="eyebrow">Cómo funciona Zhivel</p><h2 id="sistema-title">Una mesa de operaciones, cinco agentes y una sola versión del plan.</h2></div></div>
+        <div class="system-intro"><p class="lead">El Reasoning Agent coordinador consulta el estado del mundo y propone operaciones. El backend comprueba reglas y aplica el plan. Los especialistas reciben tareas y el panel devuelve a la persona responsable una vista común de lo que sucede.</p></div>
+        <ol class="flow-grid mosaic">
+          <li class="tile sand-tile"><span class="mini-index">01 / Entra</span><strong>Incidencia</strong><p>Llamada, SMS o texto con procedencia visible.</p></li>
+          <li class="tile gold-tile"><span class="mini-index">02 / Piensa</span><strong>Coordinador</strong><p>Consulta el mundo, propone y replanifica al cambiar los hechos.</p></li>
+          <li class="tile orange-tile"><span class="mini-index">03 / Comprueba</span><strong>Backend</strong><p>Valida aforo, dependencias y versión antes de ejecutar.</p></li>
+          <li class="tile teal-tile"><span class="mini-index">04 / Actúa</span><strong>Especialistas</strong><p>Persiguen acuerdos en espacios, catering, transporte y asistentes.</p></li>
+          <li class="tile ink-tile"><span class="mini-index">05 / Muestra</span><strong>Panel</strong><p>Enseña resultados, condiciones y decisiones humanas.</p></li>
+        </ol>
+        <div class="agents-grid mosaic" aria-label="Los cuatro especialistas">
+          <article class="tile paper-tile"><span class="agent-glyph" aria-hidden="true">▣</span><h3>Espacios</h3><p>Disponibilidad, aforo y condiciones reales de cada sede.</p></article>
+          <article class="tile paper-tile"><span class="agent-glyph" aria-hidden="true">✳</span><h3>Catering</h3><p>Servicios, descarga, horarios y dietas cuando cambia el destino.</p></article>
+          <article class="tile paper-tile"><span class="agent-glyph" aria-hidden="true">↗</span><h3>Transporte</h3><p>Shuttles, rutas y traslados que respetan Norte y Sur.</p></article>
+          <article class="tile paper-tile"><span class="agent-glyph" aria-hidden="true">◎</span><h3>Asistentes</h3><p>Recepción, personal y mensajes para quienes deben moverse.</p></article>
+        </div>
+      </section>
+
+      <section class="section page-width" id="demo" aria-labelledby="demo-title">
+        <div class="section-heading"><span class="section-number">05</span><div><p class="eyebrow">El recorrido de la demo</p><h2 id="demo-title">Arreglar una crisis crea la siguiente.</h2></div></div>
+        <div class="demo-grid">
+          <div class="demo-steps">
+            <article class="demo-step"><span class="step-num">01</span><div><p class="eyebrow">Aviso de recinto</p><h3>Se cierra el pabellón.</h3><p>La rotura de una tubería deja a 600 invitados sin sede. Zhivel propone repartirlos entre Pabellón B y Lounge Sur, pendientes de confirmación.</p></div></article>
+            <article class="demo-step"><span class="step-num">02</span><div><p class="eyebrow">SMS del muelle</p><h3>El nuevo plan pierde su acceso de catering.</h3><p>Un camión de televisión bloquea el Muelle Este. El coordinador vuelve a consultar, ajusta tareas y deja visibles las condiciones que aún faltan.</p></div></article>
+            <article class="demo-step"><span class="step-num">03</span><div><p class="eyebrow">Resultado</p><h3>Un cierre honesto.</h3><p>El panel separa plazas propuestas, acuerdos confirmados y cuestiones abiertas. Si no hay evidencia suficiente, el resultado sigue condicionado.</p></div></article>
+          </div>
+          <figure class="product-shot"><img src="/assets/panel-general.webp" width="1680" height="1050" loading="lazy" decoding="async" alt="Panel Zhivel con mapa de MADRING, incidencias, cronología y agentes" /><figcaption>El centro de operaciones construido durante el hackathon.</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="section page-width" id="construccion" aria-labelledby="construccion-title">
+        <div class="section-heading"><span class="section-number">06</span><div><p class="eyebrow">Cómo lo construimos</p><h2 id="construccion-title">36 horas para unir idea, voz, reglas y pantalla.</h2></div></div>
+        <div class="build-grid mosaic">
+          <div class="tile gold-tile"><span class="mini-index">Viernes · elegir</span><h3>Acotamos el problema.</h3><p>Partimos del track de crisis, escogimos MADRING y escribimos una historia con un alcance que podíamos enseñar.</p></div>
+          <div class="tile paper-tile"><span class="mini-index">Sábado · conectar</span><h3>Un estado compartido.</h3><p>Backend en Node y SQLite, frontend en React y Vite, mapa, tareas, contratos y workflows de HappyRobot.</p></div>
+          <div class="tile orange-tile"><span class="mini-index">Domingo · probar</span><h3>La demo como prueba.</h3><p>Dos incidentes encadenados obligan a replanificar. Cada fallo observado quedó registrado para corregir o mostrar su límite.</p></div>
+        </div>
+        <div class="lesson-panel"><p class="eyebrow">La lección técnica</p><p>Una llamada no es un resultado hasta que vuelve con una respuesta utilizable. Aprendimos a conservar los «no», evitar encargos duplicados y no presentar una propuesta como acuerdo.</p><a class="text-link" href="https://github.com/pdsdm/hackspain/blob/main/docs/decisions.md">Ver la historia de decisiones ↗</a></div>
+      </section>
+
+      <section class="section page-width" id="plataforma" aria-labelledby="plataforma-title">
+        <div class="section-heading"><span class="section-number">07</span><div><p class="eyebrow">La plataforma</p><h2 id="plataforma-title">Entra en la mesa de operaciones.</h2></div></div>
+        <div class="launch-grid mosaic">
+          <div class="tile ink-tile launch-copy"><span class="mini-index">Zhivel / MADRING</span><p>Explora el mapa, la cronología y las decisiones en la aplicación que construimos.</p><a class="button" href="https://platform.zibel.app/">Lanzar app <span aria-hidden="true">↗</span></a><small>El acceso requiere un código enviado por correo. Es una instancia compartida: las acciones y los teléfonos configurados afectan a la misma operación y pueden iniciar llamadas reales.</small></div>
+          <div class="tile sand-tile launch-phone"><img src="/assets/panel-movil.webp" width="390" height="844" loading="lazy" decoding="async" alt="Vista móvil de la cronología operativa de Zhivel" /></div>
+        </div>
+      </section>
+
+      <section class="section page-width team-section" id="equipo" aria-labelledby="equipo-title">
+        <div class="section-heading"><span class="section-number">+</span><div><p class="eyebrow">El equipo</p><h2 id="equipo-title">Cinco personas. Una mesa común.</h2></div></div>
+        <div class="team-grid mosaic">
+          <div class="tile paper-tile">Zhi Chen Xiang</div>
+          <div class="tile paper-tile">Pepe Moyano Font</div>
+          <div class="tile paper-tile">Carlos Mata Carrillo</div>
+          <div class="tile paper-tile">Buenaventura Porcel Esquivel</div>
+          <div class="tile paper-tile">Álvaro Iglesias Reina</div>
+        </div>
+        <p class="team-end">Hecho en HackSpain 2026, en la ETSIT de la Universidad Politécnica de Madrid, para el track de HappyRobot.</p>
+        <div class="end-links"><a class="text-link" href="https://github.com/pdsdm/hackspain">Explorar el código ↗</a><a class="text-link" href="https://hackspain.com/">Conocer HackSpain ↗</a><a class="text-link" href="https://www.happyrobot.ai/es">Conocer HappyRobot ↗</a></div>
+      </section>
+    </main>
+
+    <footer class="legal-footer page-width"><span>© 2026 Equipo Zhivel · Proyecto de hackathon.</span><span>HackSpain y HappyRobot son los nombres del evento y del track, no una marca de Zhivel.</span><a href="#inicio">Volver arriba ↑</a></footer>
+  </body>
+</html>
